@@ -6,6 +6,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  BarChart3,
   Workflow,
   ImageIcon,
   List,
@@ -107,6 +108,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     run: (e, r) => e.chain().focus().deleteRange(r).insertMermaid().run(),
   },
   {
+    title: 'Chart',
+    description: 'Column, bar, line, area or parts-of-a-whole chart.',
+    icon: BarChart3,
+    keywords: ['chart', 'graph', 'bar', 'line', 'area', 'pie', 'data', 'plot'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertChart().run(),
+  },
+  {
     title: 'Divider',
     description: 'Visually divide blocks.',
     icon: Minus,
@@ -118,7 +126,18 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
 export function filterSlashCommands(query: string) {
   const q = query.trim().toLowerCase()
   if (!q) return SLASH_COMMANDS
-  return SLASH_COMMANDS.filter(
-    (c) => c.title.toLowerCase().includes(q) || c.keywords.some((k) => k.includes(q)),
-  )
+  // Rank: title starts with the query > a title word starts with it > title contains it > keyword match.
+  const score = (c: SlashCommandItem) => {
+    const t = c.title.toLowerCase()
+    if (t.startsWith(q)) return 0
+    if (t.split(/\s+/).some((w) => w.startsWith(q))) return 1
+    if (t.includes(q)) return 2
+    if (c.keywords.some((k) => k.startsWith(q))) return 3
+    if (c.keywords.some((k) => k.includes(q))) return 4
+    return -1
+  }
+  return SLASH_COMMANDS.map((c, i) => ({ c, i, s: score(c) }))
+    .filter((x) => x.s >= 0)
+    .sort((a, b) => a.s - b.s || a.i - b.i)
+    .map((x) => x.c)
 }

@@ -16,6 +16,9 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Tasks matrix](docs/screenshots/12-tasks-matrix-dark.png) | ![Tasks matrix light](docs/screenshots/13-tasks-matrix-light.png) |
 | ![Task dialog](docs/screenshots/14-task-dialog-light.png) | ![Reminder settings](docs/screenshots/15-reminder-settings-light.png) |
 | ![Block handle menu](docs/screenshots/16-block-handle-menu-light.png) | ![Dragging a block](docs/screenshots/18-drag-drop-line-light.png) |
+| ![Text color menu](docs/screenshots/19-text-color-menu-light.png) | ![Formatted text](docs/screenshots/21-formatted-text-dark.png) |
+| ![Chart editor](docs/screenshots/22-chart-editor-light.png) | ![Line chart](docs/screenshots/23-chart-line-dark.png) |
+| ![Charts](docs/screenshots/24-charts-dark.png) | |
 
 ## Features
 
@@ -25,6 +28,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Mermaid diagrams**: `/mermaid` adds a diagram block → paste or type the code (live preview) → **Save** (`Ctrl/⌘+Enter`) renders it in the note. Double-click or **Edit** to change it. Pasting a ```` ```mermaid ```` fenced block creates a diagram directly. Diagrams follow the dark/light theme; invalid code shows the parse error.
 - **Tasks – Eisenhower Matrix** (sidebar → **Tasks**, or `Ctrl/⌘+Shift+T`): four quadrants: *Do first* (important & urgent), *Schedule* (important), *Delegate* (urgent) and *Eliminate* (neither). Add tasks per quadrant, drag them between quadrants, tick them off, show or hide completed ones. The sidebar badge counts tasks due today or overdue.
 - **Due dates & reminders**: click a task to set a due date (with *Today 17:00 / Tomorrow 9:00 / Next week* shortcuts) and reminders: at the due time, 5 min, 15 min, 30 min, 1 h, 3 h, 1 day or 1 week before. **Reminders → Default reminders** sets which ones new tasks get. Reminders are native OS notifications, and clicking one opens the task.
+- **Text formatting**: select text to get a toolbar with *Turn into* (text, H1–H3, bulleted/numbered/to-do list, quote, code), **text size** (Small → Huge), bold/italic/underline/strike/code, links, and **text & background colors**. Colors adapt to dark/light mode.
+- **Charts**: `/chart` adds a chart block. Pick *Columns, Bars, Line, Area* or *Parts of a whole*, type the data into the grid or **paste it from Excel/Google Sheets/CSV**, and save. Charts have hover tooltips, a legend, a *Table* view of the exact numbers, and colors that work for color-blind readers in both themes.
 - **Move blocks freely**: hover any block (text, heading, list item, image, diagram) to show a **⋮⋮** handle. Drag it to move the block; a blue line shows where it will land. Click the handle for *Move up/down, Duplicate, Delete* and, for images and diagrams, *Align left/center/right*. **+** adds a block below. You can also press `Ctrl/⌘+Shift+↑/↓` to move the current block. Typing while an image or diagram is selected starts a new line instead of replacing it.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.

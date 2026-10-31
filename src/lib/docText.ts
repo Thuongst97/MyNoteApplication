@@ -5,6 +5,10 @@ export function docToText(node: JSONContent | null | undefined): string {
   if (!node) return ''
   if (node.type === 'text') return node.text ?? ''
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
+  if (node.type === 'chart') {
+    const spec = node.attrs?.spec as { title?: string; labels?: string[]; series?: Array<{ name?: string }> } | undefined
+    return [spec?.title, ...(spec?.labels ?? []), ...(spec?.series ?? []).map((s) => s.name)].filter(Boolean).join(' ')
+  }
   const inner = (node.content ?? []).map(docToText)
   const isBlockContainer = (node.content ?? []).some((c) => c.type !== 'text' && c.type !== 'hardBreak')
   return inner.join(isBlockContainer ? '\n' : '')

@@ -12,6 +12,7 @@ import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
 import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
+import { ChartNode } from './chart/ChartNode'
 import { MERMAID_START } from './mermaid/renderMermaid'
 import { blockDrag, computeBlockDrop, MoveBlockShortcuts, performBlockDrop } from './blockMove'
 import { BlockHandle } from './BlockHandle'
@@ -80,6 +81,7 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       }),
       ImageSelection,
       MermaidNode,
+      ChartNode,
       MoveBlockShortcuts,
       SlashCommand,
     ],

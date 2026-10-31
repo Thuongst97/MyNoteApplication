@@ -1,0 +1,245 @@
+import { useMemo, useState } from 'react'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  type TooltipContentProps,
+} from 'recharts'
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
+import type { Theme } from '@/stores/useAppStore'
+import { CHART_TOKENS, SERIES_COLORS, formatNumber, partsOf, type ChartSpec } from './chartModel'
+
+const HEIGHT = 300
+
+/** Renders a chart spec. Loaded lazily (recharts is large). */
+export default function ChartRender({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
+  if (spec.type === 'parts') return <PartsBar spec={spec} theme={theme} />
+  return <CartesianChart spec={spec} theme={theme} />
+}
+
+function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
+  const colors = SERIES_COLORS[theme]
+  const t = CHART_TOKENS[theme]
+  const multi = spec.series.length >= 2
+  const rows = useMemo(
+    () =>
+      spec.labels.map((label, i) => {
+        const row: Record<string, string | number | null> = { label: label || `#${i + 1}` }
+        spec.series.forEach((s, j) => (row[`s${j}`] = s.values[i] ?? null))
+        return row
+      }),
+    [spec],
+  )
+
+  const tick = { fill: t.textSecondary, fontSize: 12 }
+  const axisCommon = { tickLine: false, axisLine: false, tick } as const
+  const valueAxis = { ...axisCommon, tickFormatter: (v: number) => compact(v), width: 48, tickCount: 6, allowDecimals: true }
+  const grid = <CartesianGrid stroke={t.grid} strokeWidth={1} vertical={spec.type === 'hbar'} horizontal={spec.type !== 'hbar'} />
+  const tooltip = (
+    <Tooltip
+      content={(p: TooltipContentProps<ValueType, NameType>) => <TooltipCard {...p} spec={spec} colors={colors} />}
+      cursor={spec.type === 'line' || spec.type === 'area' ? { stroke: t.textMuted, strokeWidth: 1 } : { fill: t.grid, opacity: 0.6 }}
+      isAnimationActive={false}
+    />
+  )
+  // Direct end-labels for line charts with up to 4 series (legend stays too).
+  const endLabels = spec.type === 'line' && spec.series.length <= 4 && multi
+  const margin = { top: 8, right: endLabels ? 84 : 12, bottom: 4, left: 0 }
+
+  let chart: React.ReactElement
+  if (spec.type === 'line') {
+    chart = (
+      <LineChart data={rows} margin={margin}>
+        {grid}
+        <XAxis dataKey="label" {...axisCommon} />
+        <YAxis {...valueAxis} />
+        {tooltip}
+        {spec.series.map((s, j) => (
+          <Line
+            key={j}
+            dataKey={`s${j}`}
+            name={s.name}
+            stroke={colors[j]}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            dot={rows.length <= 12 ? { r: 4, fill: colors[j], stroke: t.surface, strokeWidth: 2 } : false}
+            activeDot={{ r: 5, fill: colors[j], stroke: t.surface, strokeWidth: 2 }}
+            connectNulls
+            isAnimationActive={false}
+            label={endLabels ? (endLabel(s.name, rows.length, t.textSecondary) as never) : undefined}
+          />
+        ))}
+      </LineChart>
+    )
+  } else if (spec.type === 'area') {
+    chart = (
+      <AreaChart data={rows} margin={margin}>
+        {grid}
+        <XAxis dataKey="label" {...axisCommon} />
+        <YAxis {...valueAxis} />
+        {tooltip}
+        {spec.series.map((s, j) => (
+          <Area
+            key={j}
+            dataKey={`s${j}`}
+            name={s.name}
+            stackId="stack"
+            stroke={colors[j]}
+            strokeWidth={2}
+            fill={colors[j]}
+            fillOpacity={0.28}
+            activeDot={{ r: 5, fill: colors[j], stroke: t.surface, strokeWidth: 2 }}
+            isAnimationActive={false}
+          />
+        ))}
+      </AreaChart>
+    )
+  } else {
+    const horizontal = spec.type === 'hbar'
+    chart = (
+      <BarChart data={rows} margin={margin} layout={horizontal ? 'vertical' : 'horizontal'} barGap={2} barCategoryGap="22%">
+        {grid}
+        {horizontal ? (
+          <>
+            <XAxis type="number" {...valueAxis} />
+            <YAxis type="category" dataKey="label" {...axisCommon} width={96} tickFormatter={(v: string) => truncate(v, 14)} />
+          </>
+        ) : (
+          <>
+            <XAxis dataKey="label" {...axisCommon} />
+            <YAxis {...valueAxis} />
+          </>
+        )}
+        {tooltip}
+        {spec.series.map((s, j) => (
+          <Bar
+            key={j}
+            dataKey={`s${j}`}
+            name={s.name}
+            fill={colors[j]}
+            maxBarSize={24}
+            // 4px rounded data-end, square at the baseline.
+            radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+            isAnimationActive={false}
+          />
+        ))}
+      </BarChart>
+    )
+  }
+
+  const height = spec.type === 'hbar' ? Math.max(160, Math.min(560, rows.length * spec.series.length * 26 + rows.length * 14 + 40)) : HEIGHT
+
+  return (
+    <div className="w-full">
+      {multi && <Legend names={spec.series.map((s) => s.name)} colors={colors} />}
+      <div style={{ height }} className="w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          {chart}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+function TooltipCard({ active, payload, label, spec, colors }: TooltipContentProps<ValueType, NameType> & { spec: ChartSpec; colors: string[] }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="min-w-[140px] rounded-lg border border-black/10 bg-white px-3 py-2 text-xs shadow-lg dark:border-white/10 dark:bg-[#252525]">
+      <div className="mb-1 font-medium">{label}</div>
+      {payload.map((p) => {
+        const j = Number(String(p.dataKey).slice(1))
+        return (
+          <div key={String(p.dataKey)} className="flex items-center gap-2 py-0.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: colors[j] }} />
+            <span className="flex-1 opacity-70">{spec.series[j]?.name}</span>
+            <span className="font-medium tabular-nums">{formatNumber(p.value as number)}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Legend({ names, colors }: { names: string[]; colors: string[] }) {
+  return (
+    <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs opacity-80">
+      {names.map((n, i) => (
+        <span key={i} className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: colors[i] }} />
+          {n}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** Tall segmented bar for "parts of a whole" (instead of a pie). */
+function PartsBar({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
+  const colors = SERIES_COLORS[theme]
+  const parts = partsOf(spec)
+  const total = parts.reduce((s, p) => s + p.value, 0)
+  const [hover, setHover] = useState<number | null>(null)
+  if (!parts.length || total <= 0) return <div className="py-6 text-center text-sm opacity-50">Add positive values to show parts of a whole.</div>
+  const shown = hover !== null ? parts[hover] : null
+  return (
+    <div className="w-full px-1 py-2">
+      <div className="mb-2 flex items-baseline gap-2 text-sm">
+        <span className="opacity-60">{spec.series[0]?.name || 'Total'}</span>
+        <span className="text-lg font-semibold tabular-nums">{formatNumber(total)}</span>
+        {shown && (
+          <span className="ml-auto text-xs opacity-80">
+            {shown.label}: <b className="tabular-nums">{formatNumber(shown.value)}</b> ({((shown.value / total) * 100).toFixed(1)}%)
+          </span>
+        )}
+      </div>
+      <div className="flex h-7 w-full gap-[2px]" role="img" aria-label={parts.map((p) => `${p.label} ${formatNumber(p.value)}`).join(', ')}>
+        {parts.map((p, i) => (
+          <div
+            key={i}
+            tabIndex={0}
+            aria-label={`${p.label}: ${formatNumber(p.value)} (${((p.value / total) * 100).toFixed(1)}%)`}
+            title={`${p.label}: ${formatNumber(p.value)} (${((p.value / total) * 100).toFixed(1)}%)`}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+            onFocus={() => setHover(i)}
+            onBlur={() => setHover(null)}
+            className="h-full rounded-[4px] outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-blue-400"
+            style={{ width: `${(p.value / total) * 100}%`, background: colors[i], opacity: hover !== null && hover !== i ? 0.55 : 1 }}
+          />
+        ))}
+      </div>
+      <div className="mt-2.5">
+        <Legend names={parts.map((p) => p.label)} colors={colors} />
+      </div>
+    </div>
+  )
+}
+
+/** Series name drawn at the last point of a line (direct label). */
+function endLabel(name: string, count: number, color: string) {
+  return function EndLabel(props: { x?: number; y?: number; index?: number }) {
+    if (props.index !== count - 1) return <g />
+    return (
+      <text x={(props.x ?? 0) + 10} y={(props.y ?? 0) + 4} fill={color} fontSize={12}>
+        {truncate(name, 12)}
+      </text>
+    )
+  }
+}
+
+function compact(v: number) {
+  return Math.abs(v) >= 1000 ? Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(v) : String(v)
+}
+
+function truncate(s: string, n: number) {
+  return s.length > n ? s.slice(0, n - 1) + '…' : s
+}
