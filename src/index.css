@@ -233,3 +233,58 @@ body {
 .ProseMirror-gapcursor:after {
   border-top-color: currentColor;
 }
+
+/* ---------- Images ---------- */
+.notion-editor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+.notion-editor [data-resize-container] {
+  margin: 8px 0;
+  justify-content: flex-start;
+}
+.notion-editor [data-resize-wrapper] {
+  max-width: 100%;
+}
+.notion-editor .ProseMirror-selectednode img,
+.notion-editor [data-resize-container].is-selected img {
+  outline: 3px solid rgba(35, 131, 226, 0.55);
+}
+/* Resize handles: thin bars on the sides, small squares on the bottom corners. Shown on hover. */
+.notion-editor [data-resize-handle] {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+.notion-editor [data-resize-wrapper]:hover [data-resize-handle],
+.notion-editor [data-resize-state='true'] [data-resize-handle] {
+  opacity: 1;
+}
+.notion-editor [data-resize-handle='left'],
+.notion-editor [data-resize-handle='right'] {
+  width: 6px;
+  height: 48px;
+  max-height: 50%;
+  margin: auto 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  cursor: ew-resize;
+}
+.notion-editor [data-resize-handle='bottom-left'],
+.notion-editor [data-resize-handle='bottom-right'] {
+  width: 12px;
+  height: 12px;
+  margin: 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+.notion-editor [data-resize-handle='bottom-left'] {
+  cursor: nesw-resize;
+}
+.notion-editor [data-resize-handle='bottom-right'] {
+  cursor: nwse-resize;
+}

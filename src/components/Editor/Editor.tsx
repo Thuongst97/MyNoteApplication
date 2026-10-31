@@ -1,10 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor, type JSONContent, type Editor as TiptapEditor } from '@tiptap/react'
+import type { EditorView } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import Image from '@tiptap/extension-image'
+import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
+import { ImageSelection } from './ImageSelection'
 
 interface EditorProps {
   initialContent: JSONContent | null
@@ -22,6 +26,8 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
   onChangeRef.current = onChange
   onExitTopRef.current = onExitTop
 
+  const editorRef = useRef<TiptapEditor | null>(null)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -38,6 +44,18 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        resize: {
+          enabled: true,
+          directions: ['left', 'right', 'bottom-left', 'bottom-right'],
+          minWidth: 60,
+          minHeight: 40,
+          alwaysPreserveAspectRatio: true,
+        },
+      }),
+      ImageSelection,
       SlashCommand,
     ],
     content: initialContent ?? '',
@@ -45,6 +63,23 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       attributes: {
         class: 'notion-editor focus:outline-none',
         spellcheck: 'true',
+      },
+      // Pasted image files (screenshots, copied images) are stored and inserted as image blocks.
+      handlePaste: (_view, event) => {
+        const files = imageFilesFrom(event.clipboardData)
+        if (files.length === 0 || !editorRef.current) return false
+        event.preventDefault()
+        void insertImageFiles(editorRef.current, files)
+        return true
+      },
+      // Image files dragged in from the desktop are inserted where they are dropped.
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved) return false
+        const files = imageFilesFrom(event.dataTransfer)
+        if (files.length === 0 || !editorRef.current) return false
+        event.preventDefault()
+        void insertImageFiles(editorRef.current, files, dropPosition(view, event))
+        return true
       },
       handleKeyDown: (view, event) => {
         const { from, empty } = view.state.selection
@@ -59,6 +94,8 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
     },
     onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
   })
+
+  editorRef.current = editor
 
   useEffect(() => {
     if (editor) onReady?.(editor)
@@ -79,4 +116,20 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       <EditorContent editor={editor} />
     </div>
   )
+}
+
+/**
+ * Where a dropped image goes: between top-level blocks (before the block under
+ * the pointer if over its upper half, otherwise after it), never inside a line of text.
+ */
+function dropPosition(view: EditorView, event: DragEvent): number | undefined {
+  const hit = view.posAtCoords({ left: event.clientX, top: event.clientY })
+  if (!hit) return undefined
+  const $pos = view.state.doc.resolve(hit.pos)
+  if ($pos.depth === 0) return hit.pos
+  const before = $pos.before(1)
+  const dom = view.nodeDOM(before) as HTMLElement | null
+  const rect = dom?.getBoundingClientRect?.()
+  if (rect && event.clientY < rect.top + rect.height / 2) return before
+  return $pos.after(1)
 }

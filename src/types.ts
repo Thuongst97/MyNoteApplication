@@ -40,6 +40,8 @@ export interface ElectronAPI {
   deletePage: (id: string) => Promise<string[]>
   /** Full-text search over titles and page content. */
   searchPages: (query: string) => Promise<SearchResult[]>
+  /** Stores an image and returns the URL to put in the document. */
+  saveAsset: (data: Uint8Array, mime: string) => Promise<string>
   window: {
     minimize: () => void
     toggleMaximize: () => void

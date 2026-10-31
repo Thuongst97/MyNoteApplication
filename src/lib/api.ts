@@ -69,6 +69,12 @@ function createBrowserApi(): ElectronAPI {
       }
       return tick(out)
     },
+    // In a plain browser, images are embedded as data URLs.
+    saveAsset: async (data, mime) => {
+      let bin = ''
+      for (let i = 0; i < data.length; i += 0x8000) bin += String.fromCharCode(...data.subarray(i, i + 0x8000))
+      return `data:${mime};base64,${btoa(bin)}`
+    },
     window: {
       minimize: () => {},
       toggleMaximize: () => {},

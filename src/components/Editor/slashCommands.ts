@@ -1,10 +1,12 @@
 import type { Editor, Range } from '@tiptap/react'
+import { pickAndInsertImages } from '@/lib/images'
 import {
   CheckSquare,
   Code2,
   Heading1,
   Heading2,
   Heading3,
+  ImageIcon,
   List,
   ListOrdered,
   Minus,
@@ -85,6 +87,16 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: Code2,
     keywords: ['codeblock', 'snippet', 'pre', 'code block'],
     run: (e, r) => e.chain().focus().deleteRange(r).toggleCodeBlock().run(),
+  },
+  {
+    title: 'Image',
+    description: 'Upload an image from your computer.',
+    icon: ImageIcon,
+    keywords: ['picture', 'photo', 'img', 'upload', 'screenshot'],
+    run: (e, r) => {
+      e.chain().focus().deleteRange(r).run()
+      pickAndInsertImages(e)
+    },
   },
   {
     title: 'Divider',

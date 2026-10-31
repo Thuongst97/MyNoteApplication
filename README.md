@@ -11,11 +11,13 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Slash menu](docs/screenshots/02-slash-menu-dark.png) | ![Icon picker](docs/screenshots/05-icon-picker-light.png) |
 | ![Search](docs/screenshots/04-search-dark.png) | ![Collapsed sidebar](docs/screenshots/06-sidebar-collapsed-light.png) |
 | ![Page menu](docs/screenshots/03-page-menu-dark.png) | ![Getting started](docs/screenshots/07-getting-started-dark.png) |
+| | ![Pasted images](docs/screenshots/08-pasted-image-light.png) |
 
 ## Features
 
 - **Nested page tree** (`parentId` hierarchy) with fold/unfold animation, hover `+` to add sub-pages, `•••` menu (Add sub-page / Rename / Delete), double-click or `F2` to rename, resizable & collapsible sidebar.
 - **Block editor (TipTap)** with a **`/` slash menu**: Text, Heading 1–3, To-do list, Bulleted list, Numbered list, Quote, Code, Divider. Markdown shortcuts (`#`, `-`, `1.`, `[]`, `>`, ```` ``` ````) work too.
+- **Images**: paste (`Ctrl/⌘+V`, e.g. a screenshot), drag files in from your desktop, or use `/image` to pick files. Drag the side handles to resize; click an image and press Delete to remove it. PNG, JPEG, GIF, WebP, AVIF, BMP and SVG up to 25 MB.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.
 - **Dark / light theme** using the Notion palette (`#191919`/`#202020`/`#D4D4D4` and `#FFFFFF`/`#F7F7F5`/`#37352F`).
@@ -67,6 +69,7 @@ electron/
   main.ts          # BrowserWindow (frameless), IPC handlers, flush-on-close
   preload.ts       # contextBridge → window.electronAPI
   storage.ts       # JSON-file page storage (atomic writes, per-page write queue)
+  assets.ts        # Image files + notion-asset:// protocol + unused-image cleanup
 src/
   types.ts         # Page / PageMeta / ElectronAPI contracts shared by both processes
   stores/useAppStore.ts   # Zustand: pages, activePageId, expanded nodes, sidebar, theme, search
@@ -87,6 +90,10 @@ Each page is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
 - Windows: `%APPDATA%\notion-clone`
 - macOS: `~/Library/Application Support/notion-clone`
 - Linux: `~/.config/notion-clone`
+
+Images are stored as separate files in `<userData>/assets/` and referenced from pages as
+`notion-asset://local/<file>`, so page files stay small. The app only serves files from that folder with
+names it generated. At startup, images that no page uses anymore are deleted.
 
 Set `NOTION_CLONE_DATA_DIR=/some/folder` to use a different folder (handy for testing).
 

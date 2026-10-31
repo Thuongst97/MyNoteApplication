@@ -89,6 +89,12 @@ export class PageStorage {
     await fs.rename(tmp, target)
   }
 
+  /** Paths of every page file (used for asset garbage collection). */
+  async pageFiles(): Promise<string[]> {
+    await this.ensureLoaded()
+    return [...this.index.keys()].map((id) => this.file(id))
+  }
+
   async getTree(): Promise<PageMeta[]> {
     await this.ensureLoaded()
     return [...this.index.values()].sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)

@@ -9,6 +9,7 @@ const api: ElectronAPI = {
   savePage: (update: PageUpdate) => ipcRenderer.invoke('save-page', update),
   deletePage: (id: string) => ipcRenderer.invoke('delete-page', id),
   searchPages: (query: string) => ipcRenderer.invoke('search-pages', query),
+  saveAsset: (data: Uint8Array, mime: string) => ipcRenderer.invoke('save-asset', data, mime),
 
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
