@@ -41,6 +41,11 @@ export const MermaidNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-code') ?? el.textContent ?? '',
         renderHTML: (attrs) => ({ 'data-code': attrs.code }),
       },
+      align: {
+        default: 'center',
+        parseHTML: (el) => el.getAttribute('data-align') || 'center',
+        renderHTML: (attrs) => ({ 'data-align': attrs.align }),
+      },
     }
   },
 

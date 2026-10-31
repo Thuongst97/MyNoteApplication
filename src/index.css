@@ -303,3 +303,34 @@ body {
   margin: 0;
   font-size: 12px;
 }
+
+/* ---------- Block moving & alignment ---------- */
+.notion-editor [data-resize-container]:has(img[data-align='center']) {
+  justify-content: center;
+}
+.notion-editor [data-resize-container]:has(img[data-align='right']) {
+  justify-content: flex-end;
+}
+.notion-editor > img[data-align='center'] {
+  margin-left: auto;
+  margin-right: auto;
+}
+.notion-editor > img[data-align='right'] {
+  margin-left: auto;
+}
+/* Highlight a block selected via its handle (paragraphs, headings, lists, list items). */
+.notion-editor .ProseMirror-selectednode:not([data-resize-container]):not([data-type='mermaid']):not(img):not(hr) {
+  background: rgba(35, 131, 226, 0.12);
+  border-radius: 4px;
+  outline: none;
+}
+.prosemirror-dropcursor-block,
+.ProseMirror-dropcursor {
+  border-radius: 2px;
+}
+/* Handle drags draw their own drop line. */
+body.block-dragging .ProseMirror-dropcursor,
+body.block-dragging .prosemirror-dropcursor-block,
+body.block-dragging .prosemirror-dropcursor-inline {
+  display: none !important;
+}

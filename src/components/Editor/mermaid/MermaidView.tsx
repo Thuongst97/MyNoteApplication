@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { AlertTriangle, Check, Code2, Loader2, Trash2, Workflow, X } from 'lucide-react'
+import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Trash2, Workflow, X } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn, isMacLike } from '@/lib/utils'
 import { MERMAID_TEMPLATE, renderMermaid, type MermaidResult } from './renderMermaid'
@@ -164,9 +164,20 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
         </div>
       ) : (
         <div contentEditable={false} onDoubleClick={startEdit} className="relative px-2 py-3">
-          <DiagramOutput result={shown} onFix={startEdit} />
+          <DiagramOutput result={shown} onFix={startEdit} align={node.attrs.align} />
           {editor.isEditable && (
             <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/mermaid:opacity-100">
+              {(
+                [
+                  ['left', AlignLeft],
+                  ['center', AlignCenter],
+                  ['right', AlignRight],
+                ] as const
+              ).map(([value, Icon]) => (
+                <ToolbarButton key={value} label={`Align ${value}`} active={node.attrs.align === value} onClick={() => updateAttributes({ align: value })}>
+                  <Icon size={14} />
+                </ToolbarButton>
+              ))}
               <ToolbarButton label="Edit diagram" onClick={startEdit}>
                 <Code2 size={14} /> Edit
               </ToolbarButton>
@@ -181,7 +192,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
   )
 }
 
-function DiagramOutput({ result, onFix }: { result: MermaidResult | null; onFix?: () => void }) {
+function DiagramOutput({ result, onFix, align = 'center' }: { result: MermaidResult | null; onFix?: () => void; align?: string }) {
   if (!result)
     return (
       <div className="flex items-center gap-2 py-6 text-sm opacity-50">
@@ -204,21 +215,28 @@ function DiagramOutput({ result, onFix }: { result: MermaidResult | null; onFix?
     )
   return (
     <div
-      className="mermaid-svg flex justify-center overflow-x-auto"
+      className={cn(
+        'mermaid-svg flex overflow-x-auto',
+        align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center',
+      )}
       // Rendered by mermaid with securityLevel 'strict' (sanitised SVG).
       dangerouslySetInnerHTML={{ __html: result.svg ?? '' }}
     />
   )
 }
 
-function ToolbarButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
+function ToolbarButton({ children, label, onClick, active }: { children: React.ReactNode; label: string; onClick: () => void; active?: boolean }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]"
+      aria-pressed={active}
+      className={cn(
+        'flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]',
+        active && 'text-blue-600 dark:text-blue-400',
+      )}
     >
       {children}
     </button>

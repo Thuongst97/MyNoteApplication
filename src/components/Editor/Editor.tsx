@@ -11,6 +11,8 @@ import { SlashCommand } from './SlashCommand'
 import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
 import { MERMAID_START } from './mermaid/renderMermaid'
+import { blockDrag, computeBlockDrop, MoveBlockShortcuts, performBlockDrop } from './blockMove'
+import { BlockHandle } from './BlockHandle'
 
 interface EditorProps {
   initialContent: JSONContent | null
@@ -34,6 +36,8 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Blue line showing where a dragged block will land.
+        dropcursor: { color: '#2383e2', width: 3 },
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
       }),
       Placeholder.configure({
@@ -46,7 +50,18 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Image.configure({
+      Image.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            align: {
+              default: 'left',
+              parseHTML: (el) => el.getAttribute('data-align') || 'left',
+              renderHTML: (attrs) => ({ 'data-align': attrs.align }),
+            },
+          }
+        },
+      }).configure({
         inline: false,
         allowBase64: true,
         resize: {
@@ -59,6 +74,7 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       }),
       ImageSelection,
       MermaidNode,
+      MoveBlockShortcuts,
       SlashCommand,
     ],
     content: initialContent ?? '',
@@ -90,6 +106,15 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       },
       // Image files dragged in from the desktop are inserted where they are dropped.
       handleDrop: (view, event, _slice, moved) => {
+        // Blocks dragged by their handle: place by top/bottom half of the block under the pointer.
+        if (blockDrag.current) {
+          const source = blockDrag.current
+          blockDrag.current = null
+          const drop = computeBlockDrop(view, source, event.clientX, event.clientY)
+          if (drop) performBlockDrop(view, source, drop)
+          event.preventDefault()
+          return true
+        }
         if (moved) return false
         const files = imageFilesFrom(event.dataTransfer)
         if (files.length === 0 || !editorRef.current) return false
@@ -118,18 +143,24 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor])
 
+  const containerRef = useRef<HTMLDivElement>(null)
+
   return (
-    <div
-      className="min-h-[50vh] cursor-text pb-[30vh]"
-      onMouseDown={(e) => {
-        // Clicking the empty area below the document focuses the end of it.
-        if (e.target === e.currentTarget && editor) {
-          e.preventDefault()
-          editor.commands.focus('end')
-        }
-      }}
-    >
-      <EditorContent editor={editor} />
+    // Extends into the left gutter so the block handle stays reachable.
+    <div ref={containerRef} className="relative -ml-16 pl-16">
+      <div
+        className="min-h-[50vh] cursor-text pb-[30vh]"
+        onMouseDown={(e) => {
+          // Clicking the empty area below the document focuses the end of it.
+          if (e.target === e.currentTarget && editor) {
+            e.preventDefault()
+            editor.commands.focus('end')
+          }
+        }}
+      >
+        <EditorContent editor={editor} />
+      </div>
+      {editor && editor.isEditable && <BlockHandle editor={editor} containerRef={containerRef} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/react'
-import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state'
+import { NodeSelection, Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 /**
@@ -23,6 +23,17 @@ export const ImageSelection = Extension.create({
             if ((event.target as HTMLElement | null)?.closest('[data-resize-handle]')) return false
             view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, nodePos)))
             view.focus()
+            return true
+          },
+          // Typing while an image/diagram/divider is selected starts a new line after it
+          // instead of replacing the block (like Notion).
+          handleTextInput(view, _from, _to, text) {
+            const sel = view.state.selection
+            if (!(sel instanceof NodeSelection) || !sel.node.isAtom || !sel.node.isBlock) return false
+            const { schema } = view.state
+            const tr = view.state.tr.insert(sel.to, schema.nodes.paragraph.create(null, schema.text(text)))
+            tr.setSelection(TextSelection.create(tr.doc, sel.to + 1 + text.length)).scrollIntoView()
+            view.dispatch(tr)
             return true
           },
           decorations(state) {
