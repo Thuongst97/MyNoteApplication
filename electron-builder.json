@@ -8,10 +8,17 @@
   },
   "files": [
     "dist/**/*",
-    "dist-electron/**/*"
+    "dist-electron/**/*",
+    "!**/*.test.*",
+    "!**/*.spec.*",
+    "!tests/**",
+    "!coverage/**",
+    "!vitest.config.*"
   ],
   "win": {
-    "target": ["nsis"],
+    "target": [
+      "nsis"
+    ],
     "icon": "resources/icon.ico"
   },
   "nsis": {
@@ -19,12 +26,17 @@
     "allowToChangeInstallationDirectory": true
   },
   "mac": {
-    "target": ["dmg", "zip"],
+    "target": [
+      "dmg",
+      "zip"
+    ],
     "icon": "resources/icon.icns",
     "category": "public.app-category.productivity"
   },
   "linux": {
-    "target": ["AppImage"],
+    "target": [
+      "AppImage"
+    ],
     "category": "Office"
   }
 }

@@ -1,4 +1,5 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from '@tiptap/react'
+import { insertBlockAtCursor } from '../mermaid/MermaidNode'
 import { ChartView } from './ChartView'
 import { DEFAULT_CHART } from './chartModel'
 
@@ -58,8 +59,10 @@ export const ChartNode = Node.create({
     return {
       insertChart:
         () =>
-        ({ commands }) =>
-          commands.insertContent({ type: this.name, attrs: { spec: DEFAULT_CHART, isNew: true } }),
+        ({ tr, dispatch, state }) => {
+          if (dispatch) insertBlockAtCursor(tr, state, this.type.create({ spec: DEFAULT_CHART, isNew: true }))
+          return true
+        },
     }
   },
 })

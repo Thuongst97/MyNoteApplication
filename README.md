@@ -72,6 +72,46 @@ npm run dev
 
 `npm run dev` starts Vite and launches Electron with hot reload. (Opening the Vite URL in a normal browser also works — the app falls back to `localStorage` there, which is handy for UI work.)
 
+## Tests
+
+```bash
+npm test
+```
+
+Unit tests use [Vitest](https://vitest.dev) with jsdom and React Testing Library. They live in `tests/`:
+
+| Folder | What it covers |
+| --- | --- |
+| `tests/lib` | Reminder rules, links, search text, dates, auto-save engine, image helpers, the browser fallback API |
+| `tests/electron` | Main-process storage in a temp folder: pages (atomic writes, cascade delete, link index, path checks), image assets and cleanup, tasks/settings |
+| `tests/editor` | A real TipTap editor with the app's nodes: moving/duplicating/dropping blocks, block ids & references, Mermaid/chart/drawing/link nodes, slash commands, chart data parsing, text formatting |
+| `tests/stores` | Page/navigation store and task store |
+| `tests/components` | UI behavior: Eisenhower Matrix, task dialog, menus, sidebar, search, breadcrumbs, backlinks, graph, plus an integration test of the whole app (editor, shortcuts, page header, Mermaid, charts, drawings, page links) |
+
+Other commands:
+
+```bash
+npm run test:watch
+```
+
+```bash
+npm run test:coverage
+```
+
+```bash
+npm run typecheck:test
+```
+
+`test:watch` re-runs tests on change, `test:coverage` writes an HTML report to `coverage/`, and `typecheck:test` type-checks the tests.
+
+Tests are **not part of release builds**:
+- `npm run build` only compiles `src/` and `electron/`.
+- Vite only bundles code the app imports.
+- `electron-builder` only packages `dist/` and `dist-electron/`, and explicitly excludes test files.
+- The test tools are all dev dependencies, so they're never shipped.
+
+`npm run dist`, `dist:win` and `dist:mac`, and the GitHub Actions build, run the tests first and stop if any fail.
+
 ## Building installers
 
 ```bash

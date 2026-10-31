@@ -11,13 +11,21 @@
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac"
+    "dist": "npm test && npm run build && electron-builder",
+    "dist:win": "npm test && npm run build && electron-builder --win",
+    "dist:mac": "npm test && npm run build && electron-builder --mac",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
   },
   "devDependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
     "@tailwindcss/typography": "^0.5.20",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@tiptap/extension-image": "^3.32.2",
     "@tiptap/extension-placeholder": "^3.32.2",
     "@tiptap/extension-task-item": "^3.32.2",
@@ -32,10 +40,12 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/coverage-v8": "^5.0.5",
     "autoprefixer": "^10.6.2",
     "d3-force": "^3.0.0",
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
+    "jsdom": "^30.1.3",
     "lucide-react": "^1.66.0",
     "mermaid": "^11.17.2",
     "postcss": "^8.5.32",
@@ -47,6 +57,7 @@
     "vite": "^8.3.5",
     "vite-plugin-electron": "^1.2.0",
     "vite-plugin-electron-renderer": "^1.0.0",
+    "vitest": "^5.0.5",
     "zustand": "^5.0.16"
   }
 }

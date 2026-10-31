@@ -10,3 +10,4 @@ release
 .vscode/*
 !.vscode/extensions.json
 .idea
+coverage

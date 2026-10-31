@@ -1,4 +1,5 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from '@tiptap/react'
+import { insertBlockAtCursor } from '../mermaid/MermaidNode'
 import { DrawingView } from './DrawingView'
 import { EMPTY_DRAWING } from './drawingModel'
 
@@ -57,8 +58,10 @@ export const DrawingNode = Node.create({
     return {
       insertDrawing:
         () =>
-        ({ commands }) =>
-          commands.insertContent({ type: this.name, attrs: { data: EMPTY_DRAWING, isNew: true } }),
+        ({ tr, dispatch, state }) => {
+          if (dispatch) insertBlockAtCursor(tr, state, this.type.create({ data: EMPTY_DRAWING, isNew: true }))
+          return true
+        },
     }
   },
 })

@@ -31,7 +31,11 @@ export const BlockFlash = Extension.create({
           if (pos < 0) return false
           if (dispatch) {
             dispatch(state.tr.setMeta(key, blockId))
-            requestAnimationFrame(() => (view.nodeDOM(pos) as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+            requestAnimationFrame(() => {
+              // The editor may be gone by the next frame (e.g. the user switched pages).
+              if (view.isDestroyed) return
+              ;(view.nodeDOM(pos) as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+            })
             setTimeout(() => {
               if (!view.isDestroyed && key.getState(view.state) === blockId) view.dispatch(view.state.tr.setMeta(key, null))
             }, 2400)

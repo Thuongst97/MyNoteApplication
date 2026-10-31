@@ -51,6 +51,27 @@ export const BlockIds = Extension.create({
       return node.isText ? node : node.type.create(attrs, Fragment.from(content), node.marks)
     }
     return [
+      // Splitting a block in the middle (Enter) copies all attributes, so ids can end up
+      // duplicated; the first occurrence keeps the id, later copies lose it.
+      new Plugin({
+        key: new PluginKey('blockIdsUnique'),
+        appendTransaction: (transactions, _old, state) => {
+          if (!transactions.some((tr) => tr.docChanged)) return null
+          const seen = new Set<string>()
+          const dupes: number[] = []
+          state.doc.descendants((node, pos) => {
+            const id = node.attrs.blockId as string | null | undefined
+            if (!id) return true
+            if (seen.has(id)) dupes.push(pos)
+            else seen.add(id)
+            return true
+          })
+          if (!dupes.length) return null
+          const tr = state.tr
+          for (const pos of dupes) tr.setNodeAttribute(pos, 'blockId', null)
+          return tr.setMeta('addToHistory', false)
+        },
+      }),
       new Plugin({
         key: new PluginKey('blockIdsPaste'),
         props: {
