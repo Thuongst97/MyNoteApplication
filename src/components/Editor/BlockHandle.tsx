@@ -14,7 +14,7 @@ interface HandleState extends BlockTarget {
   box: { top: number; bottom: number; textLeft: number }
 }
 
-const ALIGNABLE = new Set(['image', 'mermaid', 'chart'])
+const ALIGNABLE = new Set(['image', 'mermaid', 'chart', 'drawing'])
 
 /**
  * Notion-style block handle: hover a block to show "+" and a "⋮⋮" grip.

@@ -1,10 +1,12 @@
 import type { JSONContent } from '@tiptap/react'
+import { drawingText } from '@/components/Editor/drawing/drawingModel'
 
 /** Flattens a TipTap JSON document into plain text (blocks separated by newlines). */
 export function docToText(node: JSONContent | null | undefined): string {
   if (!node) return ''
   if (node.type === 'text') return node.text ?? ''
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
+  if (node.type === 'drawing') return drawingText(node.attrs?.data)
   if (node.type === 'chart') {
     const spec = node.attrs?.spec as { title?: string; labels?: string[]; series?: Array<{ name?: string }> } | undefined
     return [spec?.title, ...(spec?.labels ?? []), ...(spec?.series ?? []).map((s) => s.name)].filter(Boolean).join(' ')

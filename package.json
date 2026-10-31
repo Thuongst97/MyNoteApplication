@@ -16,6 +16,7 @@
     "dist:mac": "npm run build && electron-builder --mac"
   },
   "devDependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
     "@tailwindcss/typography": "^0.5.20",
     "@tiptap/extension-image": "^3.32.2",
     "@tiptap/extension-placeholder": "^3.32.2",

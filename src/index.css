@@ -383,3 +383,10 @@ body.block-dragging .prosemirror-dropcursor-inline {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+
+/* ---------- Drawings ---------- */
+.notion-editor .drawing-svg svg {
+  max-width: 100%;
+  max-height: 560px;
+  height: auto;
+}

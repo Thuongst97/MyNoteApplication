@@ -6,6 +6,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Shapes,
   BarChart3,
   Workflow,
   ImageIcon,
@@ -113,6 +114,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: BarChart3,
     keywords: ['chart', 'graph', 'bar', 'line', 'area', 'pie', 'data', 'plot'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertChart().run(),
+  },
+  {
+    title: 'Drawing',
+    description: 'Shapes, arrows, text boxes and freehand — like a slide.',
+    icon: Shapes,
+    keywords: ['draw', 'drawing', 'sketch', 'whiteboard', 'shapes', 'canvas', 'powerpoint', 'slide', 'diagram'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertDrawing().run(),
   },
   {
     title: 'Divider',

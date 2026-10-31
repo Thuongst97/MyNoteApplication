@@ -14,6 +14,8 @@ export function useGlobalShortcuts() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
       if (!mod || e.altKey) return
+      // The full-window drawing editor has its own shortcuts.
+      if (document.body.classList.contains('drawing-open')) return
       const s = useAppStore.getState()
       const key = e.key.toLowerCase()
       if (key === 'k' && !e.shiftKey) {
