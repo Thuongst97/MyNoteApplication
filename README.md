@@ -3,6 +3,15 @@
 Block-based note-taking app built with **Electron + React 18 + TypeScript + Tailwind CSS + TipTap + Zustand**.
 Runs on Windows and macOS (and Linux), stores everything locally, and uses a frameless window.
 
+## Screenshots
+
+| Dark | Light |
+| --- | --- |
+| ![Page in dark mode](docs/screenshots/01-page-dark.png) | ![Page in light mode](docs/screenshots/01-page-light.png) |
+| ![Slash menu](docs/screenshots/02-slash-menu-dark.png) | ![Icon picker](docs/screenshots/05-icon-picker-light.png) |
+| ![Search](docs/screenshots/04-search-dark.png) | ![Collapsed sidebar](docs/screenshots/06-sidebar-collapsed-light.png) |
+| ![Page menu](docs/screenshots/03-page-menu-dark.png) | ![Getting started](docs/screenshots/07-getting-started-dark.png) |
+
 ## Features
 
 - **Nested page tree** (`parentId` hierarchy) with fold/unfold animation, hover `+` to add sub-pages, `•••` menu (Add sub-page / Rename / Delete), double-click or `F2` to rename, resizable & collapsible sidebar.

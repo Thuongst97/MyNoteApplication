@@ -100,7 +100,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
             <button
               type="button"
               onClick={() => setIconOpen((o) => !o)}
-              className="rounded-lg p-1 text-[64px] leading-none transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+              className="rounded-lg p-1 text-[64px] leading-none outline-none transition-colors hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-blue-400 dark:hover:bg-white/10"
               aria-label="Change icon"
             >
               {page.icon}

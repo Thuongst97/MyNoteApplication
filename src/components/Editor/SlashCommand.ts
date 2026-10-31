@@ -18,7 +18,8 @@ export const SlashCommand = Extension.create({
         editor: this.editor,
         pluginKey: SlashCommandPluginKey,
         char: '/',
-        allowSpaces: false,
+        // Allow multi-word queries like "/heading 2" or "/to-do list".
+        allowSpaces: true,
         startOfLine: false,
         placement: 'bottom-start',
         offset: { mainAxis: 6 },
@@ -29,6 +30,8 @@ export const SlashCommand = Extension.create({
           return $from.parent.type.name !== 'codeBlock'
         },
         items: ({ query }) => filterSlashCommands(query),
+        // Once a multi-word query matches nothing, the user is just writing prose: close the menu.
+        shouldShow: ({ query }) => !(/\s/.test(query) && filterSlashCommands(query).length === 0),
         command: ({ editor, range, props }) => props.run(editor, range),
         render: () => {
           let renderer: ReactRenderer<SlashMenuHandle, SlashMenuProps> | null = null
