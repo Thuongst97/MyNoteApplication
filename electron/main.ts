@@ -1,9 +1,11 @@
-import { app, BrowserWindow, ipcMain, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeImage, net, Notification, protocol, shell, Tray } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
 import { ASSET_SCHEME, AssetStorage } from './assets'
-import type { PageUpdate } from '../src/types'
+import type { PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
+import { TaskStore } from './tasks'
+import { notificationText } from '../src/lib/reminders'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -34,9 +36,113 @@ protocol.registerSchemesAsPrivileged([
   { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ])
 
+const APP_ID = 'com.thuong.notionclone'
+const REMINDER_CHECK_MS = 15_000
+
 let win: BrowserWindow | null = null
 let storage: PageStorage
 let assets: AssetStorage
+let tasks: TaskStore
+let tray: Tray | null = null
+let isQuitting = false
+let toldAboutBackground = false
+/** Keep notifications referenced, otherwise their click handlers can be garbage-collected. */
+const liveNotifications = new Set<Notification>()
+
+// Only one instance: a second launch focuses the existing window (important when running in the tray).
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => showWindow())
+}
+if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
+
+/** Windows/Linux keep running in the tray after the window is closed (if enabled). */
+async function shouldHideOnClose() {
+  if (isMac || isQuitting) return false
+  return (await tasks.getSettings()).runInBackground
+}
+
+function showWindow() {
+  if (!app.isReady()) return
+  if (!win || win.isDestroyed()) {
+    createWindow()
+    return
+  }
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+}
+
+function trayIconPath() {
+  return path.join(process.env.VITE_PUBLIC, 'tray.png')
+}
+
+function ensureTray() {
+  if (isMac || tray) return
+  tray = new Tray(nativeImage.createFromPath(trayIconPath()))
+  tray.setToolTip('NotionClone')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open NotionClone', click: () => showWindow() },
+      { label: 'Open Tasks', click: () => openTaskInWindow(null) },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true
+          app.quit()
+        },
+      },
+    ]),
+  )
+  tray.on('click', () => showWindow())
+}
+
+function destroyTray() {
+  tray?.destroy()
+  tray = null
+}
+
+function openTaskInWindow(taskId: string | null) {
+  const send = () => win?.webContents.send('tasks:open', taskId)
+  if (!win || win.isDestroyed()) {
+    createWindow()
+    win!.webContents.once('did-finish-load', () => setTimeout(send, 300))
+  } else {
+    showWindow()
+    send()
+  }
+}
+
+function notify(title: string, body: string, onClick?: () => void) {
+  if (!Notification.isSupported()) return false
+  const n = new Notification({ title, body, icon: trayIconPath(), silent: false })
+  liveNotifications.add(n)
+  const drop = () => liveNotifications.delete(n)
+  n.on('click', () => {
+    drop()
+    onClick?.()
+  })
+  n.on('close', drop)
+  n.on('failed', drop)
+  n.show()
+  return true
+}
+
+async function checkReminders() {
+  try {
+    const now = Date.now()
+    const due = await tasks.takeDueReminders(now, REMINDER_CHECK_MS)
+    for (const item of due) {
+      const { title, body } = notificationText(item, now)
+      notify(title, body, () => openTaskInWindow(item.task.id))
+    }
+    if (due.length) win?.webContents.send('tasks:changed')
+  } catch (err) {
+    console.error('[reminders] check failed:', err)
+  }
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -67,16 +173,37 @@ function createWindow() {
 
   // Ask the renderer to flush any pending debounced saves before closing.
   let flushed = false
+  let hideDecided = false
   win.on('close', (event) => {
     if (flushed || !win || win.webContents.isDestroyed()) return
     event.preventDefault()
     const target = win
+    // First decide whether this close should just hide the window to the tray.
+    if (!hideDecided) {
+      void shouldHideOnClose().then((hide) => {
+        if (target.isDestroyed()) return
+        if (hide) {
+          target.webContents.send('app:flush-request')
+          target.hide()
+          ensureTray()
+          if (!toldAboutBackground) {
+            toldAboutBackground = true
+            notify('NotionClone is still running', 'Task reminders will keep arriving. Quit from the tray icon.')
+          }
+        } else {
+          hideDecided = true
+          target.close()
+        }
+      })
+      return
+    }
     const finish = () => {
       if (flushed) return
       flushed = true
       ipcMain.removeListener('app:flush-done', finish)
       if (!target.isDestroyed()) target.close()
     }
+    hideDecided = false
     ipcMain.once('app:flush-done', finish)
     setTimeout(finish, 3000) // never block closing forever
     target.webContents.send('app:flush-request')
@@ -107,6 +234,24 @@ function registerIpc() {
   ipcMain.handle('save-page', (_e, update: PageUpdate) => storage.save(update))
   ipcMain.handle('delete-page', (_e, id: string) => storage.delete(id))
   ipcMain.handle('search-pages', (_e, query: string) => storage.search(query))
+  // ---- Tasks & reminders ------------------------------------------------
+  ipcMain.handle('tasks:list', () => tasks.list())
+  ipcMain.handle('tasks:save', async (_e, update: TaskUpdate) => {
+    const t = await tasks.save(update)
+    void checkReminders()
+    return t
+  })
+  ipcMain.handle('tasks:remove', (_e, id: string) => tasks.remove(id))
+  ipcMain.handle('tasks:get-settings', () => tasks.getSettings())
+  ipcMain.handle('tasks:set-settings', async (_e, patch: Partial<TaskSettings>) => {
+    const next = await tasks.setSettings(patch)
+    if (!isMac && !next.runInBackground) destroyTray()
+    return next
+  })
+  ipcMain.handle('tasks:test-notification', () =>
+    notify('🔔 Notifications are working', 'You will be reminded about tasks like this.', () => showWindow()),
+  )
+
   ipcMain.handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
 
   // ---- Window controls (custom title bar on Windows/Linux) ---------------
@@ -123,6 +268,10 @@ function registerIpc() {
   ipcMain.handle('window:is-maximized', (e) => fromEvent(e)?.isMaximized() ?? false)
 }
 
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
 app.on('window-all-closed', () => {
   if (!isMac) {
     app.quit()
@@ -130,9 +279,7 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow()
-})
+app.on('activate', () => showWindow())
 
 void app.whenReady().then(() => {
   storage = new PageStorage(app.getPath('userData'))
@@ -156,6 +303,12 @@ void app.whenReady().then(() => {
     .then((files) => assets.collectGarbage(files))
     .catch((err) => console.error('[assets] cleanup failed:', err))
 
+  tasks = new TaskStore(app.getPath('userData'))
+
   registerIpc()
   createWindow()
+
+  // Reminder scheduler: runs in the main process so it works while the window is hidden/closed.
+  void checkReminders()
+  setInterval(() => void checkReminders(), REMINDER_CHECK_MS)
 })

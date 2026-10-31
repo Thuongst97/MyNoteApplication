@@ -1,4 +1,5 @@
-import type { ElectronAPI, Page, PageMeta, SearchResult } from '@/types'
+import type { ElectronAPI, Page, PageMeta, SearchResult, Task, TaskSettings } from '@/types'
+import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, notificationText } from './reminders'
 import { docToText, makeSnippet } from './docText'
 
 declare global {
@@ -69,6 +70,7 @@ function createBrowserApi(): ElectronAPI {
       }
       return tick(out)
     },
+    tasks: createBrowserTasksApi(),
     // In a plain browser, images are embedded as data URLs.
     saveAsset: async (data, mime) => {
       let bin = ''
@@ -83,6 +85,73 @@ function createBrowserApi(): ElectronAPI {
       onMaximizedChange: () => () => {},
     },
     onFlushRequest: () => () => {},
+  }
+}
+
+/** localStorage-backed tasks + a web-Notification reminder loop (browser dev mode only). */
+function createBrowserTasksApi(): ElectronAPI['tasks'] {
+  const TASKS = 'notion-clone:tasks'
+  const SETTINGS = 'notion-clone:task-settings'
+  const read = <T,>(k: string, f: T): T => {
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? 'null') ?? f
+    } catch {
+      return f
+    }
+  }
+  const all = () => read<Task[]>(TASKS, [])
+  const write = (t: Task[]) => localStorage.setItem(TASKS, JSON.stringify(t))
+  const openListeners = new Set<(id: string) => void>()
+  const changeListeners = new Set<() => void>()
+  const notify = (title: string, body: string, onClick?: () => void) => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false
+    const n = new Notification(title, { body })
+    n.onclick = () => {
+      window.focus()
+      onClick?.()
+    }
+    return true
+  }
+  setInterval(() => {
+    const now = Date.now()
+    const { notifications, changed } = collectDueReminders(all(), now, 15_000)
+    if (!changed.length) return
+    write(all().map((t) => changed.find((c) => c.id === t.id) ?? t))
+    notifications.forEach((n) => {
+      const { title, body } = notificationText(n, now)
+      notify(title, body, () => openListeners.forEach((l) => l(n.task.id)))
+    })
+    changeListeners.forEach((l) => l())
+  }, 15_000)
+
+  return {
+    list: async () => all(),
+    save: async (u) => {
+      const list = all()
+      const t = applyTaskUpdate(list.find((x) => x.id === u.id) ?? null, u)
+      write([...list.filter((x) => x.id !== u.id), t])
+      return t
+    },
+    remove: async (id) => write(all().filter((t) => t.id !== id)),
+    getSettings: async () => ({ ...DEFAULT_TASK_SETTINGS, ...read<Partial<TaskSettings>>(SETTINGS, {}) }),
+    setSettings: async (patch) => {
+      const next = { ...DEFAULT_TASK_SETTINGS, ...read<Partial<TaskSettings>>(SETTINGS, {}), ...patch }
+      localStorage.setItem(SETTINGS, JSON.stringify(next))
+      return next
+    },
+    testNotification: async () => {
+      if (typeof Notification === 'undefined') return false
+      if (Notification.permission === 'default') await Notification.requestPermission()
+      return notify('🔔 Notifications are working', 'You will be reminded about tasks like this.')
+    },
+    onOpenTask: (cb) => {
+      openListeners.add(cb)
+      return () => void openListeners.delete(cb)
+    },
+    onChanged: (cb) => {
+      changeListeners.add(cb)
+      return () => void changeListeners.delete(cb)
+    },
   }
 }
 

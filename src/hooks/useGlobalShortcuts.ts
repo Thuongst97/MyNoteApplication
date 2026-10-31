@@ -7,6 +7,7 @@ import { useAppStore } from '@/stores/useAppStore'
  *  - Ctrl/⌘+N        new page
  *  - Ctrl/⌘+\        toggle sidebar
  *  - Ctrl/⌘+Shift+L  toggle dark/light mode
+ *  - Ctrl/⌘+Shift+T  open Tasks (Eisenhower Matrix)
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
@@ -24,6 +25,9 @@ export function useGlobalShortcuts() {
       } else if (e.key === '\\') {
         e.preventDefault()
         s.toggleSidebar()
+      } else if (key === 't' && e.shiftKey) {
+        e.preventDefault()
+        s.openTasks()
       } else if (key === 'l' && e.shiftKey) {
         e.preventDefault()
         s.toggleTheme()

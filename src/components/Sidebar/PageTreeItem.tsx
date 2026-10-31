@@ -13,7 +13,7 @@ interface PageTreeItemProps {
 /** One row of the page tree; renders its children recursively. */
 export function PageTreeItem({ page, depth }: PageTreeItemProps) {
   const pages = useAppStore((s) => s.pages)
-  const isActive = useAppStore((s) => s.activePageId === page.id)
+  const isActive = useAppStore((s) => s.view === 'page' && s.activePageId === page.id)
   const isExpanded = useAppStore((s) => !!s.expanded[page.id])
   const { setActivePage, toggleExpanded, createPage, deletePage, updatePageMeta } = useAppStore.getState()
 

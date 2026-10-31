@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
-import { ChevronsLeft, Moon, Plus, Search, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, ChevronsLeft, Moon, Plus, Search, Sun, SquarePen } from 'lucide-react'
+import { useTaskStore } from '@/stores/useTaskStore'
 import { selectChildren, useAppStore } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
@@ -10,7 +11,14 @@ export function Sidebar() {
   const isOpen = useAppStore((s) => s.isSidebarOpen)
   const width = useAppStore((s) => s.sidebarWidth)
   const theme = useAppStore((s) => s.theme)
-  const { toggleSidebar, createPage, setSearchOpen, toggleTheme, setSidebarWidth } = useAppStore.getState()
+  const view = useAppStore((s) => s.view)
+  const { toggleSidebar, createPage, setSearchOpen, toggleTheme, setSidebarWidth, openTasks } = useAppStore.getState()
+  // Badge: open tasks that are overdue or due before the end of today.
+  const dueCount = useTaskStore((s) => {
+    const end = new Date()
+    end.setHours(23, 59, 59, 999)
+    return s.tasks.filter((t) => !t.completed && t.dueAt !== null && t.dueAt <= end.getTime()).length
+  })
   const roots = selectChildren(pages, null)
   const isMac = platform === 'darwin'
   const asideRef = useRef<HTMLElement>(null)
@@ -75,6 +83,25 @@ export function Sidebar() {
             <Plus size={16} className="opacity-70" />
             <span className="flex-1 text-left">New page</span>
             <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘N' : 'Ctrl+N'}</kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => openTasks()}
+            className={cn(
+              'flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',
+              view === 'tasks' && 'bg-black/[0.06] font-medium text-ink-light dark:bg-white/[0.09] dark:text-white',
+            )}
+          >
+            <CheckSquare size={16} className="opacity-70" />
+            <span className="flex-1 text-left">Tasks</span>
+            {dueCount > 0 && (
+              <span
+                title={`${dueCount} task(s) due today or overdue`}
+                className="min-w-[18px] rounded-full bg-red-500 px-1.5 text-center text-[11px] font-semibold leading-[18px] text-white"
+              >
+                {dueCount}
+              </span>
+            )}
           </button>
         </div>
 

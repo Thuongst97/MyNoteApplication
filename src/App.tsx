@@ -4,6 +4,8 @@ import { Sidebar } from '@/components/Sidebar/Sidebar'
 import { TopBar } from '@/components/TitleBar/TopBar'
 import { PageView } from '@/components/Editor/PageView'
 import { SearchModal } from '@/components/Search/SearchModal'
+import { TaskMatrix } from '@/components/Tasks/TaskMatrix'
+import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
 import { api } from '@/lib/api'
@@ -13,6 +15,7 @@ export default function App() {
   const theme = useAppStore((s) => s.theme)
   const isLoaded = useAppStore((s) => s.isLoaded)
   const activePageId = useAppStore((s) => s.activePageId)
+  const view = useAppStore((s) => s.view)
   const activeExists = useAppStore((s) => s.pages.some((p) => p.id === s.activePageId))
   const { loadPages, createPage } = useAppStore.getState()
 
@@ -20,6 +23,9 @@ export default function App() {
 
   useEffect(() => {
     void loadPages()
+    void useTaskStore.getState().load()
+    // Clicking a reminder notification opens the task in the matrix.
+    return api.tasks.onOpenTask((id) => useAppStore.getState().openTasks(id))
   }, [loadPages])
 
   // Apply theme class to <html>.
@@ -50,6 +56,8 @@ export default function App() {
             <div className="flex h-full items-center justify-center opacity-50">
               <Loader2 className="animate-spin" />
             </div>
+          ) : view === 'tasks' ? (
+            <TaskMatrix />
           ) : activePageId && activeExists ? (
             <PageView key={activePageId} pageId={activePageId} />
           ) : (

@@ -11,13 +11,19 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Slash menu](docs/screenshots/02-slash-menu-dark.png) | ![Icon picker](docs/screenshots/05-icon-picker-light.png) |
 | ![Search](docs/screenshots/04-search-dark.png) | ![Collapsed sidebar](docs/screenshots/06-sidebar-collapsed-light.png) |
 | ![Page menu](docs/screenshots/03-page-menu-dark.png) | ![Getting started](docs/screenshots/07-getting-started-dark.png) |
-| | ![Pasted images](docs/screenshots/08-pasted-image-light.png) |
+| ![Mermaid editing](docs/screenshots/09-mermaid-editing-dark.png) | ![Pasted images](docs/screenshots/08-pasted-image-light.png) |
+| ![Mermaid diagrams](docs/screenshots/10-mermaid-dark.png) | ![Mermaid diagrams light](docs/screenshots/11-mermaid-light.png) |
+| ![Tasks matrix](docs/screenshots/12-tasks-matrix-dark.png) | ![Tasks matrix light](docs/screenshots/13-tasks-matrix-light.png) |
+| ![Task dialog](docs/screenshots/14-task-dialog-light.png) | ![Reminder settings](docs/screenshots/15-reminder-settings-light.png) |
 
 ## Features
 
 - **Nested page tree** (`parentId` hierarchy) with fold/unfold animation, hover `+` to add sub-pages, `•••` menu (Add sub-page / Rename / Delete), double-click or `F2` to rename, resizable & collapsible sidebar.
 - **Block editor (TipTap)** with a **`/` slash menu**: Text, Heading 1–3, To-do list, Bulleted list, Numbered list, Quote, Code, Divider. Markdown shortcuts (`#`, `-`, `1.`, `[]`, `>`, ```` ``` ````) work too.
 - **Images**: paste (`Ctrl/⌘+V`, e.g. a screenshot), drag files in from your desktop, or use `/image` to pick files. Drag the side handles to resize; click an image and press Delete to remove it. PNG, JPEG, GIF, WebP, AVIF, BMP and SVG up to 25 MB.
+- **Mermaid diagrams**: `/mermaid` adds a diagram block → paste or type the code (live preview) → **Save** (`Ctrl/⌘+Enter`) renders it in the note. Double-click or **Edit** to change it. Pasting a ```` ```mermaid ```` fenced block creates a diagram directly. Diagrams follow the dark/light theme; invalid code shows the parse error.
+- **Tasks – Eisenhower Matrix** (sidebar → **Tasks**, or `Ctrl/⌘+Shift+T`): four quadrants: *Do first* (important & urgent), *Schedule* (important), *Delegate* (urgent) and *Eliminate* (neither). Add tasks per quadrant, drag them between quadrants, tick them off, show or hide completed ones. The sidebar badge counts tasks due today or overdue.
+- **Due dates & reminders**: click a task to set a due date (with *Today 17:00 / Tomorrow 9:00 / Next week* shortcuts) and reminders: at the due time, 5 min, 15 min, 30 min, 1 h, 3 h, 1 day or 1 week before. **Reminders → Default reminders** sets which ones new tasks get. Reminders are native OS notifications, and clicking one opens the task.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.
 - **Dark / light theme** using the Notion palette (`#191919`/`#202020`/`#D4D4D4` and `#FFFFFF`/`#F7F7F5`/`#37352F`).
@@ -32,6 +38,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | `Ctrl/⌘ + N` | New page |
 | `Ctrl/⌘ + \` | Toggle sidebar |
 | `Ctrl/⌘ + Shift + L` | Toggle dark/light |
+| `Ctrl/⌘ + Shift + T` | Open Tasks (Eisenhower Matrix) |
 | `/` | Block menu (in editor) |
 | `Enter` / `↓` in title | Jump into the page body |
 
@@ -70,16 +77,21 @@ electron/
   preload.ts       # contextBridge → window.electronAPI
   storage.ts       # JSON-file page storage (atomic writes, per-page write queue)
   assets.ts        # Image files + notion-asset:// protocol + unused-image cleanup
+  tasks.ts         # Task + settings storage and the reminder check
 src/
   types.ts         # Page / PageMeta / ElectronAPI contracts shared by both processes
   stores/useAppStore.ts   # Zustand: pages, activePageId, expanded nodes, sidebar, theme, search
   lib/autoSave.ts  # Debounced auto-save engine (per-page timers, flush, cancel)
+  lib/reminders.ts # Quadrants, reminder presets and reminder rules (shared by main + renderer)
+  stores/useTaskStore.ts  # Zustand store for tasks and reminder settings
   lib/api.ts       # window.electronAPI, or a localStorage fallback in a plain browser
   components/
     Sidebar/       # Sidebar + recursive PageTreeItem
     Editor/        # PageView, PageHeader (title/icon/cover), TipTap Editor, slash menu
     TitleBar/      # Top bar (breadcrumbs, save status) + Windows/Linux window controls
     Search/        # Ctrl+K search palette
+    Tasks/         # Eisenhower Matrix, task cards, task dialog, reminder settings
+    Editor/mermaid/  # Mermaid diagram block (node, view, lazy renderer)
 resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
 ```
 
@@ -94,6 +106,17 @@ Each page is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
 Images are stored as separate files in `<userData>/assets/` and referenced from pages as
 `notion-asset://local/<file>`, so page files stay small. The app only serves files from that folder with
 names it generated. At startup, images that no page uses anymore are deleted.
+
+Tasks are stored in `<userData>/tasks.json` and reminder settings in `<userData>/task-settings.json`.
+
+### How reminders work
+
+- The scheduler runs in the main process and checks every 15 seconds, so reminders arrive while you're on any page.
+- **Windows/Linux:** closing the window keeps the app running in the system tray, so reminders still arrive. Quit from the tray icon, or turn this off under *Tasks → Reminders*.
+- **macOS:** the app keeps running in the Dock after its window closes, as usual. Reminders stop when you quit with ⌘Q.
+- Each reminder fires once. Reminders whose time had already passed when you set the due date don't fire. Changing the due date sets up its reminders again.
+- If the app wasn't running when reminders were due, you get one *missed reminder* notification per task the next time it starts. Reminders more than 7 days old are skipped.
+- Use *Tasks → Reminders → Send test notification* to check that your OS allows notifications. On macOS, allow NotionClone under System Settings → Notifications. On Windows, check Focus Assist.
 
 Set `NOTION_CLONE_DATA_DIR=/some/folder` to use a different folder (handy for testing).
 

@@ -23,6 +23,35 @@ export interface Page extends PageMeta {
 /** Fields the renderer may send when saving. `id` is always required. */
 export type PageUpdate = Partial<Omit<Page, 'id' | 'createdAt' | 'updatedAt'>> & { id: string }
 
+/** A to-do item shown in the Eisenhower Matrix. */
+export interface Task {
+  id: string
+  title: string
+  notes: string
+  important: boolean
+  urgent: boolean
+  /** Due date/time (ms since epoch), or null. */
+  dueAt: number | null
+  /** Reminder offsets in minutes before `dueAt` (0 = at the due time). */
+  reminders: number[]
+  completed: boolean
+  completedAt: number | null
+  order: number
+  createdAt: number
+  updatedAt: number
+  /** Reminders already delivered, as `${dueAt}:${offset}` keys. */
+  sentReminders: string[]
+}
+
+export type TaskUpdate = Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'sentReminders'>> & { id: string }
+
+export interface TaskSettings {
+  /** Reminder offsets (minutes before due) applied to new tasks. */
+  defaultReminders: number[]
+  /** Windows/Linux: keep running in the system tray after the window is closed, so reminders still arrive. */
+  runInBackground: boolean
+}
+
 export interface SearchResult {
   id: string
   /** Short excerpt of matching body text, if the match was in the content. */
@@ -42,6 +71,18 @@ export interface ElectronAPI {
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */
   saveAsset: (data: Uint8Array, mime: string) => Promise<string>
+  tasks: {
+    list: () => Promise<Task[]>
+    save: (update: TaskUpdate) => Promise<Task>
+    remove: (id: string) => Promise<void>
+    getSettings: () => Promise<TaskSettings>
+    setSettings: (patch: Partial<TaskSettings>) => Promise<TaskSettings>
+    testNotification: () => Promise<boolean>
+    /** Fired when the user clicks a reminder notification. */
+    onOpenTask: (cb: (id: string) => void) => () => void
+    /** Fired when tasks change outside the renderer (e.g. reminders marked as sent). */
+    onChanged: (cb: () => void) => () => void
+  }
   window: {
     minimize: () => void
     toggleMaximize: () => void

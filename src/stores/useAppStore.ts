@@ -9,7 +9,10 @@ export type Theme = 'light' | 'dark'
 
 const PREFS_KEY = 'notion-clone:prefs'
 
+export type View = 'page' | 'tasks'
+
 interface Prefs {
+  view: View
   theme: Theme
   isSidebarOpen: boolean
   sidebarWidth: number
@@ -20,6 +23,7 @@ interface Prefs {
 function loadPrefs(): Prefs {
   const fallback: Prefs = {
     theme: window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark',
+    view: 'page',
     isSidebarOpen: true,
     sidebarWidth: 260,
     expanded: {},
@@ -39,6 +43,10 @@ interface AppState extends Prefs {
   /** Id of the page whose title should be focused after creation. */
   focusTitleFor: string | null
 
+  /** Task to scroll to / highlight in the Tasks view (e.g. from a notification). */
+  highlightTaskId: string | null
+
+  openTasks: (highlightTaskId?: string | null) => void
   loadPages: () => Promise<void>
   setActivePage: (id: string | null) => void
   createPage: (parentId?: string | null, init?: { title?: string; content?: JSONContent }) => Promise<string>
@@ -61,6 +69,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoaded: false,
   isSearchOpen: false,
   focusTitleFor: null,
+  highlightTaskId: null,
+
+  openTasks: (highlightTaskId = null) => {
+    const prev = get().activePageId
+    if (prev) void autoSaver.flush(prev)
+    set({ view: 'tasks', highlightTaskId })
+  },
 
   loadPages: async () => {
     let pages = await api.getPageTree()
@@ -88,7 +103,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       expanded[cur] = true
       cur = byId.get(cur)?.parentId ?? null
     }
-    set({ activePageId: id, expanded })
+    set({ activePageId: id, expanded, view: 'page' })
   },
 
   createPage: async (parentId = null, init) => {
@@ -160,6 +175,7 @@ autoSaver.onSaved((meta) => {
 // Persist UI preferences.
 useAppStore.subscribe((s) => {
   const p: Prefs = {
+    view: s.view,
     theme: s.theme,
     isSidebarOpen: s.isSidebarOpen,
     sidebarWidth: s.sidebarWidth,

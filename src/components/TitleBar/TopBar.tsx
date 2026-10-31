@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, Check, ChevronsRight, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, Check, CheckSquare, ChevronsRight, FileText, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver, type SaveStatus } from '@/lib/autoSave'
 import { isElectron, platform } from '@/lib/api'
@@ -11,6 +11,7 @@ export function TopBar() {
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const pages = useAppStore((s) => s.pages)
   const activePageId = useAppStore((s) => s.activePageId)
+  const view = useAppStore((s) => s.view)
   const { toggleSidebar, setActivePage } = useAppStore.getState()
   const isMac = platform === 'darwin'
   const showWindowControls = isElectron && !isMac
@@ -18,7 +19,7 @@ export function TopBar() {
   // Breadcrumb trail from the root to the active page.
   const trail = []
   const byId = new Map(pages.map((p) => [p.id, p]))
-  let cur = activePageId ? byId.get(activePageId) : undefined
+  let cur = activePageId && view === 'page' ? byId.get(activePageId) : undefined
   while (cur) {
     trail.unshift(cur)
     cur = cur.parentId ? byId.get(cur.parentId) : undefined
@@ -47,6 +48,11 @@ export function TopBar() {
       )}
 
       <nav className="flex min-w-0 flex-1 items-center gap-0.5 text-sm" aria-label="Breadcrumb">
+        {view === 'tasks' && (
+          <span className="flex items-center gap-1.5 px-1.5 py-0.5">
+            <CheckSquare size={14} className="text-blue-500" /> Tasks
+          </span>
+        )}
         {trail.map((p, i) => (
           <span key={p.id} className="flex min-w-0 items-center gap-0.5">
             {i > 0 && <span className="px-0.5 opacity-30">/</span>}

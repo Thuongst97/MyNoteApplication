@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { ElectronAPI, PageUpdate } from '../src/types'
+import type { ElectronAPI, PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
 
 const api: ElectronAPI = {
   platform: process.platform,
@@ -11,6 +11,24 @@ const api: ElectronAPI = {
   searchPages: (query: string) => ipcRenderer.invoke('search-pages', query),
   saveAsset: (data: Uint8Array, mime: string) => ipcRenderer.invoke('save-asset', data, mime),
 
+  tasks: {
+    list: () => ipcRenderer.invoke('tasks:list'),
+    save: (update: TaskUpdate) => ipcRenderer.invoke('tasks:save', update),
+    remove: (id: string) => ipcRenderer.invoke('tasks:remove', id),
+    getSettings: () => ipcRenderer.invoke('tasks:get-settings'),
+    setSettings: (patch: Partial<TaskSettings>) => ipcRenderer.invoke('tasks:set-settings', patch),
+    testNotification: () => ipcRenderer.invoke('tasks:test-notification'),
+    onOpenTask: (cb) => {
+      const listener = (_e: IpcRendererEvent, id: string) => cb(id)
+      ipcRenderer.on('tasks:open', listener)
+      return () => ipcRenderer.removeListener('tasks:open', listener)
+    },
+    onChanged: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('tasks:changed', listener)
+      return () => ipcRenderer.removeListener('tasks:changed', listener)
+    },
+  },
   window: {
     minimize: () => ipcRenderer.send('window:minimize'),
     toggleMaximize: () => ipcRenderer.send('window:toggle-maximize'),
