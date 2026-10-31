@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/useAppStore'
  *  - Ctrl/⌘+\        toggle sidebar
  *  - Ctrl/⌘+Shift+L  toggle dark/light mode
  *  - Ctrl/⌘+Shift+T  open Tasks (Eisenhower Matrix)
+ *  - Ctrl/⌘+Shift+G  open Graph view
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
@@ -27,6 +28,9 @@ export function useGlobalShortcuts() {
       } else if (e.key === '\\') {
         e.preventDefault()
         s.toggleSidebar()
+      } else if (key === 'g' && e.shiftKey) {
+        e.preventDefault()
+        s.openGraph()
       } else if (key === 't' && e.shiftKey) {
         e.preventDefault()
         s.openTasks()

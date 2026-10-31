@@ -390,3 +390,22 @@ body.block-dragging .prosemirror-dropcursor-inline {
   max-height: 560px;
   height: auto;
 }
+
+/* ---------- Links & references ---------- */
+.notion-editor .mention-wrapper {
+  display: inline;
+}
+.notion-editor .block-flash,
+.notion-editor .block-flash > * {
+  animation: block-flash 2.2s ease-out;
+  border-radius: 4px;
+}
+@keyframes block-flash {
+  0%,
+  35% {
+    background: rgba(35, 131, 226, 0.22);
+  }
+  100% {
+    background: transparent;
+  }
+}

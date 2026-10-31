@@ -19,7 +19,9 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Text color menu](docs/screenshots/19-text-color-menu-light.png) | ![Formatted text](docs/screenshots/21-formatted-text-dark.png) |
 | ![Chart editor](docs/screenshots/22-chart-editor-light.png) | ![Line chart](docs/screenshots/23-chart-line-dark.png) |
 | ![Charts](docs/screenshots/24-charts-dark.png) | ![Drawing in a note](docs/screenshots/27-drawing-in-note-dark.png) |
-| ![Drawing editor](docs/screenshots/25-drawing-editor-light.png) | |
+| ![Drawing editor](docs/screenshots/25-drawing-editor-light.png) | ![Page links](docs/screenshots/28-page-links-light.png) |
+| ![Block reference jump](docs/screenshots/29-block-reference-jump-light.png) | ![Whiteboard](docs/screenshots/30-whiteboard-light.png) |
+| ![Graph view](docs/screenshots/31-graph-view-dark.png) | |
 
 ## Features
 
@@ -32,6 +34,10 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Text formatting**: select text to get a toolbar with *Turn into* (text, H1–H3, bulleted/numbered/to-do list, quote, code), **text size** (Small → Huge), bold/italic/underline/strike/code, links, and **text & background colors**. Colors adapt to dark/light mode.
 - **Charts**: `/chart` adds a chart block. Pick *Columns, Bars, Line, Area* or *Parts of a whole*, type the data into the grid or **paste it from Excel/Google Sheets/CSV**, and save. Charts have hover tooltips, a legend, a *Table* view of the exact numbers, and colors that work for color-blind readers in both themes.
 - **Drawings (PowerPoint-style)**: `/drawing` opens a full-window drawing editor (Excalidraw) with rectangles, diamonds, ellipses, arrows that stay attached to shapes, lines, text and text inside shapes, freehand pen, images, fill/stroke colors, layers, grouping and alignment. Clean lines and a regular font by default. Saved drawings appear in the note as sharp images that match the theme. Double-click a drawing to edit it, and text inside drawings is searchable.
+- **Sub-pages in documents**: `/page` creates a sub-page and opens it. The parent keeps a clickable link block. Sub-pages also appear nested in the sidebar.
+- **Page links & block references**: type `[[` (anywhere) or `@` (after a space) to link to any page, or create one on the spot. To link to a specific block, open the block's **⋮⋮ → Copy link to block** and paste it into any page. It shows as *Page › start of block*, and clicking it opens the page, scrolls to the block and highlights it. Each page lists **Linked from** (backlinks) at the bottom. **Copy link to page** is in the sidebar page menu.
+- **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.
+- **Infinite canvas / whiteboard pages**: **New whiteboard** in the sidebar (or *Add whiteboard inside* on a page) creates a page that is one endless canvas with shapes, arrows, text, pen, images, colors and layers. Changes save automatically. Shapes can link to pages (paste a copied page link into a shape's link), and clicking the link opens the page. Whiteboard text is searchable, and whiteboards appear in the sidebar, search and graph.
 - **Move blocks freely**: hover any block (text, heading, list item, image, diagram) to show a **⋮⋮** handle. Drag it to move the block; a blue line shows where it will land. Click the handle for *Move up/down, Duplicate, Delete* and, for images and diagrams, *Align left/center/right*. **+** adds a block below. You can also press `Ctrl/⌘+Shift+↑/↓` to move the current block. Typing while an image or diagram is selected starts a new line instead of replacing it.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.
@@ -48,6 +54,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | `Ctrl/⌘ + \` | Toggle sidebar |
 | `Ctrl/⌘ + Shift + L` | Toggle dark/light |
 | `Ctrl/⌘ + Shift + T` | Open Tasks (Eisenhower Matrix) |
+| `Ctrl/⌘ + Shift + G` | Open Graph view |
+| `[[` or `@` | Link to a page (in the editor) |
 | `/` | Block menu (in editor) |
 | `Ctrl/⌘ + Shift + ↑ / ↓` | Move the current block up/down |
 | `Enter` / `↓` in title | Jump into the page body |
@@ -107,7 +115,7 @@ resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
 
 ## Data storage
 
-Each page is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
+Each page (document or whiteboard) is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
 
 - Windows: `%APPDATA%\notion-clone`
 - macOS: `~/Library/Application Support/notion-clone`
@@ -116,6 +124,9 @@ Each page is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
 Images are stored as separate files in `<userData>/assets/` and referenced from pages as
 `notion-asset://local/<file>`, so page files stay small. The app only serves files from that folder with
 names it generated. At startup, images that no page uses anymore are deleted.
+
+Links between pages are stored inside the page content and use the internal URL format
+`notionclone://page/<pageId>#<blockId>`. The main process keeps a link index for backlinks and the graph.
 
 Tasks are stored in `<userData>/tasks.json` and reminder settings in `<userData>/task-settings.json`.
 

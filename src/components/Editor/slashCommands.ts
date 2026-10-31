@@ -1,11 +1,16 @@
 import type { Editor, Range } from '@tiptap/react'
 import { pickAndInsertImages } from '@/lib/images'
+import { useAppStore } from '@/stores/useAppStore'
+import { autoSaver } from '@/lib/autoSave'
+import { newId } from '@/lib/utils'
 import {
   CheckSquare,
   Code2,
   Heading1,
   Heading2,
   Heading3,
+  FilePlus,
+  Link2,
   Shapes,
   BarChart3,
   Workflow,
@@ -28,6 +33,28 @@ export interface SlashCommandItem {
 }
 
 export const SLASH_COMMANDS: SlashCommandItem[] = [
+  {
+    title: 'Page',
+    description: 'Create a sub-page inside this page.',
+    icon: FilePlus,
+    keywords: ['subpage', 'sub-page', 'child', 'new page', 'doc', 'document'],
+    run: (e, r) => {
+      const store = useAppStore.getState()
+      const parent = store.activePageId
+      const id = newId()
+      e.chain().focus().deleteRange(r).insertPageLink(id).run()
+      // Save this page (with the link) first, then open the new sub-page.
+      if (parent) void autoSaver.flush(parent)
+      void store.createPage(parent, { id })
+    },
+  },
+  {
+    title: 'Link to page',
+    description: 'Link to another page (or type [[ anywhere).',
+    icon: Link2,
+    keywords: ['link', 'mention', 'reference', 'page', '[[', '@'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertContent('[[').run(),
+  },
   {
     title: 'Text',
     description: 'Just start writing with plain text.',

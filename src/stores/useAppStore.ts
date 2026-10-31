@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { JSONContent } from '@tiptap/react'
-import type { PageMeta } from '@/types'
+import type { PageKind, PageMeta } from '@/types'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { newId } from '@/lib/utils'
@@ -9,7 +9,7 @@ export type Theme = 'light' | 'dark'
 
 const PREFS_KEY = 'notion-clone:prefs'
 
-export type View = 'page' | 'tasks'
+export type View = 'page' | 'tasks' | 'graph'
 
 interface Prefs {
   view: View
@@ -48,8 +48,18 @@ interface AppState extends Prefs {
 
   openTasks: (highlightTaskId?: string | null) => void
   loadPages: () => Promise<void>
-  setActivePage: (id: string | null) => void
-  createPage: (parentId?: string | null, init?: { title?: string; content?: JSONContent }) => Promise<string>
+  setActivePage: (id: string | null, opts?: { blockId?: string | null }) => void
+  createPage: (
+    parentId?: string | null,
+    init?: { title?: string; content?: JSONContent; kind?: PageKind; id?: string; navigate?: boolean },
+  ) => Promise<string>
+  /** Block to scroll to and flash after navigating (block references). */
+  highlightBlockId: string | null
+  openGraph: () => void
+  toast: { id: number; message: string } | null
+  showToast: (message: string) => void
+  /** Bumped whenever page links may have changed (backlinks, graph). */
+  linksVersion: number
   updatePageMeta: (id: string, patch: Partial<Pick<PageMeta, 'title' | 'icon' | 'cover'>>) => void
   deletePage: (id: string) => Promise<void>
   toggleExpanded: (id: string, value?: boolean) => void
@@ -70,6 +80,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   isSearchOpen: false,
   focusTitleFor: null,
   highlightTaskId: null,
+  highlightBlockId: null,
+  linksVersion: 0,
+  toast: null,
+  showToast: (message) => {
+    const id = Date.now()
+    set({ toast: { id, message } })
+    setTimeout(() => {
+      if (get().toast?.id === id) set({ toast: null })
+    }, 2200)
+  },
+
+  openGraph: () => {
+    const prev = get().activePageId
+    if (prev) void autoSaver.flush(prev)
+    set({ view: 'graph' })
+  },
 
   openTasks: (highlightTaskId = null) => {
     const prev = get().activePageId
@@ -91,7 +117,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ pages, isLoaded: true, activePageId: active })
   },
 
-  setActivePage: (id) => {
+  setActivePage: (id, opts) => {
     const prev = get().activePageId
     // Persist the page we're leaving right away instead of waiting for the debounce.
     if (prev && prev !== id) void autoSaver.flush(prev)
@@ -103,14 +129,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       expanded[cur] = true
       cur = byId.get(cur)?.parentId ?? null
     }
-    set({ activePageId: id, expanded, view: 'page' })
+    set({ activePageId: id, expanded, view: 'page', highlightBlockId: opts?.blockId ?? null })
   },
 
   createPage: async (parentId = null, init) => {
-    const id = newId()
+    const id = init?.id ?? newId()
     const now = Date.now()
+    const kind: PageKind = init?.kind ?? 'doc'
     const meta: PageMeta = {
       id,
+      kind,
       title: init?.title ?? '',
       icon: null,
       cover: null,
@@ -122,10 +150,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       pages: [...s.pages, meta],
       expanded: parentId ? { ...s.expanded, [parentId]: true } : s.expanded,
-      focusTitleFor: id,
+      focusTitleFor: init?.navigate === false ? s.focusTitleFor : id,
     }))
-    get().setActivePage(id)
-    await api.savePage({ ...meta, content: init?.content ?? null })
+    if (init?.navigate !== false) get().setActivePage(id)
+    const content = init?.content ?? (kind === 'whiteboard' ? { type: 'whiteboard', scene: { elements: [], files: {} } } : null)
+    await api.savePage({ ...meta, content })
+    set((s) => ({ linksVersion: s.linksVersion + 1 }))
     return id
   },
 
@@ -153,6 +183,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ pages: remaining, activePageId: nextActive })
     await api.deletePage(id)
+    set((s) => ({ linksVersion: s.linksVersion + 1 }))
   },
 
   toggleExpanded: (id, value) =>
@@ -169,6 +200,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 autoSaver.onSaved((meta) => {
   useAppStore.setState((s) => ({
     pages: s.pages.map((p) => (p.id === meta.id ? { ...p, updatedAt: meta.updatedAt } : p)),
+    linksVersion: s.linksVersion + 1,
   }))
 })
 

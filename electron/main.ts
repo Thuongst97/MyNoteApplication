@@ -233,6 +233,7 @@ function registerIpc() {
   ipcMain.handle('read-page', (_e, id: string) => storage.read(id))
   ipcMain.handle('save-page', (_e, update: PageUpdate) => storage.save(update))
   ipcMain.handle('delete-page', (_e, id: string) => storage.delete(id))
+  ipcMain.handle('get-links', () => storage.getLinks())
   ipcMain.handle('search-pages', (_e, query: string) => storage.search(query))
   // ---- Tasks & reminders ------------------------------------------------
   ipcMain.handle('tasks:list', () => tasks.list())

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import type { Slice } from '@tiptap/pm/model'
-import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Copy, GripVertical, Link2, Plus, Trash2 } from 'lucide-react'
+import { ensureBlockId, REFERENCEABLE } from './links/BlockIds'
+import { pageUrl } from '@/lib/links'
+import { useAppStore } from '@/stores/useAppStore'
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { cn, isMacLike } from '@/lib/utils'
 import { blockAt, blockDrag, computeBlockDrop, deleteBlock, duplicateBlock, moveBlock, performBlockDrop, type BlockTarget } from './blockMove'
@@ -21,7 +24,7 @@ const ALIGNABLE = new Set(['image', 'mermaid', 'chart', 'drawing'])
  * Drag the grip to move the block (a blue line shows where it lands);
  * click it for a menu (move, duplicate, delete, align).
  */
-export function BlockHandle({ editor, containerRef }: { editor: Editor; containerRef: React.RefObject<HTMLDivElement> }) {
+export function BlockHandle({ editor, containerRef, pageId }: { editor: Editor; containerRef: React.RefObject<HTMLDivElement>; pageId: string }) {
   const [state, setState] = useState<HandleState | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -291,6 +294,21 @@ export function BlockHandle({ editor, containerRef }: { editor: Editor; containe
           <MenuItem icon={<Copy size={14} />} onClick={() => run((t) => duplicateBlock(editor, t))}>
             Duplicate
           </MenuItem>
+          {REFERENCEABLE.includes(state.node.type.name) && (
+            <MenuItem
+              icon={<Link2 size={14} />}
+              onClick={() =>
+                run((t) => {
+                  const id = ensureBlockId(editor, t.pos)
+                  if (!id) return
+                  void navigator.clipboard.writeText(pageUrl(pageId, id))
+                  useAppStore.getState().showToast('Link to block copied — paste it in any page')
+                })
+              }
+            >
+              Copy link to block
+            </MenuItem>
+          )}
           <div className="my-1 h-px bg-black/5 dark:bg-white/10" />
           <MenuItem icon={<Trash2 size={14} />} danger shortcut="Del" onClick={() => run((t) => deleteBlock(editor, t))}>
             Delete

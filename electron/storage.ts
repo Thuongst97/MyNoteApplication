@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { docToText, makeSnippet } from '../src/lib/docText'
-import type { Page, PageMeta, PageUpdate, SearchResult } from '../src/types'
+import { extractLinks } from '../src/lib/links'
+import type { Page, PageLinkEdge, PageMeta, PageUpdate, SearchResult } from '../src/types'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
@@ -13,7 +14,7 @@ function assertValidId(id: unknown): asserts id is string {
 
 function toMeta(page: Page): PageMeta {
   const { content: _content, ...meta } = page
-  return meta
+  return { ...meta, kind: meta.kind === 'whiteboard' ? 'whiteboard' : 'doc' }
 }
 
 /**
@@ -25,6 +26,8 @@ function toMeta(page: Page): PageMeta {
 export class PageStorage {
   private readonly dir: string
   private index = new Map<string, PageMeta>()
+  /** Outgoing page links per page (kept up to date on save). */
+  private links = new Map<string, string[]>()
   private loaded: Promise<void> | null = null
   private queues = new Map<string, Promise<unknown>>()
   /** Ids deleted during this session; late auto-saves must not resurrect them. */
@@ -51,7 +54,10 @@ export class PageStorage {
       try {
         const raw = await fs.readFile(path.join(this.dir, name), 'utf8')
         const page = JSON.parse(raw) as Page
-        if (page && typeof page.id === 'string') this.index.set(page.id, toMeta(page))
+        if (page && typeof page.id === 'string') {
+          this.index.set(page.id, toMeta(page))
+          this.links.set(page.id, extractLinks(page.content))
+        }
       } catch (err) {
         console.error(`[storage] Skipping unreadable page file ${name}:`, err)
       }
@@ -95,6 +101,15 @@ export class PageStorage {
     return [...this.index.keys()].map((id) => this.file(id))
   }
 
+  async getLinks(): Promise<PageLinkEdge[]> {
+    await this.ensureLoaded()
+    const edges: PageLinkEdge[] = []
+    for (const [source, targets] of this.links) {
+      for (const target of targets) if (target !== source && this.index.has(target)) edges.push({ source, target })
+    }
+    return edges
+  }
+
   async getTree(): Promise<PageMeta[]> {
     await this.ensureLoaded()
     return [...this.index.values()].sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
@@ -118,6 +133,7 @@ export class PageStorage {
       const existing = await this.readFromDisk(update.id)
       const base: Page = existing ?? {
         id: update.id,
+        kind: update.kind === 'whiteboard' ? 'whiteboard' : 'doc',
         title: '',
         icon: null,
         cover: null,
@@ -141,6 +157,7 @@ export class PageStorage {
       await this.writeToDisk(page)
       const meta = toMeta(page)
       this.index.set(page.id, meta)
+      if (update.content !== undefined) this.links.set(page.id, extractLinks(page.content))
       return meta
     })
   }
@@ -163,6 +180,7 @@ export class PageStorage {
         this.enqueue(pid, async () => {
           await fs.rm(this.file(pid), { force: true })
           this.index.delete(pid)
+          this.links.delete(pid)
         }),
       ),
     )

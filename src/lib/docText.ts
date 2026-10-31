@@ -5,6 +5,8 @@ import { drawingText } from '@/components/Editor/drawing/drawingModel'
 export function docToText(node: JSONContent | null | undefined): string {
   if (!node) return ''
   if (node.type === 'text') return node.text ?? ''
+  if (node.type === 'whiteboard') return drawingText({ scene: (node as { scene?: never }).scene })
+  if (node.type === 'mention') return String(node.attrs?.label ?? '')
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
   if (node.type === 'drawing') return drawingText(node.attrs?.data)
   if (node.type === 'chart') {

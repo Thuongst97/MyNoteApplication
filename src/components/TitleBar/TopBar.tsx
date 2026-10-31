@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, Check, CheckSquare, ChevronsRight, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, Check, CheckSquare, ChevronsRight, FileText, Loader2, Network, Shapes } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver, type SaveStatus } from '@/lib/autoSave'
 import { isElectron, platform } from '@/lib/api'
@@ -48,6 +48,11 @@ export function TopBar() {
       )}
 
       <nav className="flex min-w-0 flex-1 items-center gap-0.5 text-sm" aria-label="Breadcrumb">
+        {view === 'graph' && (
+          <span className="flex items-center gap-1.5 px-1.5 py-0.5">
+            <Network size={14} className="text-blue-500" /> Graph view
+          </span>
+        )}
         {view === 'tasks' && (
           <span className="flex items-center gap-1.5 px-1.5 py-0.5">
             <CheckSquare size={14} className="text-blue-500" /> Tasks
@@ -61,7 +66,7 @@ export function TopBar() {
               onClick={() => setActivePage(p.id)}
               className="no-drag flex min-w-0 max-w-[200px] items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
             >
-              <span className="shrink-0 text-[14px] leading-none">{p.icon ?? <FileText size={14} className="opacity-60" />}</span>
+              <span className="shrink-0 text-[14px] leading-none">{p.icon ?? (p.kind === 'whiteboard' ? <Shapes size={14} className="opacity-60" /> : <FileText size={14} className="opacity-60" />)}</span>
               <span className="truncate">{p.title || 'Untitled'}</span>
             </button>
           </span>

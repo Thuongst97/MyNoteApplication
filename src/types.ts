@@ -1,8 +1,12 @@
 import type { JSONContent } from '@tiptap/react'
 
 /** Lightweight page metadata used to build the sidebar tree. */
+export type PageKind = 'doc' | 'whiteboard'
+
 export interface PageMeta {
   id: string
+  /** 'doc' = block document, 'whiteboard' = infinite canvas. */
+  kind: PageKind
   title: string
   /** An emoji used as the page icon, or null for the default icon. */
   icon: string | null
@@ -52,6 +56,11 @@ export interface TaskSettings {
   runInBackground: boolean
 }
 
+export interface PageLinkEdge {
+  source: string
+  target: string
+}
+
 export interface SearchResult {
   id: string
   /** Short excerpt of matching body text, if the match was in the content. */
@@ -67,6 +76,8 @@ export interface ElectronAPI {
   /** Resolves to null if the page was deleted in the meantime. */
   savePage: (update: PageUpdate) => Promise<PageMeta | null>
   deletePage: (id: string) => Promise<string[]>
+  /** Every page-to-page link (mentions, page blocks, whiteboard links). */
+  getLinks: () => Promise<PageLinkEdge[]>
   /** Full-text search over titles and page content. */
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */

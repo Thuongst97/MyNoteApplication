@@ -1,6 +1,7 @@
 import type { ElectronAPI, Page, PageMeta, SearchResult, Task, TaskSettings } from '@/types'
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, notificationText } from './reminders'
 import { docToText, makeSnippet } from './docText'
+import { extractLinks } from './links'
 
 declare global {
   interface Window {
@@ -22,7 +23,7 @@ function createBrowserApi(): ElectronAPI {
     }
   }
   const store = (pages: Record<string, Page>) => localStorage.setItem(KEY, JSON.stringify(pages))
-  const meta = ({ content: _c, ...m }: Page): PageMeta => m
+  const meta = ({ content: _c, ...m }: Page): PageMeta => ({ ...m, kind: m.kind === 'whiteboard' ? 'whiteboard' : 'doc' })
   const deleted = new Set<string>()
   const tick = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 0))
 
@@ -36,7 +37,7 @@ function createBrowserApi(): ElectronAPI {
       const pages = load()
       const now = Date.now()
       const prev: Page = pages[u.id] ?? {
-        id: u.id, title: '', icon: null, cover: null, parentId: null,
+        id: u.id, kind: u.kind === 'whiteboard' ? 'whiteboard' : 'doc', title: '', icon: null, cover: null, parentId: null,
         order: now, createdAt: now, updatedAt: now, content: null,
       }
       const clean = Object.fromEntries(Object.entries(u).filter(([, v]) => v !== undefined))
@@ -59,6 +60,14 @@ function createBrowserApi(): ElectronAPI {
       })
       store(pages)
       return tick(ids)
+    },
+    getLinks: async () => {
+      const pages = load()
+      return Object.values(pages).flatMap((p) =>
+        extractLinks(p.content)
+          .filter((t) => t !== p.id && pages[t])
+          .map((target) => ({ source: p.id, target })),
+      )
     },
     searchPages: async (query) => {
       const q = query.trim().toLowerCase()

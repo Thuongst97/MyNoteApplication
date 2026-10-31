@@ -5,6 +5,8 @@ import { TopBar } from '@/components/TitleBar/TopBar'
 import { PageView } from '@/components/Editor/PageView'
 import { SearchModal } from '@/components/Search/SearchModal'
 import { TaskMatrix } from '@/components/Tasks/TaskMatrix'
+import { GraphView } from '@/components/Graph/GraphView'
+import { WhiteboardPage } from '@/components/Whiteboard/WhiteboardPage'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
@@ -16,7 +18,9 @@ export default function App() {
   const isLoaded = useAppStore((s) => s.isLoaded)
   const activePageId = useAppStore((s) => s.activePageId)
   const view = useAppStore((s) => s.view)
-  const activeExists = useAppStore((s) => s.pages.some((p) => p.id === s.activePageId))
+  const activePage = useAppStore((s) => s.pages.find((p) => p.id === s.activePageId))
+  const activeExists = !!activePage
+  const toast = useAppStore((s) => s.toast)
   const { loadPages, createPage } = useAppStore.getState()
 
   useGlobalShortcuts()
@@ -58,6 +62,10 @@ export default function App() {
             </div>
           ) : view === 'tasks' ? (
             <TaskMatrix />
+          ) : view === 'graph' ? (
+            <GraphView />
+          ) : activePageId && activeExists && activePage?.kind === 'whiteboard' ? (
+            <WhiteboardPage key={activePageId} pageId={activePageId} />
           ) : activePageId && activeExists ? (
             <PageView key={activePageId} pageId={activePageId} />
           ) : (
@@ -75,6 +83,15 @@ export default function App() {
         </div>
       </main>
       <SearchModal />
+      {toast && (
+        <div
+          key={toast.id}
+          role="status"
+          className="fixed bottom-6 left-1/2 z-[300] -translate-x-1/2 animate-pop-in rounded-lg bg-[#2f2f2f] px-4 py-2 text-sm text-white shadow-xl dark:bg-[#ebebea] dark:text-[#191919]"
+        >
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
 import { Editor } from './Editor'
 import { PageHeader } from './PageHeader'
+import { Backlinks } from './links/Backlinks'
 
 /**
  * Loads a page's content and renders header + editor.
@@ -20,6 +21,15 @@ export function PageView({ pageId }: { pageId: string }) {
   const [content, setContent] = useState<JSONContent | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const editorRef = useRef<TiptapEditor | null>(null)
+  // Arrived via a block reference: remember which block to show once the editor is up.
+  const pendingBlock = useRef<string | null>(null)
+  if (pendingBlock.current === null) {
+    const id = useAppStore.getState().highlightBlockId
+    if (id) {
+      pendingBlock.current = id
+      useAppStore.setState({ highlightBlockId: null })
+    }
+  }
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -59,6 +69,13 @@ export function PageView({ pageId }: { pageId: string }) {
   const onEditorReady = useCallback(
     (editor: TiptapEditor) => {
       editorRef.current = editor
+      // TipTap may create the editor twice while mounting; act on the one that survives.
+      setTimeout(() => {
+        const blockId = pendingBlock.current
+        if (!blockId || editor.isDestroyed) return
+        pendingBlock.current = ''
+        if (!editor.commands.flashBlock(blockId)) useAppStore.getState().showToast('That block no longer exists')
+      }, 60)
       if (pendingBodyFocus.current) {
         pendingBodyFocus.current = false
         focusEditorStart()
@@ -98,12 +115,14 @@ export function PageView({ pageId }: { pageId: string }) {
           </div>
         ) : (
           <Editor
+            pageId={pageId}
             initialContent={content}
             onChange={onChange}
             onReady={onEditorReady}
             onExitTop={focusTitleEnd}
           />
         )}
+        {content !== undefined && <Backlinks pageId={pageId} />}
       </div>
     </div>
   )

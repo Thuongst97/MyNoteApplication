@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { CheckSquare, ChevronsLeft, Moon, Plus, Search, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, ChevronsLeft, Moon, Network, Plus, Search, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { selectChildren, useAppStore } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
@@ -12,7 +12,7 @@ export function Sidebar() {
   const width = useAppStore((s) => s.sidebarWidth)
   const theme = useAppStore((s) => s.theme)
   const view = useAppStore((s) => s.view)
-  const { toggleSidebar, createPage, setSearchOpen, toggleTheme, setSidebarWidth, openTasks } = useAppStore.getState()
+  const { toggleSidebar, createPage, setSearchOpen, toggleTheme, setSidebarWidth, openTasks, openGraph } = useAppStore.getState()
   // Badge: open tasks that are overdue or due before the end of today.
   const dueCount = useTaskStore((s) => {
     const end = new Date()
@@ -102,6 +102,26 @@ export function Sidebar() {
                 {dueCount}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => openGraph()}
+            className={cn(
+              'flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',
+              view === 'graph' && 'bg-black/[0.06] font-medium text-ink-light dark:bg-white/[0.09] dark:text-white',
+            )}
+          >
+            <Network size={16} className="opacity-70" />
+            <span className="flex-1 text-left">Graph view</span>
+            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘⇧G' : 'Ctrl+Shift+G'}</kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => void createPage(null, { kind: 'whiteboard', title: 'Untitled whiteboard' })}
+            className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+          >
+            <Shapes size={16} className="opacity-70" />
+            <span className="flex-1 text-left">New whiteboard</span>
           </button>
         </div>
 

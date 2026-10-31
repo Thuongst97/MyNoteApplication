@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CornerDownLeft, FileText, Search } from 'lucide-react'
+import { CornerDownLeft, FileText, Search, Shapes } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
@@ -142,7 +142,7 @@ export function SearchModal() {
                 )}
               >
                 <span className="mt-0.5 flex w-5 shrink-0 justify-center text-base leading-none">
-                  {page.icon ?? <FileText size={16} className="opacity-60" />}
+                  {page.icon ?? (page.kind === 'whiteboard' ? <Shapes size={16} className="opacity-60" /> : <FileText size={16} className="opacity-60" />)}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">

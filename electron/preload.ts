@@ -8,6 +8,7 @@ const api: ElectronAPI = {
   readPage: (id: string) => ipcRenderer.invoke('read-page', id),
   savePage: (update: PageUpdate) => ipcRenderer.invoke('save-page', update),
   deletePage: (id: string) => ipcRenderer.invoke('delete-page', id),
+  getLinks: () => ipcRenderer.invoke('get-links'),
   searchPages: (query: string) => ipcRenderer.invoke('search-pages', query),
   saveAsset: (data: Uint8Array, mime: string) => ipcRenderer.invoke('save-asset', data, mime),
 

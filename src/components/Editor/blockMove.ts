@@ -77,7 +77,8 @@ export function moveBlock(editor: Editor, dir: 'up' | 'down', target = blockAtSe
 
 export function duplicateBlock(editor: Editor, target: BlockTarget) {
   const end = target.pos + target.node.nodeSize
-  const tr = editor.state.tr.insert(end, target.node.copy(target.node.content))
+  const attrs = target.node.attrs.blockId ? { ...target.node.attrs, blockId: null } : target.node.attrs
+  const tr = editor.state.tr.insert(end, target.node.type.create(attrs, target.node.content, target.node.marks))
   tr.setSelection(NodeSelection.create(tr.doc, end))
   editor.view.dispatch(tr.scrollIntoView())
 }

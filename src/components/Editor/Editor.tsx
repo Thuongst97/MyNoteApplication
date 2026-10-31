@@ -14,11 +14,21 @@ import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
 import { ChartNode } from './chart/ChartNode'
 import { DrawingNode } from './drawing/DrawingNode'
+import { BlockIds, blockSnippet } from './links/BlockIds'
+import { PageLinkNode } from './links/PageLinkNode'
+import { MentionNode } from './links/MentionNode'
+import { PageSuggestion } from './links/PageSuggestion'
+import { BlockFlash } from './links/BlockFlash'
+import { parsePageUrl } from '@/lib/links'
+import { api } from '@/lib/api'
+import { useAppStore } from '@/stores/useAppStore'
 import { MERMAID_START } from './mermaid/renderMermaid'
 import { blockDrag, computeBlockDrop, MoveBlockShortcuts, performBlockDrop } from './blockMove'
 import { BlockHandle } from './BlockHandle'
 
 interface EditorProps {
+  /** The page being edited (used for "Copy link to block"). */
+  pageId: string
   initialContent: JSONContent | null
   onChange: (content: JSONContent) => void
   /** Receives the editor instance once created (e.g. so the title can move focus into it). */
@@ -28,7 +38,7 @@ interface EditorProps {
 }
 
 /** TipTap block canvas. Mount one instance per page (keyed by page id). */
-export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorProps) {
+export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }: EditorProps) {
   const onChangeRef = useRef(onChange)
   const onExitTopRef = useRef(onExitTop)
   onChangeRef.current = onChange
@@ -84,6 +94,11 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       MermaidNode,
       ChartNode,
       DrawingNode,
+      BlockIds,
+      PageLinkNode,
+      MentionNode,
+      PageSuggestion,
+      BlockFlash,
       MoveBlockShortcuts,
       SlashCommand,
     ],
@@ -95,6 +110,14 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       },
       // Pasted image files (screenshots, copied images) are stored and inserted as image blocks.
       handlePaste: (view, event) => {
+        // A copied page/block link (notionclone://page/…) becomes a page link / block reference.
+        const pasted = (event.clipboardData?.getData('text/plain') ?? '').trim()
+        const ref = parsePageUrl(pasted)
+        if (ref && editorRef.current) {
+          event.preventDefault()
+          void insertReference(editorRef.current, ref.pageId, ref.blockId)
+          return true
+        }
         // A pasted ```mermaid fenced block (or bare mermaid code on an empty line) becomes a diagram.
         const text = event.clipboardData?.getData('text/plain') ?? ''
         const fenced = text.trim().match(/^```mermaid[ \t]*\r?\n([\s\S]*?)\r?\n?```$/)
@@ -131,6 +154,23 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
         event.preventDefault()
         void insertImageFiles(editorRef.current, files, dropPosition(view, event))
         return true
+      },
+      // Internal links (notionclone://) navigate; web links open in the browser with Ctrl/⌘+click.
+      handleClick: (view, pos, event) => {
+        const $pos = view.state.doc.resolve(pos)
+        const link = $pos.marks().find((m) => m.type.name === 'link') ?? view.state.doc.nodeAt(pos)?.marks.find((m) => m.type.name === 'link')
+        const href = link?.attrs.href as string | undefined
+        if (!href) return false
+        const ref = parsePageUrl(href)
+        if (ref) {
+          useAppStore.getState().setActivePage(ref.pageId, { blockId: ref.blockId })
+          return true
+        }
+        if ((event.metaKey || event.ctrlKey) && /^https?:/i.test(href)) {
+          window.open(href, '_blank')
+          return true
+        }
+        return false
       },
       handleKeyDown: (view, event) => {
         const { from, empty } = view.state.selection
@@ -170,7 +210,7 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
       >
         <EditorContent editor={editor} />
       </div>
-      {editor && editor.isEditable && <BlockHandle editor={editor} containerRef={containerRef} />}
+      {editor && editor.isEditable && <BlockHandle editor={editor} containerRef={containerRef} pageId={pageId} />}
       {editor && editor.isEditable && <FormattingToolbar editor={editor} />}
     </div>
   )
@@ -190,4 +230,33 @@ function dropPosition(view: EditorView, event: DragEvent): number | undefined {
   const rect = dom?.getBoundingClientRect?.()
   if (rect && event.clientY < rect.top + rect.height / 2) return before
   return $pos.after(1)
+}
+
+/** Inserts a link to a page, or to a block on a page (with a snapshot of the block's text). */
+async function insertReference(editor: TiptapEditor, pageId: string, blockId: string | null) {
+  const at = editor.state.selection.from
+  let label = ''
+  if (blockId) {
+    const page = await api.readPage(pageId).catch(() => null)
+    const find = (n: { attrs?: Record<string, unknown>; content?: unknown[] } | null | undefined): unknown => {
+      if (!n) return null
+      if (n.attrs?.blockId === blockId) return n
+      for (const c of (n.content ?? []) as typeof n[]) {
+        const hit = find(c)
+        if (hit) return hit
+      }
+      return null
+    }
+    const node = find(page?.content as never)
+    if (node) label = blockSnippet(editor.schema.nodeFromJSON(node), 50)
+  }
+  if (editor.isDestroyed) return
+  editor
+    .chain()
+    .focus()
+    .insertContentAt(Math.min(at, editor.state.doc.content.size), [
+      { type: 'mention', attrs: { pageId, blockId, label } },
+      { type: 'text', text: ' ' },
+    ])
+    .run()
 }

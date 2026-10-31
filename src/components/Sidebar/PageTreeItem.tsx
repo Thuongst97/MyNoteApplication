@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRight, FileText, MoreHorizontal, Pencil, Plus, Trash2, FilePlus } from 'lucide-react'
+import { ChevronRight, FileText, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
+import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
 import { selectChildren, useAppStore } from '@/stores/useAppStore'
 import { MenuItem, Popover } from '@/components/ui/Popover'
@@ -91,7 +92,7 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
           />
         </button>
         <span className="flex w-5 shrink-0 items-center justify-center text-[15px] leading-none">
-          {page.icon ?? <FileText size={15} className="opacity-60" />}
+          {page.icon ?? (page.kind === 'whiteboard' ? <Shapes size={15} className="opacity-60" /> : <FileText size={15} className="opacity-60" />)}
         </span>
 
         {renaming ? (
@@ -145,6 +146,25 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
               }}
             >
               Add sub-page
+            </MenuItem>
+            <MenuItem
+              icon={<Shapes size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                void createPage(page.id, { kind: 'whiteboard', title: 'Untitled whiteboard' })
+              }}
+            >
+              Add whiteboard inside
+            </MenuItem>
+            <MenuItem
+              icon={<Link2 size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                void navigator.clipboard.writeText(pageUrl(page.id))
+                useAppStore.getState().showToast('Link to page copied — paste it in any page or whiteboard')
+              }}
+            >
+              Copy link to page
             </MenuItem>
             <MenuItem
               icon={<Pencil size={14} />}
