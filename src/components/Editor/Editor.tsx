@@ -6,6 +6,8 @@ import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
+import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
+import { FormattingToolbar } from './FormattingToolbar'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
 import { ImageSelection } from './ImageSelection'
@@ -48,6 +50,10 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
           return "Write something, or press '/' for commands…"
         },
       }),
+      TextStyle,
+      Color,
+      BackgroundColor,
+      FontSize,
       TaskList,
       TaskItem.configure({ nested: true }),
       Image.extend({
@@ -161,6 +167,7 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
         <EditorContent editor={editor} />
       </div>
       {editor && editor.isEditable && <BlockHandle editor={editor} containerRef={containerRef} />}
+      {editor && editor.isEditable && <FormattingToolbar editor={editor} />}
     </div>
   )
 }

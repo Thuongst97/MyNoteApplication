@@ -4,6 +4,47 @@
 
 :root {
   --titlebar-h: 44px;
+
+  /* Notion-like text & background colors (light mode) */
+  --c-gray: #787774;
+  --c-brown: #9f6b53;
+  --c-orange: #d9730d;
+  --c-yellow: #cb912f;
+  --c-green: #448361;
+  --c-blue: #337ea9;
+  --c-purple: #9065b0;
+  --c-pink: #c14c8a;
+  --c-red: #d44c47;
+  --bg-gray: #f1f1ef;
+  --bg-brown: #f4eeee;
+  --bg-orange: #fbecdd;
+  --bg-yellow: #fbf3db;
+  --bg-green: #edf3ec;
+  --bg-blue: #e7f3f8;
+  --bg-purple: #f6f3f9;
+  --bg-pink: #faf1f5;
+  --bg-red: #fdebec;
+}
+
+.dark {
+  --c-gray: #9b9b9b;
+  --c-brown: #ba856f;
+  --c-orange: #c77d48;
+  --c-yellow: #ca9849;
+  --c-green: #529e72;
+  --c-blue: #5e87c9;
+  --c-purple: #9d68d3;
+  --c-pink: #d15796;
+  --c-red: #df5452;
+  --bg-gray: #2f2f2f;
+  --bg-brown: #4a3228;
+  --bg-orange: #5c3b23;
+  --bg-yellow: #564328;
+  --bg-green: #243d30;
+  --bg-blue: #143a4e;
+  --bg-purple: #3c2d49;
+  --bg-pink: #4e2c3c;
+  --bg-red: #522e2a;
 }
 
 html,
@@ -333,4 +374,12 @@ body.block-dragging .ProseMirror-dropcursor,
 body.block-dragging .prosemirror-dropcursor-block,
 body.block-dragging .prosemirror-dropcursor-inline {
   display: none !important;
+}
+
+/* Colored text backgrounds read like highlights */
+.notion-editor span[style*='background-color'] {
+  border-radius: 3px;
+  padding: 0 1px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
