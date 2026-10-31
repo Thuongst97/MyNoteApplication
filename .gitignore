@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+dist-electron
+dist_electron
+release
+*.local
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
