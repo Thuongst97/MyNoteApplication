@@ -9,6 +9,8 @@ import Image from '@tiptap/extension-image'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
 import { ImageSelection } from './ImageSelection'
+import { MermaidNode } from './mermaid/MermaidNode'
+import { MERMAID_START } from './mermaid/renderMermaid'
 
 interface EditorProps {
   initialContent: JSONContent | null
@@ -56,6 +58,7 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
         },
       }),
       ImageSelection,
+      MermaidNode,
       SlashCommand,
     ],
     content: initialContent ?? '',
@@ -65,7 +68,20 @@ export function Editor({ initialContent, onChange, onReady, onExitTop }: EditorP
         spellcheck: 'true',
       },
       // Pasted image files (screenshots, copied images) are stored and inserted as image blocks.
-      handlePaste: (_view, event) => {
+      handlePaste: (view, event) => {
+        // A pasted ```mermaid fenced block (or bare mermaid code on an empty line) becomes a diagram.
+        const text = event.clipboardData?.getData('text/plain') ?? ''
+        const fenced = text.trim().match(/^```mermaid[ \t]*\r?\n([\s\S]*?)\r?\n?```$/)
+        const { $from, empty } = view.state.selection
+        const onEmptyLine = empty && $from.parent.isTextblock && $from.parent.content.size === 0 && $from.parent.type.name === 'paragraph'
+        const bare = onEmptyLine && MERMAID_START.test(text.trim()) && text.includes('\n') ? text.trim() : null
+        const code = fenced?.[1] ?? bare
+        if (code && editorRef.current) {
+          event.preventDefault()
+          editorRef.current.chain().focus().insertMermaid(code).run()
+          return true
+        }
+
         const files = imageFilesFrom(event.clipboardData)
         if (files.length === 0 || !editorRef.current) return false
         event.preventDefault()

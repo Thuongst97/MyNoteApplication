@@ -33,6 +33,7 @@
     "electron": "^45.2.1",
     "electron-builder": "^26.18.0",
     "lucide-react": "^1.66.0",
+    "mermaid": "^11.17.2",
     "postcss": "^8.5.32",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

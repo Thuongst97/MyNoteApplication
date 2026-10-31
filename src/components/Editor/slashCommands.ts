@@ -6,6 +6,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Workflow,
   ImageIcon,
   List,
   ListOrdered,
@@ -97,6 +98,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
       e.chain().focus().deleteRange(r).run()
       pickAndInsertImages(e)
     },
+  },
+  {
+    title: 'Mermaid diagram',
+    description: 'Flowcharts, sequence diagrams and more from code.',
+    icon: Workflow,
+    keywords: ['mermaid', 'diagram', 'chart', 'flowchart', 'graph', 'sequence', 'uml'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertMermaid().run(),
   },
   {
     title: 'Divider',

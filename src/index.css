@@ -288,3 +288,18 @@ body {
 .notion-editor [data-resize-handle='bottom-right'] {
   cursor: nwse-resize;
 }
+
+/* ---------- Mermaid diagrams ---------- */
+.notion-editor .mermaid-svg svg {
+  max-width: 100%;
+  height: auto;
+}
+.notion-editor [data-type='mermaid'].ProseMirror-selectednode {
+  outline: none;
+}
+.notion-editor .mermaid-block pre {
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+}
