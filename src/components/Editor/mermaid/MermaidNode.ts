@@ -1,4 +1,5 @@
 import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
+import { borderAttribute } from '../blockBorder'
 import { mergeAttributes, Node, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
 import { TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state'
 import type { Node as PMNode } from '@tiptap/pm/model'
@@ -83,6 +84,7 @@ export const MermaidNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-align') || 'center',
         renderHTML: (attrs) => ({ 'data-align': attrs.align }),
       },
+      border: borderAttribute,
     }
   },
 

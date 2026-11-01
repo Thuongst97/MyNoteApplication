@@ -105,6 +105,7 @@ export const PLANTUML_KIND: SourceKind = {
   Render: PlantUmlRender,
   EditorFooter: ServerSetting,
   expandable: true,
+  borderToggle: true,
 }
 
 export function PlantUmlView(props: NodeViewProps) {

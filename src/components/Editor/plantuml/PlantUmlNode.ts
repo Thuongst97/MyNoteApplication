@@ -1,5 +1,6 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from '@tiptap/react'
 import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
+import { borderAttribute } from '../blockBorder'
 import { insertBlockAtCursor } from '../mermaid/MermaidNode'
 import { PlantUmlView } from './PlantUmlView'
 
@@ -29,6 +30,7 @@ export const PlantUmlNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-source') ?? '',
         renderHTML: (attrs) => ({ 'data-source': attrs.source }),
       },
+      border: borderAttribute,
     }
   },
 

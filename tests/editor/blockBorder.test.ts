@@ -31,3 +31,24 @@ describe('mind map and drawing borders', () => {
     expect(blockFrameClass(true, false)).toContain('border-blue-400/70')
   })
 })
+
+describe('Mermaid and PlantUML diagram borders', () => {
+  it('are on by default (also for existing blocks) and "off" survives copy & paste', async () => {
+    const { makeEditor } = await import('./helpers')
+    const e = makeEditor({
+      type: 'doc',
+      content: [
+        { type: 'mermaid', attrs: { code: 'graph LR; A-->B' } },
+        { type: 'plantuml', attrs: { source: 'A -> B' } },
+      ],
+    })
+    const attrs = () => e.getJSON().content!.slice(0, 2).map((n) => n.attrs?.border)
+    expect(attrs()).toEqual([true, true])
+    const tr = e.state.tr
+    e.state.doc.forEach((n, pos) => tr.setNodeMarkup(pos, undefined, { ...n.attrs, border: false }))
+    e.view.dispatch(tr)
+    e.commands.setContent(e.getHTML())
+    expect(attrs()).toEqual([false, false])
+    e.destroy()
+  })
+})

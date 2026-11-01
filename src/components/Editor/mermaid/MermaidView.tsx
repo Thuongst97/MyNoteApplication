@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Maximize2, Trash2, Workflow, X } from 'lucide-react'
+import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Maximize2, Square, Trash2, Workflow, X } from 'lucide-react'
+import { blockFrameClass } from '../blockBorder'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn, isMacLike } from '@/lib/utils'
@@ -91,8 +92,8 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
   return (
     <NodeViewWrapper
       className={cn(
-        'mermaid-block group/mermaid relative my-2 rounded-lg border transition-colors',
-        editing || selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
+        'mermaid-block group/mermaid relative my-2',
+        blockFrameClass(editing || selected, node.attrs.border !== false),
       )}
       data-drag-handle
     >
@@ -192,6 +193,13 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
                   <Icon size={14} />
                 </ToolbarButton>
               ))}
+              <ToolbarButton
+                label={node.attrs.border !== false ? 'Hide border' : 'Show border'}
+                active={node.attrs.border !== false}
+                onClick={() => updateAttributes({ border: node.attrs.border === false })}
+              >
+                <Square size={14} /> Border
+              </ToolbarButton>
               <ToolbarButton label="Edit diagram" onClick={startEdit}>
                 <Code2 size={14} /> Edit
               </ToolbarButton>

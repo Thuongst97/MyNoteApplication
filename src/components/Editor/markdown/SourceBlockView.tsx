@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Blocks, Check, Code2, Copy, Maximize2, Trash2, X, type LucideIcon } from 'lucide-react'
+import { Blocks, Check, Code2, Copy, Maximize2, Square, Trash2, X, type LucideIcon } from 'lucide-react'
+import { blockFrameClass } from '../blockBorder'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { cn, isMacLike } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
@@ -20,6 +21,8 @@ export interface SourceKind {
   toBlocksHtml?: (source: string) => string
   /** Diagram blocks: offer a full-window viewer (zoom & pan) for the rendered SVG. */
   expandable?: boolean
+  /** Has a frame (on by default, `border` attribute) with a Border toggle, like drawings. */
+  borderToggle?: boolean
   /** Extra controls under the editor (e.g. the PlantUML server). */
   EditorFooter?: () => React.ReactElement
 }
@@ -135,8 +138,10 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
   return (
     <NodeViewWrapper
       className={cn(
-        'markdown-block group/md relative my-2 rounded-lg border transition-colors',
-        editing || selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
+        'markdown-block group/md relative my-2',
+        kind.borderToggle
+          ? blockFrameClass(editing || selected, node.attrs.border !== false)
+          : cn('rounded-lg border transition-colors', editing || selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10'),
       )}
     >
       {editing ? (
@@ -208,6 +213,15 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
                   <Maximize2 size={14} /> Expand
                 </ToolbarButton>
               )}
+              {kind.borderToggle && (
+                <ToolbarButton
+                  label={node.attrs.border !== false ? 'Hide border' : 'Show border'}
+                  active={node.attrs.border !== false}
+                  onClick={() => updateAttributes({ border: node.attrs.border === false })}
+                >
+                  <Square size={14} /> Border
+                </ToolbarButton>
+              )}
               <ToolbarButton label={`Edit ${kind.name}`} onClick={startEdit}>
                 <Code2 size={14} /> Edit
               </ToolbarButton>
@@ -231,14 +245,18 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
   )
 }
 
-function ToolbarButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
+function ToolbarButton({ children, label, onClick, active }: { children: React.ReactNode; label: string; onClick: () => void; active?: boolean }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
+      aria-pressed={active}
       onClick={onClick}
-      className="flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]"
+      className={cn(
+        'flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]',
+        active && 'text-blue-600 dark:text-blue-400',
+      )}
     >
       {children}
     </button>
