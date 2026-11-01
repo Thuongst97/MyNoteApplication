@@ -28,7 +28,14 @@
   },
   "nsis": {
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "resources/icon.ico",
+    "uninstallerIcon": "resources/icon.ico",
+    "installerHeaderIcon": "resources/icon.ico",
+    "include": "resources/installer.nsh",
+    "shortcutName": "PremiumNote",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
   },
   "mac": {
     "target": [
