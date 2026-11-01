@@ -128,3 +128,13 @@ describe('damaged drawing data', () => {
     expect(d.svgLight).toBe('')
   })
 })
+
+describe('whiteboard / drawing canvas background', () => {
+  it('stores the light background (Excalidraw inverts it in dark mode); old dark backgrounds become white', async () => {
+    const { canvasBackground } = await import('@/components/Editor/drawing/drawingModel')
+    expect(canvasBackground(undefined)).toBe('#ffffff')
+    expect(canvasBackground('')).toBe('#ffffff')
+    expect(canvasBackground('#191919')).toBe('#ffffff') // saved by older versions in dark mode → showed light gray
+    expect(canvasBackground('#FFF9DB')).toBe('#FFF9DB') // a color the user picked is kept
+  })
+})

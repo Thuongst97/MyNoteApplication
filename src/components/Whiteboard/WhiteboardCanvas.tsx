@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/useAppStore'
 import { parsePageUrl } from '@/lib/links'
 import type { WhiteboardContent } from './WhiteboardPage'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
+import { canvasBackground } from '@/components/Editor/drawing/drawingModel'
 import { useTwoWayArrowTool } from './twoWayArrow'
 
 interface Props {
@@ -34,7 +35,7 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
         elements: initial.scene.elements as ExcalidrawElement[],
         files: initial.scene.files as BinaryFiles,
         appState: {
-          viewBackgroundColor: initial.scene.background ?? (theme === 'dark' ? '#191919' : '#ffffff'),
+          viewBackgroundColor: canvasBackground(initial.scene.background),
           currentItemRoughness: 0,
           currentItemFontFamily: FONT_FAMILY.Nunito,
           currentItemRoundness: 'sharp',

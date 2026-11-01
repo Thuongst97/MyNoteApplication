@@ -41,3 +41,15 @@ export function normalizeDrawing(raw: unknown): DrawingData {
     svgDark: typeof r.svgDark === 'string' ? r.svgDark : '',
   }
 }
+
+/**
+ * The canvas background to give Excalidraw. Excalidraw draws dark mode by *inverting* the
+ * canvas, so the stored background must be the light one: white becomes the dark canvas.
+ * Whiteboards created in dark mode by older versions stored the app's dark surface
+ * (#191919), which the inversion turned into a light gray canvas — treat that as white.
+ * Any other color the user picked in Excalidraw is kept.
+ */
+export function canvasBackground(stored: unknown): string {
+  if (typeof stored !== 'string' || !stored.trim()) return '#ffffff'
+  return stored.trim().toLowerCase() === '#191919' ? '#ffffff' : stored
+}

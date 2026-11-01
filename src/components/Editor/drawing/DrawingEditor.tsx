@@ -6,7 +6,7 @@ import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { Check, Loader2, X } from 'lucide-react'
 import type { Theme } from '@/stores/useAppStore'
 import { isMacLike } from '@/lib/utils'
-import type { DrawingData } from './drawingModel'
+import { canvasBackground, type DrawingData } from './drawingModel'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { useTwoWayArrowTool } from '@/components/Whiteboard/twoWayArrow'
 
@@ -121,7 +121,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
             elements: initial.scene.elements as ExcalidrawElement[],
             files: initial.scene.files as BinaryFiles,
             appState: {
-              viewBackgroundColor: initial.scene.background || '#ffffff',
+              viewBackgroundColor: canvasBackground(initial.scene.background),
               // PowerPoint-like defaults: clean lines, sharp corners, regular font.
               currentItemRoughness: 0,
               currentItemFontFamily: FONT_FAMILY.Nunito,
