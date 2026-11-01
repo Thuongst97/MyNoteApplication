@@ -8,18 +8,9 @@ import { cn } from '@/lib/utils'
 import { ReminderSettings } from './ReminderSettings'
 import { PILL, QUADRANT_PRESETS, useQuadrantAccent, withAlpha } from './quadrantStyle'
 import { ColorPicker } from '@/components/ui/ColorPicker'
-import { TaskCard, dueState } from './TaskCard'
+import { TaskCard, dueState, taskDrag } from './TaskCard'
+import { dropIndexFromY, orderForIndex, sortByPriority } from '@/lib/taskOrder'
 import { TaskDialog } from './TaskDialog'
-
-/** Sort: open tasks first, then by due date (no date last), then by creation. */
-function sortTasks(a: Task, b: Task) {
-  if (a.completed !== b.completed) return a.completed ? 1 : -1
-  if (a.completed && b.completed) return (b.completedAt ?? 0) - (a.completedAt ?? 0)
-  const ad = a.dueAt ?? Infinity
-  const bd = b.dueAt ?? Infinity
-  if (ad !== bd) return ad - bd
-  return a.order - b.order
-}
 
 /** Short hints shown next to each quadrant's title. */
 const HINTS: Record<Quadrant, string> = {
@@ -65,7 +56,7 @@ export function TaskMatrix() {
   const byQuadrant = useMemo(() => {
     const groups: Record<Quadrant, Task[]> = { do: [], schedule: [], delegate: [], eliminate: [] }
     for (const t of tasks) if (showCompleted || !t.completed) groups[quadrantOf(t)].push(t)
-    Object.values(groups).forEach((g) => g.sort(sortTasks))
+    Object.values(groups).forEach((g) => g.sort(sortByPriority))
     return groups
   }, [tasks, showCompleted])
 
@@ -89,22 +80,22 @@ export function TaskMatrix() {
   }
 
   return (
-    <div className="relative min-h-full text-[#1C1B19] dark:text-[#ECE7DD]">
-      {/* Faint champagne / blue glows behind the matrix. */}
+    <div className="relative min-h-full text-[#171717] dark:text-[#ECE7DD]">
+      {/* Dark mode only: faint champagne / blue glows behind the matrix (light mode is plain black & white). */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_500px_at_85%_-10%,rgba(201,165,99,0.11),transparent_60%),radial-gradient(800px_600px_at_-10%_110%,rgba(79,127,201,0.06),transparent_60%)] dark:bg-[radial-gradient(900px_500px_at_85%_-10%,rgba(217,185,122,0.08),transparent_60%),radial-gradient(800px_600px_at_-10%_110%,rgba(127,166,224,0.06),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 hidden dark:block dark:bg-[radial-gradient(900px_500px_at_85%_-10%,rgba(217,185,122,0.08),transparent_60%),radial-gradient(800px_600px_at_-10%_110%,rgba(127,166,224,0.06),transparent_60%)]"
       />
       <div className="relative mx-auto flex min-h-full w-full max-w-[1240px] flex-col px-10 pb-10 pt-8">
         {/* Header */}
         <div className="mb-7 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#A8843F] dark:text-[#D9B97A]">Focus</div>
-            <h1 className="bg-gradient-to-b from-[#1C1B19] to-[#4A453D] bg-clip-text text-[42px] font-semibold leading-none tracking-[-0.025em] text-transparent dark:from-white dark:to-[#CFC6B6]">
+            <h1 className="text-[42px] font-semibold leading-none tracking-[-0.025em] text-[#171717] dark:bg-gradient-to-b dark:from-white dark:to-[#CFC6B6] dark:bg-clip-text dark:text-transparent">
               Tasks
             </h1>
-            <p className="mt-3 text-sm text-[#8A857D] dark:text-[#8D8A85]">
-              <span className="font-medium text-[#1C1B19] dark:text-[#ECE7DD]">{open.length} open</span>
+            <p className="mt-3 text-sm text-[#8A8A8A] dark:text-[#8D8A85]">
+              <span className="font-medium text-[#171717] dark:text-[#ECE7DD]">{open.length} open</span>
               {overdue > 0 && <span className="text-[#C24848] dark:text-[#E07A7A]"> · {overdue} overdue</span>}
               <span> · Eisenhower matrix</span>
             </p>
@@ -143,7 +134,7 @@ interface QuadrantColumnProps {
   flashId: string | null
   onOpen: (id: string) => void
   onAdd: (init: Partial<Task>) => Promise<Task>
-  onUpdate: (u: { id: string; important?: boolean; urgent?: boolean; completed?: boolean }) => Promise<void>
+  onUpdate: (u: { id: string; important?: boolean; urgent?: boolean; completed?: boolean; order?: number }) => Promise<void>
 }
 
 function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: QuadrantColumnProps) {
@@ -159,8 +150,33 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
   }
   const [draft, setDraft] = useState('')
   const [adding, setAdding] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
-  const openCount = tasks.filter((t) => !t.completed).length
+  /** Where a dragged task would land among this quadrant's open tasks (null = not dragging here). */
+  const [dropAt, setDropAt] = useState<number | null>(null)
+  const openTasks = tasks.filter((t) => !t.completed)
+  const openCount = openTasks.length
+  /** Open tasks a dragged task can be dropped between (itself excluded). */
+  const landing = openTasks.filter((t) => t.id !== taskDrag.id)
+
+  /** Puts task `id` at position `index` of this quadrant (moving it here if it's elsewhere). */
+  const placeAt = (id: string, index: number) => {
+    const others = openTasks.filter((t) => t.id !== id)
+    void onUpdate({ id, important: q.important, urgent: q.urgent, order: orderForIndex(others, index) })
+  }
+  const dropIndex = (section: HTMLElement, y: number) => {
+    const rows = [...section.querySelectorAll<HTMLElement>('[data-task-id]:not([data-completed])')].filter((r) => r.dataset.taskId !== taskDrag.id)
+    return dropIndexFromY(
+      rows.map((r) => r.getBoundingClientRect()),
+      y,
+    )
+  }
+  /** Alt+↑/↓ on a focused task. */
+  const move = (id: string, delta: -1 | 1) => {
+    const i = openTasks.findIndex((t) => t.id === id)
+    const target = i + delta
+    if (i < 0 || target < 0 || target >= openTasks.length) return
+    placeAt(id, target)
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-task-id="${id}"]`)?.focus())
+  }
 
   const submit = () => {
     const title = draft.trim()
@@ -176,29 +192,36 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         if (!e.dataTransfer.types.includes('application/x-task-id')) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
-        setDragOver(true)
+        const at = dropIndex(e.currentTarget, e.clientY)
+        if (at !== dropAt) setDropAt(at)
       }}
       onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false)
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropAt(null)
       }}
       onDrop={(e) => {
-        setDragOver(false)
-        const taskId = e.dataTransfer.getData('application/x-task-id')
-        if (taskId) void onUpdate({ id: taskId, important: q.important, urgent: q.urgent })
+        e.preventDefault()
+        const taskId = e.dataTransfer.getData('application/x-task-id') || taskDrag.id
+        const at = dropAt ?? dropIndex(e.currentTarget, e.clientY)
+        setDropAt(null)
+        if (taskId) placeAt(taskId, at)
       }}
       className={cn(
         'group/quad relative flex min-h-[300px] flex-col overflow-hidden rounded-[20px] border px-[22px] pb-4 pt-5 transition-shadow',
-        'border-[#ECE8E1] bg-gradient-to-b from-white to-[#FDFCFA] shadow-[0_24px_48px_-30px_rgba(60,48,30,0.28),0_1px_2px_rgba(28,27,25,0.04),inset_0_1px_0_#fff]',
-        'dark:border-white/[0.07] dark:from-white/[0.045] dark:to-white/[0.02] dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]',
+        'border-[#EAEAEA] bg-white shadow-[0_24px_48px_-30px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.04)]',
+        'dark:border-white/[0.07] dark:bg-transparent dark:bg-gradient-to-b dark:from-white/[0.045] dark:to-white/[0.02] dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]',
       )}
       style={{
-        ...(dragOver && { boxShadow: `0 0 0 2px ${withAlpha(accent, 0.55)}` }),
+        ...(dropAt !== null && { boxShadow: `0 0 0 2px ${withAlpha(accent, 0.55)}` }),
         ...(custom && { borderColor: withAlpha(accent, 0.35) }),
       }}
     >
-      {/* Corner glow in the quadrant's color */}
-      <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(620px 170px at 0% 0%, ${withAlpha(accent, 0.09)}, transparent 62%)` }} />
 
+      {/* Dark mode only: corner glow in the quadrant's color */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={{ background: `radial-gradient(620px 170px at 0% 0%, ${withAlpha(accent, 0.09)}, transparent 62%)` }}
+      />
       <header className="relative mb-3.5 flex items-center gap-3">
         <span
           data-testid="quadrant-dot"
@@ -206,7 +229,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
           style={{ background: accent, boxShadow: `0 0 0 4px ${withAlpha(accent, 0.14)}, 0 0 14px ${withAlpha(accent, 0.35)}` }}
         />
         <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{q.title}</h2>
-        <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#9A958C] dark:text-[#7E7B76]">{HINTS[id]}</span>
+        <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#9A9A9A] dark:text-[#7E7B76]">{HINTS[id]}</span>
         <ColorPicker
           trigger="icon"
           align="right"
@@ -218,25 +241,35 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
           onChange={setQuadrantColor}
           className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100"
         />
-        <span className="rounded-lg border border-[#ECE8E1] bg-[#F5F3EF] px-2 py-0.5 text-xs tabular-nums text-[#6E695F] dark:border-white/[0.07] dark:bg-white/[0.06] dark:text-[#BDB7AC]">
+        <span className="rounded-lg border border-[#EAEAEA] bg-[#F5F5F5] px-2 py-0.5 text-xs tabular-nums text-[#6E6E6E] dark:border-white/[0.07] dark:bg-white/[0.06] dark:text-[#BDB7AC]">
           {openCount}
         </span>
       </header>
 
       <div className="relative flex flex-1 flex-col gap-2">
-        {tasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            now={now}
-            accent={accent}
-            highlighted={flashId === t.id}
-            onOpen={() => onOpen(t.id)}
-            onToggle={() => void onUpdate({ id: t.id, completed: !t.completed })}
-          />
-        ))}
+        {tasks.map((t) => {
+          const rank = t.completed ? undefined : openTasks.indexOf(t) + 1
+          // Drop positions count the open tasks other than the one being dragged.
+          const slot = t.completed || t.id === taskDrag.id ? -1 : landing.findIndex((x) => x.id === t.id)
+          return (
+            <div key={t.id} className="relative">
+              {dropAt !== null && slot !== -1 && dropAt === slot && <DropLine color={accent} />}
+              <TaskCard
+                task={t}
+                now={now}
+                rank={rank}
+                accent={accent}
+                highlighted={flashId === t.id}
+                onOpen={() => onOpen(t.id)}
+                onToggle={() => void onUpdate({ id: t.id, completed: !t.completed })}
+                onMove={(d) => move(t.id, d)}
+              />
+            </div>
+          )
+        })}
+        {dropAt !== null && dropAt >= landing.length && <DropLine color={accent} />}
         {tasks.length === 0 && !adding && (
-          <div className="rounded-[14px] border border-dashed border-[#E3DED5] px-4 py-7 text-center text-[13.5px] text-[#B3AEA5] dark:border-white/[0.08] dark:text-[#6D6A65]">
+          <div className="rounded-[14px] border border-dashed border-[#E5E5E5] px-4 py-7 text-center text-[13.5px] text-[#A3A3A3] dark:border-white/[0.08] dark:text-[#6D6A65]">
             Clear. Keep it that way.
           </div>
         )}
@@ -258,14 +291,14 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
               }
             }}
             placeholder="Task name, then Enter"
-            className="rounded-[14px] border bg-white px-3.5 py-2.5 text-[14.5px] text-[#1C1B19] outline-none placeholder:text-[#B3AEA5] dark:bg-white/[0.04] dark:text-[#ECE7DD] dark:placeholder:text-[#6D6A65]"
+            className="rounded-[14px] border bg-white px-3.5 py-2.5 text-[14.5px] text-[#171717] outline-none placeholder:text-[#A3A3A3] dark:bg-white/[0.04] dark:text-[#ECE7DD] dark:placeholder:text-[#6D6A65]"
             style={{ borderColor: withAlpha(accent, 0.6) }}
           />
         ) : (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] text-[#9A958C] transition-colors hover:text-[#1C1B19] dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]"
+            className="mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] text-[#9A9A9A] transition-colors hover:text-[#171717] dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]"
           >
             <Plus size={14} /> Add task
           </button>
@@ -273,4 +306,9 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
       </div>
     </section>
   )
+}
+
+/** Thin line showing where a dragged task will be dropped. */
+function DropLine({ color }: { color: string }) {
+  return <div aria-hidden data-testid="drop-line" className="-my-[5px] h-[2px] rounded-full" style={{ background: color }} />
 }

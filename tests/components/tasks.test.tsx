@@ -39,6 +39,34 @@ describe('TaskCard', () => {
 })
 
 describe('TaskMatrix', () => {
+  it('numbers open tasks 1, 2, 3 by priority and reorders them with Alt+↑/↓ and drag & drop', async () => {
+    const { add } = useTaskStore.getState()
+    const ids: Record<string, string> = {}
+    for (const [key, title, order, completed] of [['a', 'Alpha', 10, false], ['b', 'Bravo', 20, false], ['c', 'Charlie', 30, false], ['d', 'Done one', 5, true]] as const)
+      ids[key] = (await add({ title, important: true, urgent: true, order, completed })).id
+    render(<TaskMatrix />)
+    const doFirst = screen.getByRole('region', { name: 'Do first' })
+    const names = () => within(doFirst).getAllByRole('button', { name: /^\d+\. / }).map((b) => b.getAttribute('aria-label'))
+    expect(names()).toEqual(['1. Alpha', '2. Bravo', '3. Charlie']) // the completed task has no number
+    // Keyboard: move Charlie up one place → between Alpha and Bravo.
+    within(doFirst).getByRole('button', { name: '3. Charlie' }).focus()
+    await userEvent.keyboard('{Alt>}{ArrowUp}{/Alt}')
+    expect(names()).toEqual(['1. Alpha', '2. Charlie', '3. Bravo'])
+    // Drag Alpha to the top of Schedule (an empty quadrant) and back to the end of Do first.
+    const schedule = screen.getByRole('region', { name: 'Schedule' })
+    const drag = (id: string, target: HTMLElement) =>
+      act(async () => {
+        fireEvent.dragOver(target, { dataTransfer: { getData: () => id, types: ['application/x-task-id'] } })
+        fireEvent.drop(target, { dataTransfer: { getData: () => id, types: ['application/x-task-id'] } })
+      })
+    await drag(ids.a, schedule)
+    expect(within(schedule).getByRole('button', { name: '1. Alpha' })).toBeInTheDocument()
+    expect(useTaskStore.getState().tasks.find((t) => t.id === ids.a)).toMatchObject({ important: true, urgent: false })
+    expect(names()).toEqual(['1. Charlie', '2. Bravo'])
+    await drag(ids.a, doFirst)
+    expect(names()).toEqual(['1. Charlie', '2. Bravo', '3. Alpha'])
+  })
+
   it('recolors a quadrant from its palette button and resets it to default', async () => {
     const setSettings = vi.fn(async (patch) => useTaskStore.setState((st) => ({ settings: { ...st.settings, ...patch } })))
     useTaskStore.setState({ setSettings } as never)

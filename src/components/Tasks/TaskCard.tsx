@@ -10,40 +10,68 @@ export function dueState(task: Task, now: number): 'overdue' | 'soon' | 'later' 
   return 'later'
 }
 
+/** Id of the task being dragged (dataTransfer can't be read during dragover). */
+export const taskDrag = { id: null as string | null }
+
 interface TaskCardProps {
   task: Task
   now: number
   highlighted: boolean
+  /** Priority number (1, 2, 3…) of an open task; none for completed ones. */
+  rank?: number
   /** The quadrant's accent color (fills the checkbox when done). */
   accent?: string
   onToggle: () => void
   onOpen: () => void
+  /** Alt+↑ / Alt+↓: move the task up or down one place. */
+  onMove?: (delta: -1 | 1) => void
 }
 
-/** One task row in the matrix ("Midnight Onyx": soft rounded row, square checkbox, date on the right). */
-export function TaskCard({ task, now, highlighted, accent = '#4F7FC9', onToggle, onOpen }: TaskCardProps) {
+/** One task row: priority number, checkbox, title (+ note), due date. Drag it to reorder. */
+export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onToggle, onOpen, onMove }: TaskCardProps) {
   const state = dueState(task, now)
   return (
     <div
       data-task-id={task.id}
+      data-completed={task.completed || undefined}
       draggable
       onDragStart={(e) => {
+        taskDrag.id = task.id
         e.dataTransfer.setData('application/x-task-id', task.id)
         e.dataTransfer.effectAllowed = 'move'
+        e.currentTarget.classList.add('opacity-40')
+      }}
+      onDragEnd={(e) => {
+        taskDrag.id = null
+        e.currentTarget.classList.remove('opacity-40')
       }}
       onClick={onOpen}
-      onKeyDown={(e) => e.key === 'Enter' && onOpen()}
+      onKeyDown={(e) => {
+        if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && onMove) {
+          e.preventDefault()
+          onMove(e.key === 'ArrowUp' ? -1 : 1)
+        } else if (e.key === 'Enter') onOpen()
+      }}
       tabIndex={0}
       role="button"
+      aria-label={`${rank ? `${rank}. ` : ''}${task.title || 'Untitled task'}`}
+      title="Click to open · drag to reorder (Alt+↑/↓)"
       className={cn(
-        'group flex cursor-pointer items-center gap-3 rounded-[14px] border px-3.5 py-3 text-[14.5px] outline-none transition',
+        'group flex cursor-grab items-center gap-3 rounded-[14px] border px-3.5 py-3 text-[14.5px] outline-none transition active:cursor-grabbing',
         task.completed
           ? 'border-transparent bg-transparent'
-          : 'border-[#EFECE6] bg-[#F8F7F4] hover:border-[#E3DED5] hover:bg-[#F4F2EE] dark:border-white/[0.05] dark:bg-white/[0.035] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055]',
+          : 'border-[#EEEEEE] bg-[#F7F7F7] hover:border-[#E0E0E0] hover:bg-[#F3F3F3] dark:border-white/[0.05] dark:bg-white/[0.035] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055]',
         'focus-visible:ring-2 focus-visible:ring-[#C9A563]/60',
         highlighted && 'animate-pulse ring-2 ring-[#C9A563]',
       )}
     >
+      <span
+        aria-hidden
+        className="w-4 shrink-0 text-right text-[13px] font-semibold tabular-nums text-[#A3A3A3] dark:text-[#7E7B76]"
+        style={rank === 1 ? { color: accent } : undefined}
+      >
+        {rank ?? ''}
+      </span>
       <button
         type="button"
         role="checkbox"
@@ -54,8 +82,8 @@ export function TaskCard({ task, now, highlighted, accent = '#4F7FC9', onToggle,
           onToggle()
         }}
         className={cn(
-          'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors',
-          !task.completed && 'border-[#CFC9BE] bg-white hover:border-[#A8843F] dark:border-white/25 dark:bg-transparent dark:hover:border-[#D9B97A]',
+          'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors',
+          !task.completed && 'border-[#D4D4D4] bg-white hover:border-[#737373] dark:border-white/25 dark:bg-transparent dark:hover:border-[#D9B97A]',
         )}
         style={task.completed ? { background: accent, borderColor: accent } : undefined}
       >
@@ -65,13 +93,13 @@ export function TaskCard({ task, now, highlighted, accent = '#4F7FC9', onToggle,
         <div
           className={cn(
             'break-words leading-snug',
-            task.completed ? 'text-[#B3AEA5] line-through dark:text-[#6D6A65]' : 'text-[#1C1B19] dark:text-[#ECE7DD]',
-            !task.title && 'opacity-50',
+            task.completed ? 'text-[#B5B5B5] line-through dark:text-[#6D6A65]' : 'text-[#171717] dark:text-[#ECE7DD]',
+            !task.title && 'opacity-60',
           )}
         >
           {task.title || 'Untitled task'}
         </div>
-        {task.notes && !task.completed && <div className="mt-0.5 truncate text-[12.5px] text-[#9A958C] dark:text-[#7E7B76]">{task.notes.split('\n')[0]}</div>}
+        {task.notes && !task.completed && <div className="mt-0.5 truncate text-[12.5px] text-[#8A8A8A] dark:text-[#7E7B76]">{task.notes.split('\n')[0]}</div>}
       </div>
       {task.dueAt !== null && !task.completed && (
         <span
@@ -79,12 +107,12 @@ export function TaskCard({ task, now, highlighted, accent = '#4F7FC9', onToggle,
             'flex shrink-0 items-center gap-1 whitespace-nowrap text-xs',
             state === 'overdue' && 'font-medium text-[#C24848] dark:text-[#E07A7A]',
             state === 'soon' && 'font-medium text-[#A8843F] dark:text-[#D9B97A]',
-            (state === 'later' || state === null) && 'text-[#8A857D] dark:text-[#9C978E]',
+            (state === 'later' || state === null) && 'text-[#8A8A8A] dark:text-[#9C978E]',
           )}
         >
           {state === 'overdue' ? 'Overdue · ' : <Calendar size={12} className="opacity-70" />}
           {formatDueDate(task.dueAt, now)}
-          {task.reminders.length > 0 && <Bell size={11} className="ml-1 opacity-50" aria-label={`${task.reminders.length} reminder(s)`} />}
+          {task.reminders.length > 0 && <Bell size={11} className="ml-1 opacity-60" aria-label={`${task.reminders.length} reminder(s)`} />}
         </span>
       )}
     </div>
