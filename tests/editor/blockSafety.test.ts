@@ -49,3 +49,28 @@ describe('clicks inside a block editing panel', () => {
     panel.remove()
   })
 })
+
+describe('read-only rendered content (Markdown block)', () => {
+  it('leaves mouse selection and copying to the browser', () => {
+    editor = makeEditor(doc(p('x')))
+    const body = document.createElement('div')
+    body.className = 'markdown-body selectable-text'
+    const para = document.createElement('p')
+    para.textContent = 'Copy me'
+    body.append(para)
+    editor.view.dom.append(body)
+    const down = new MouseEvent('mousedown', { bubbles: true })
+    Object.defineProperty(down, 'target', { value: para })
+    expect(editor.view.someProp('handleDOMEvents', (h) => h.mousedown?.(editor.view, down))).toBe(true)
+    // With text selected inside it, copy is the browser's (copies that text, not the block).
+    const range = document.createRange()
+    range.selectNodeContents(para)
+    window.getSelection()!.removeAllRanges()
+    window.getSelection()!.addRange(range)
+    expect(editor.view.someProp('handleDOMEvents', (h) => h.copy?.(editor.view, new ClipboardEvent('copy')))).toBe(true)
+    // Outside such content, copying stays the editor's job.
+    window.getSelection()!.removeAllRanges()
+    expect(editor.view.someProp('handleDOMEvents', (h) => h.copy?.(editor.view, new ClipboardEvent('copy')))).toBeFalsy()
+    body.remove()
+  })
+})

@@ -731,3 +731,13 @@ body.block-dragging .prosemirror-dropcursor-inline {
   color: inherit !important;
   fill: none !important;
 }
+
+/* Rendered read-only content inside the editor (Markdown block): normal text selection & copy. */
+.notion-editor .selectable-text {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+.notion-editor .selectable-text a {
+  cursor: pointer;
+}

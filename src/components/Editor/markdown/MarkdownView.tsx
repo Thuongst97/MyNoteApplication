@@ -98,7 +98,6 @@ export function MarkdownView({ node, updateAttributes, deleteNode, selected, edi
         'markdown-block group/md relative my-2 rounded-lg border transition-colors',
         editing || selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
       )}
-      data-drag-handle
     >
       {editing ? (
         <div contentEditable={false} className="no-drag rounded-lg bg-[#f7f6f3] p-3 dark:bg-[#202020]">
@@ -158,8 +157,9 @@ export function MarkdownView({ node, updateAttributes, deleteNode, selected, edi
           </div>
         </div>
       ) : (
-        <div contentEditable={false} onDoubleClick={startEdit} className="relative px-1 py-1">
-          <MarkdownRender source={source} className="markdown-body" />
+        <div contentEditable={false} className="relative px-1 py-1">
+          {/* Selectable, copyable text: double-click selects a word; use Edit to change the source. */}
+          <MarkdownRender source={source} className="markdown-body selectable-text" />
           {editor.isEditable && (
             <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover/md:opacity-100">
               <ToolbarButton label="Edit Markdown" onClick={startEdit}>

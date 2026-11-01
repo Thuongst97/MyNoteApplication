@@ -41,7 +41,17 @@ export const ImageSelection = Extension.create({
             // shortcuts (Ctrl+Enter to save) would act on the page instead.
             mousedown(view, event) {
               const t = event.target as HTMLElement | null
-              return !!t?.closest?.('.no-drag') && view.dom.contains(t)
+              // .selectable-text: rendered read-only content (e.g. a Markdown block) whose text
+              // the user selects with the mouse — the editor must not turn that into a block selection.
+              return !!t?.closest?.('.no-drag, .selectable-text') && view.dom.contains(t)
+            },
+            // Copying a text selection made inside read-only rendered content copies that text
+            // (the browser's default), not the editor's idea of the selection (the whole block).
+            copy(view) {
+              const sel = window.getSelection()
+              const node = sel && !sel.isCollapsed ? sel.anchorNode : null
+              const el = node ? (node instanceof Element ? node : node.parentElement) : null
+              return !!el?.closest('.selectable-text') && view.dom.contains(el)
             },
           },
           handleClickOn(view, _pos, node, nodePos, event, direct) {
