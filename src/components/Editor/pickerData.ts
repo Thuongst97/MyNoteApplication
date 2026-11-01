@@ -22,8 +22,5 @@ export const COVERS = [
   '#EBF5FA',
 ]
 
-/** Converts a stored cover value into a CSS background. URLs become images. */
-export function coverToCss(cover: string) {
-  if (/^(https?:|data:image\/)/.test(cover)) return `center / cover no-repeat url("${cover.replace(/"/g, '%22')}")`
-  return cover
-}
+/** Converts a stored cover value into a safe CSS background (see lib/sanitize). */
+export { coverToCss } from '@/lib/sanitize'

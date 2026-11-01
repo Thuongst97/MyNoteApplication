@@ -1,3 +1,4 @@
+import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
 import { mergeAttributes, Node, ReactNodeViewRenderer, type Editor } from '@tiptap/react'
 import { TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state'
 import type { Node as PMNode } from '@tiptap/pm/model'
@@ -76,7 +77,7 @@ export const MermaidNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(MermaidView)
+    return ReactNodeViewRenderer(withBlockBoundary(MermaidView))
   },
 
   addCommands() {

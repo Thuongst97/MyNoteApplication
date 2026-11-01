@@ -59,6 +59,17 @@ describe('newTask / applyTaskUpdate', () => {
     expect(t.sentReminders).toEqual([])
   })
 
+  it('only accepts known fields from updates (e.g. cannot reset sent reminders)', () => {
+    const t = newTask('a', { dueAt: NOW + 10 * M }, settings, NOW)
+    const u = applyTaskUpdate(t, { id: 'a', sentReminders: [], createdAt: 0, evil: 'x'.repeat(10), completedAt: 1, completed: 'yes' } as never, NOW)
+    expect(u.sentReminders).toEqual(t.sentReminders)
+    expect(u.createdAt).toBe(t.createdAt)
+    expect('evil' in u).toBe(false)
+    expect(u.completed).toBe(true)
+    expect(u.completedAt).toBe(NOW)
+    expect(applyTaskUpdate(t, { id: 'a', reminders: 'nope' as never, order: NaN }, NOW)).toMatchObject({ reminders: [], order: NOW })
+  })
+
   it('ignores id changes in updates', () => {
     const t = newTask('a', {}, settings, NOW)
     expect(applyTaskUpdate(t, { id: 'b' } as never, NOW).id).toBe('a')

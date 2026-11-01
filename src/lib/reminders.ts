@@ -61,6 +61,8 @@ export function newTask(id: string, init: Partial<Task>, settings: TaskSettings,
   )
 }
 
+const TASK_FIELDS = new Set(['title', 'notes', 'important', 'urgent', 'dueAt', 'reminders', 'completed', 'order'])
+
 /**
  * Applies an update to a task. Reminders whose time is already in the past
  * when a due date/reminder is set are marked as sent, so setting a due date
@@ -82,14 +84,22 @@ export function applyTaskUpdate(prev: Task | null, update: TaskUpdate, now = Dat
     updatedAt: now,
     sentReminders: [],
   }
-  const clean = Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined)) as TaskUpdate
+  // Only known fields are taken from an update (it may come from another process).
+  const clean = Object.fromEntries(
+    Object.entries(update).filter(([k, v]) => v !== undefined && TASK_FIELDS.has(k)),
+  ) as TaskUpdate
   const next: Task = { ...base, ...clean, id: base.id, updatedAt: now }
   next.title = String(next.title ?? '').slice(0, 500)
   next.notes = String(next.notes ?? '').slice(0, 10_000)
+  next.order = Number.isFinite(next.order) ? next.order : now
+  next.reminders = Array.isArray(next.reminders) ? next.reminders : []
   next.important = !!next.important
   next.urgent = !!next.urgent
+  next.completed = !!next.completed
   next.dueAt = typeof next.dueAt === 'number' && Number.isFinite(next.dueAt) ? next.dueAt : null
-  next.reminders = [...new Set((next.reminders ?? []).map(Number).filter((m) => Number.isFinite(m) && m >= 0))].sort((a, b) => a - b)
+  next.reminders = [...new Set((next.reminders ?? []).map(Number).filter((m) => Number.isFinite(m) && m >= 0 && m <= 366 * 24 * 60))]
+    .sort((a, b) => a - b)
+    .slice(0, 20)
   if (next.completed && !base.completed) next.completedAt = now
   if (!next.completed) next.completedAt = null
 

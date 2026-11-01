@@ -39,7 +39,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
   return (
     <div className="group/header">
       {/* Cover */}
-      {page.cover ? (
+      {page.cover && coverToCss(page.cover) ? (
         <div className="group/cover relative h-[30vh] max-h-72 min-h-36 w-full" style={{ background: coverToCss(page.cover) }}>
           <div className="absolute bottom-3 right-4 flex gap-1 opacity-0 transition-opacity group-hover/cover:opacity-100">
             <div className="relative">
@@ -69,7 +69,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
                   className="flex gap-2"
                   onSubmit={(e) => {
                     e.preventDefault()
-                    if (/^https?:\/\//.test(coverUrl.trim())) {
+                    if (coverToCss(coverUrl.trim())) {
                       onChange({ cover: coverUrl.trim() })
                       setCoverUrl('')
                       setCoverOpen(false)
@@ -79,7 +79,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
                   <input
                     value={coverUrl}
                     onChange={(e) => setCoverUrl(e.target.value)}
-                    placeholder="https://…"
+                    placeholder="https://… (image link)"
                     className="min-w-0 flex-1 rounded-md border border-black/10 bg-transparent px-2 py-1 text-sm outline-none focus:border-blue-400 dark:border-white/15"
                   />
                   <button type="submit" className="rounded-md bg-blue-500 px-2 text-sm text-white hover:bg-blue-600">
@@ -98,7 +98,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
       <div className="mx-auto w-full px-12 md:px-24" style={columnStyle}>
         {/* Icon */}
         {page.icon && (
-          <div className={cn('relative', page.cover ? '-mt-10' : 'mt-4')}>
+          <div className={cn('relative', page.cover && coverToCss(page.cover) ? '-mt-10' : 'mt-4')}>
             <button
               type="button"
               onClick={() => setIconOpen((o) => !o)}

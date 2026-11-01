@@ -114,7 +114,7 @@ function createBrowserLibrariesApi(): ElectronAPI['libraries'] {
     get: async () => read(),
     save: async (d) => write(normalizeLibraries(d)),
     installUrl: async (url) => {
-      if (!isAllowedLibraryUrl(url)) throw new Error('Only https:// library links can be installed.')
+      if (!isAllowedLibraryUrl(url, { allowLocalHttp: true })) throw new Error('Only https:// library links can be installed.')
       const items = parseLibraryFile(await (await fetch(url)).text())
       const r = installLibrary(read(), url, items)
       return { data: write(r.data), categoryId: r.categoryId }

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { LibraryStore } from '../../electron/libraries'
+import { fetchLibraryText, LibraryStore } from '../../electron/libraries'
 
 let root: string
 beforeEach(async () => (root = await fs.mkdtemp(path.join(os.tmpdir(), 'nc-libs-'))))
@@ -23,7 +23,7 @@ describe('LibraryStore', () => {
     const s = new LibraryStore(root, fetchText)
     const url = 'https://libraries.excalidraw.com/libraries/x/software-architecture.excalidrawlib'
     const r = await s.installFromUrl(url)
-    expect(fetchText).toHaveBeenCalledWith(url)
+    expect(fetchText).toHaveBeenCalledWith(url, {})
     expect(r.data.categories[1]).toMatchObject({ name: 'Software architecture', source: url })
     // survives a restart
     const again = new LibraryStore(root)
@@ -62,5 +62,30 @@ describe('LibraryStore', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await new LibraryStore(root).get()).categories).toHaveLength(1)
     spy.mockRestore()
+  })
+})
+
+describe('fetchLibraryText (downloads)', () => {
+  const body = (text: string, init: { url?: string; status?: number; length?: number } = {}) =>
+    Object.defineProperty(new Response(text, { status: init.status ?? 200, headers: init.length ? { 'content-length': String(init.length) } : {} }), 'url', {
+      value: init.url ?? 'https://libs.example/a.excalidrawlib',
+    })
+
+  it('downloads the text', async () => {
+    const f = vi.fn(async () => body('{"ok":1}'))
+    expect(await fetchLibraryText('https://libs.example/a.excalidrawlib', {}, f as never)).toBe('{"ok":1}')
+    expect(f).toHaveBeenCalledWith('https://libs.example/a.excalidrawlib', expect.objectContaining({ credentials: 'omit' }))
+  })
+
+  it('refuses redirects to addresses that are not allowed', async () => {
+    const f = async () => body('{}', { url: 'http://localhost:9200/_secret' })
+    await expect(fetchLibraryText('https://libs.example/a', {}, f as never)).rejects.toThrow(/redirected/)
+  })
+
+  it('stops at 20 MB (declared or actual) and reports HTTP errors', async () => {
+    await expect(fetchLibraryText('https://x.example/a', {}, (async () => body('x', { length: 30 * 1024 * 1024 })) as never)).rejects.toThrow(/20 MB/)
+    const big = 'x'.repeat(21 * 1024 * 1024)
+    await expect(fetchLibraryText('https://x.example/a', {}, (async () => body(big)) as never)).rejects.toThrow(/20 MB/)
+    await expect(fetchLibraryText('https://x.example/a', {}, (async () => body('no', { status: 404 })) as never)).rejects.toThrow(/404/)
   })
 })

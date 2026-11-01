@@ -9,6 +9,7 @@ import {
   normalizeLibraries,
   parseLibraryFile,
   type LibraryData,
+  type UrlPolicy,
 } from '../src/lib/libraries'
 
 /** Drawing libraries, saved permanently in `<userData>/libraries.json`. */
@@ -20,7 +21,7 @@ export class LibraryStore {
   constructor(
     root: string,
     /** Download function (injectable for tests). */
-    private readonly fetchText: (url: string) => Promise<string> = defaultFetch,
+    private readonly fetchText: (url: string, policy: UrlPolicy) => Promise<string> = (url, policy) => fetchLibraryText(url, policy),
   ) {
     this.file = path.join(root, 'libraries.json')
   }
@@ -48,9 +49,9 @@ export class LibraryStore {
   }
 
   /** Downloads a library and saves it as a category. */
-  async installFromUrl(url: string): Promise<{ data: LibraryData; categoryId: string }> {
-    if (!isAllowedLibraryUrl(url)) throw new Error('Only https:// library links can be installed.')
-    const items = parseLibraryFile(await this.fetchText(url))
+  async installFromUrl(url: string, policy: UrlPolicy = {}): Promise<{ data: LibraryData; categoryId: string }> {
+    if (!isAllowedLibraryUrl(url, policy)) throw new Error('Only https:// library links can be installed.')
+    const items = parseLibraryFile(await this.fetchText(url, policy))
     const r = installLibrary(await this.get(), url, items)
     await this.save(r.data)
     return { data: this.data!, categoryId: r.categoryId }
@@ -77,17 +78,33 @@ export class LibraryStore {
   }
 }
 
-async function defaultFetch(url: string): Promise<string> {
+/**
+ * Downloads a library as text: https only (checked again after redirects), stops as soon
+ * as the size limit is passed, and times out after 30 seconds.
+ */
+export async function fetchLibraryText(url: string, policy: UrlPolicy = {}, fetchImpl: typeof fetch = fetch): Promise<string> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 30_000)
   try {
-    const res = await fetch(url, { signal: controller.signal, redirect: 'follow' })
+    const res = await fetchImpl(url, { signal: controller.signal, redirect: 'follow', credentials: 'omit' })
+    if (res.url && !isAllowedLibraryUrl(res.url, policy)) throw new Error('The library link redirected to an address that is not allowed.')
     if (!res.ok) throw new Error(`Download failed (${res.status}).`)
-    const len = Number(res.headers.get('content-length') ?? 0)
-    if (len > MAX_LIBRARY_BYTES) throw new Error('The library is larger than 20 MB.')
-    const text = await res.text()
-    if (text.length > MAX_LIBRARY_BYTES) throw new Error('The library is larger than 20 MB.')
-    return text
+    if (Number(res.headers.get('content-length') ?? 0) > MAX_LIBRARY_BYTES) throw new Error('The library is larger than 20 MB.')
+    if (!res.body) return ''
+    const reader = res.body.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > MAX_LIBRARY_BYTES) {
+        await reader.cancel().catch(() => undefined)
+        throw new Error('The library is larger than 20 MB.')
+      }
+      chunks.push(value)
+    }
+    return new TextDecoder().decode(Buffer.concat(chunks))
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw new Error('The download timed out.')
     throw err

@@ -39,6 +39,16 @@ describe('PageStorage', () => {
     expect((await new PageStorage(root).read('a'))!.width).toBe(700)
   })
 
+  it('validates page fields and survives corrupted files', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', title: 'ok', icon: { evil: true } as never, cover: 'red; position:fixed', content: 'not a doc' as never })
+    expect(await s.read('a')).toMatchObject({ title: 'ok', icon: null, cover: null, content: null })
+    // a hand-edited/corrupted file with wrong types is cleaned when loaded
+    await fs.writeFile(path.join(root, 'pages', 'b.json'), JSON.stringify({ id: 'b', title: 7, icon: [1], cover: {}, parentId: 9, order: 'x' }))
+    const tree = await new PageStorage(root).getTree()
+    expect(tree.find((p) => p.id === 'b')).toMatchObject({ title: '', icon: null, cover: null, parentId: null, order: 0 })
+  })
+
   it('writes atomically (no temp files left behind)', async () => {
     const s = new PageStorage(root)
     await Promise.all(Array.from({ length: 20 }, (_, i) => s.save({ id: 'a', title: `v${i}` })))

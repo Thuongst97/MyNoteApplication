@@ -8,6 +8,7 @@ import { insertBlockAtCursor, placeCursorAfter } from '../mermaid/MermaidNode'
 import { countNodes, layoutMindMap, mindMapToList, newMindMap, normalizeMindMap, type MindMap } from './mindmapModel'
 import { MindMapSvg } from './MindMapSvg'
 import { MindMapEditor } from './MindMapEditor'
+import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -57,7 +58,7 @@ export const MindMapNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(MindMapView)
+    return ReactNodeViewRenderer(SafeMindMapView)
   },
 
   addCommands() {
@@ -71,6 +72,8 @@ export const MindMapNode = Node.create({
     }
   },
 })
+
+const SafeMindMapView = withBlockBoundary(MindMapView)
 
 function MindMapView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const theme = useAppStore((s) => s.theme)

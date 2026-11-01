@@ -3,6 +3,7 @@ import path from 'node:path'
 import { docToText, makeSnippet } from '../src/lib/docText'
 import { extractLinks } from '../src/lib/links'
 import { normalizeWidth } from '../src/lib/pageWidth'
+import { cleanCover, cleanIcon, cleanPageMeta, cleanTitle } from '../src/lib/pageMeta'
 import type { Page, PageLinkEdge, PageMeta, PageUpdate, SearchResult } from '../src/types'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
@@ -15,8 +16,11 @@ function assertValidId(id: unknown): asserts id is string {
 
 function toMeta(page: Page): PageMeta {
   const { content: _content, ...meta } = page
-  return { ...meta, kind: meta.kind === 'whiteboard' ? 'whiteboard' : 'doc' }
+  return cleanPageMeta(meta)
 }
+
+/** Largest page file we'll write (protects the disk from runaway content). */
+export const MAX_PAGE_BYTES = 100 * 1024 * 1024
 
 /**
  * File-based page storage. Every page lives in `<root>/pages/<id>.json`.
@@ -92,7 +96,9 @@ export class PageStorage {
   private async writeToDisk(page: Page) {
     const target = this.file(page.id)
     const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(page), 'utf8')
+    const json = JSON.stringify(page)
+    if (json.length > MAX_PAGE_BYTES) throw new Error('This page is too large to save (over 100 MB).')
+    await fs.writeFile(tmp, json, 'utf8')
     await fs.rename(tmp, target)
   }
 
@@ -146,13 +152,13 @@ export class PageStorage {
       }
       const page: Page = {
         ...base,
-        ...(update.title !== undefined && { title: String(update.title) }),
-        ...(update.icon !== undefined && { icon: update.icon }),
-        ...(update.cover !== undefined && { cover: update.cover }),
+        ...(update.title !== undefined && { title: cleanTitle(update.title) }),
+        ...(update.icon !== undefined && { icon: cleanIcon(update.icon) }),
+        ...(update.cover !== undefined && { cover: cleanCover(update.cover) }),
         ...(update.parentId !== undefined && { parentId: update.parentId }),
-        ...(update.order !== undefined && { order: Number(update.order) }),
+        ...(update.order !== undefined && Number.isFinite(Number(update.order)) && { order: Number(update.order) }),
         ...(update.width !== undefined && { width: normalizeWidth(update.width) }),
-        ...(update.content !== undefined && { content: update.content }),
+        ...(update.content !== undefined && { content: update.content && typeof update.content === 'object' ? update.content : null }),
         id: update.id,
         updatedAt: now,
       }

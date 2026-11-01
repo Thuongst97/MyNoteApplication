@@ -116,3 +116,15 @@ describe('text formatting', () => {
     expect(html).toContain('<strong>')
   })
 })
+
+describe('damaged drawing data', () => {
+  it('falls back to an empty drawing instead of crashing', async () => {
+    const { normalizeDrawing } = await import('@/components/Editor/drawing/drawingModel')
+    expect(normalizeDrawing(null)).toEqual({ scene: { elements: [], files: {}, background: '#ffffff' }, svgLight: '', svgDark: '' })
+    const d = normalizeDrawing({ scene: { elements: [{ type: 'rectangle' }, null, 5], files: [], background: 'red;evil' }, svgLight: 42 })
+    expect(d.scene.elements).toEqual([{ type: 'rectangle' }])
+    expect(d.scene.files).toEqual({})
+    expect(d.scene.background).toBe('#ffffff')
+    expect(d.svgLight).toBe('')
+  })
+})

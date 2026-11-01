@@ -7,6 +7,7 @@ import { SearchModal } from '@/components/Search/SearchModal'
 import { TaskMatrix } from '@/components/Tasks/TaskMatrix'
 import { GraphView } from '@/components/Graph/GraphView'
 import { WhiteboardPage } from '@/components/Whiteboard/WhiteboardPage'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
@@ -56,6 +57,7 @@ export default function App() {
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden" id="canvas-scroll">
+          <ErrorBoundary what={view === 'page' ? 'this page' : `the ${view} view`} resetKey={`${view}:${activePageId}`}>
           {!isLoaded ? (
             <div className="flex h-full items-center justify-center opacity-50">
               <Loader2 className="animate-spin" />
@@ -80,6 +82,7 @@ export default function App() {
               </button>
             </div>
           )}
+          </ErrorBoundary>
         </div>
       </main>
       <SearchModal />

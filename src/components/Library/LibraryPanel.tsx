@@ -26,6 +26,7 @@ import { filterLibraries, itemText, PERSONAL_ID, type LibraryCategory, type Libr
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { cn } from '@/lib/utils'
 import { cloneItemElements } from './libraryInsert'
+import { sanitizeSvg } from '@/lib/sanitize'
 
 const toExcalidrawItems = (items: LibraryItem[]): LibraryItems =>
   items.map((i) => ({ id: i.id, status: 'unpublished', created: i.created, name: i.name, elements: i.elements as ExcalidrawElement[] })) as unknown as LibraryItems
@@ -328,7 +329,8 @@ function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; them
         .then((el: SVGSVGElement) => {
           el.removeAttribute('width')
           el.removeAttribute('height')
-          const html = el.outerHTML
+          // Library items come from downloaded files: sanitize before showing.
+          const html = sanitizeSvg(el.outerHTML)
           svgCache.set(key, html)
           if (!cancelled) setSvg(html)
         })

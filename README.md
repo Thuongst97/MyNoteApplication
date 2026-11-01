@@ -150,6 +150,31 @@ Tests are **not part of release builds**:
 
 `npm run dist`, `dist:win` and `dist:mac`, and the GitHub Actions build, run the tests first and stop if any fail.
 
+## Security
+
+The app treats everything outside its own code as untrusted (pasted content, downloaded libraries, the libraries website, files on disk).
+
+**App windows and processes**
+- **Isolated app pages:** pages run sandboxed with context isolation and no Node.js access. They reach the main process only through a small preload API, and every message is checked to come from the app's own page.
+- **Content Security Policy:** scripts load only from the app itself. Objects, frames, `<base>` and form submissions are blocked.
+- **Navigation and links:** the app window can't be navigated away. New windows and `<webview>`s are blocked everywhere, and only `http(s)` links are handed to the system browser (never `file:`, `javascript:` or other schemes).
+- **Permissions:** everything is denied by default (camera, microphone, location, notifications, …). Only clipboard and fullscreen are allowed, and only to the app's own page.
+
+**Content and stored data**
+- **Untrusted markup:** pasted HTML, drawing previews and library thumbnails are sanitized (DOMPurify) before display. Links with `javascript:`/`data:` addresses are refused. Page covers accept only safe gradients, colors and https/data images.
+- **Stored images:** images are served from `notion-asset://`, which only resolves file names the app created inside its assets folder, with `nosniff` and a no-script policy.
+- **Validation:** page fields, task fields, mind maps, charts, drawings and libraries are validated when saved and again when loaded. Damaged data falls back safely, and a broken block or page shows an error message instead of crashing the app.
+
+**Libraries website and downloads**
+- **Browse libraries:** the site opens in a separate in-memory session. It can't use the app's storage or `notion-asset://`, can't download files or request permissions, and installing a library always asks for confirmation.
+- **Downloads:** library downloads are https-only (checked again after redirects), capped at 20 MB while streaming, time out after 30 s, and are validated before saving.
+
+**Release builds**
+- **No developer access:** dev tools, the reload shortcut and the test overrides (`NOTION_CLONE_LIBRARIES_URL`, http downloads) are disabled.
+- **Electron fuses:** `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` are disabled. The app loads only from its archive, archive integrity validation and cookie encryption are on.
+
+**Dependencies:** `npm audit` reports no high or critical issues. Patched versions of `nanoid`, `katex` and `lodash-es` are forced through `overrides`. The remaining moderate advisories are in the electron-builder build tooling, which isn't shipped and isn't exploitable through our own build config.
+
 ## Building installers
 
 ```bash

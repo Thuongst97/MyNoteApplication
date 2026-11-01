@@ -45,9 +45,12 @@ describe('names and links', () => {
     expect(libraryNameFrom('')).toBe('Library')
   })
 
-  it('only allows https downloads (http just for localhost)', () => {
+  it('only allows https downloads (http://localhost only when explicitly allowed, i.e. development)', () => {
     expect(isAllowedLibraryUrl('https://x.com/a.excalidrawlib')).toBe(true)
-    expect(isAllowedLibraryUrl('http://127.0.0.1:8765/a')).toBe(true)
+    expect(isAllowedLibraryUrl('http://127.0.0.1:8765/a')).toBe(false) // release builds
+    expect(isAllowedLibraryUrl('http://127.0.0.1:8765/a', { allowLocalHttp: true })).toBe(true)
+    expect(isAllowedLibraryUrl('http://evil.com/a', { allowLocalHttp: true })).toBe(false)
+    expect(isAllowedLibraryUrl('https://user:pass@x.com/a')).toBe(false)
     expect(isAllowedLibraryUrl('http://evil.com/a')).toBe(false)
     expect(isAllowedLibraryUrl('file:///etc/passwd')).toBe(false)
     expect(isAllowedLibraryUrl('not a url')).toBe(false)
@@ -59,6 +62,7 @@ describe('names and links', () => {
     expect(addLibraryUrlFrom(`https://excalidraw.com/?addLibrary=${encodeURIComponent(lib)}`)).toBe(lib)
     expect(addLibraryUrlFrom(`https://excalidraw.com/#addLibrary=${encodeURIComponent('javascript:alert(1)')}`)).toBeNull()
     expect(addLibraryUrlFrom('https://excalidraw.com/')).toBeNull()
+    expect(addLibraryUrlFrom(`https://excalidraw.com/#addLibrary=${encodeURIComponent('http://localhost:8080/x')}`)).toBeNull()
   })
 })
 

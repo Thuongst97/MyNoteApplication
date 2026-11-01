@@ -1,21 +1,23 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { Loader2, PenLine, Shapes, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
-import type { DrawingData } from './drawingModel'
+import { normalizeDrawing, type DrawingData } from './drawingModel'
+import { sanitizeSvg } from '@/lib/sanitize'
 
 const DrawingEditor = lazy(() => import('./DrawingEditor'))
 
 export function DrawingView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const theme = useAppStore((s) => s.theme)
-  const data = node.attrs.data as DrawingData
+  const data = useMemo(() => normalizeDrawing(node.attrs.data), [node.attrs.data])
   const [open, setOpen] = useState<boolean>(!!node.attrs.isNew)
   const align = node.attrs.align as string
-  const svg = theme === 'dark' ? data.svgDark : data.svgLight
-  const empty = !data.scene?.elements?.length
+  // Previews may come from pasted content: never trust them as HTML.
+  const svg = useMemo(() => sanitizeSvg(theme === 'dark' ? data.svgDark : data.svgLight), [data, theme])
+  const empty = data.scene.elements.length === 0
 
   const leave = () =>
     requestAnimationFrame(() => {

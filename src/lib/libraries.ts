@@ -85,12 +85,18 @@ export function libraryNameFrom(source: string): string {
   return base ? base[0].toUpperCase() + base.slice(1) : 'Library'
 }
 
-/** Only http(s) URLs (http only for localhost) may be downloaded. */
-export function isAllowedLibraryUrl(url: string): boolean {
+export interface UrlPolicy {
+  /** Allow plain http:// to localhost (development and tests only, never in releases). */
+  allowLocalHttp?: boolean
+}
+
+/** Only https:// URLs may be downloaded (plus http://localhost when explicitly allowed). */
+export function isAllowedLibraryUrl(url: string, policy: UrlPolicy = {}): boolean {
   try {
     const u = new URL(url)
-    if (u.protocol === 'https:') return true
-    return u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
+    if (u.username || u.password) return false
+    if (u.protocol === 'https:') return !!u.hostname
+    return !!policy.allowLocalHttp && u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
   } catch {
     return false
   }
@@ -100,12 +106,12 @@ export function isAllowedLibraryUrl(url: string): boolean {
  * The library URL from a libraries.excalidraw.com "Add to Excalidraw" link
  * (…#addLibrary=<encoded url>&token=…), or null.
  */
-export function addLibraryUrlFrom(link: string): string | null {
+export function addLibraryUrlFrom(link: string, policy: UrlPolicy = {}): string | null {
   try {
     const u = new URL(link)
     const params = new URLSearchParams(u.hash.slice(1) || u.search.slice(1))
     const lib = params.get('addLibrary')
-    return lib && isAllowedLibraryUrl(lib) ? lib : null
+    return lib && isAllowedLibraryUrl(lib, policy) ? lib : null
   } catch {
     return null
   }

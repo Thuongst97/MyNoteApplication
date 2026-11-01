@@ -1,3 +1,4 @@
+import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
 import { mergeAttributes, Node, ReactNodeViewRenderer } from '@tiptap/react'
 import { insertBlockAtCursor } from '../mermaid/MermaidNode'
 import { DrawingView } from './DrawingView'
@@ -51,7 +52,7 @@ export const DrawingNode = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(DrawingView)
+    return ReactNodeViewRenderer(withBlockBoundary(DrawingView))
   },
 
   addCommands() {

@@ -3,6 +3,7 @@ import { Loader2, Shapes } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
+import { normalizeDrawing } from '@/components/Editor/drawing/drawingModel'
 
 const WhiteboardCanvas = lazy(() => import('./WhiteboardCanvas'))
 
@@ -25,8 +26,10 @@ export function WhiteboardPage({ pageId }: { pageId: string }) {
       .then(() => api.readPage(pageId))
       .then((page) => {
         if (cancelled) return
+        // Damaged or unexpected content opens as an empty board instead of crashing.
         const c = page?.content as WhiteboardContent | null
-        setContent(c?.type === 'whiteboard' ? c : { type: 'whiteboard', scene: { elements: [], files: {} } })
+        const scene = normalizeDrawing({ scene: c?.type === 'whiteboard' ? c.scene : null }).scene
+        setContent({ type: 'whiteboard', scene: { ...scene, background: typeof c?.scene?.background === 'string' ? scene.background : undefined } })
       })
     return () => {
       cancelled = true

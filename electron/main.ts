@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
@@ -8,6 +8,7 @@ import { TaskStore } from './tasks'
 import { LibraryStore } from './libraries'
 import { addLibraryUrlFrom, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
+import { assetResponseHeaders, isAppUrl, isPermissionAllowed, isSafeExternalUrl } from './security'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -29,6 +30,43 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST
 
 const isMac = process.platform === 'darwin'
+/** Development/test builds only: never true in a packaged release. */
+const isDev = !app.isPackaged
+
+/** Is this one of the app's own pages (not the libraries website or anything else)? */
+const isApp = (url: string | undefined | null) =>
+  isAppUrl(url, { devServerUrl: VITE_DEV_SERVER_URL, rendererIndexFile: path.join(RENDERER_DIST, 'index.html') })
+
+/**
+ * Only the app's own pages may call into the main process. (The libraries website in the
+ * browse window has no preload, but this also guards against any future window.)
+ */
+function trusted(e: IpcMainEvent | IpcMainInvokeEvent) {
+  const ok = isApp(e.senderFrame?.url)
+  if (!ok) console.warn('[security] blocked IPC from', e.senderFrame?.url)
+  return ok
+}
+const handle = <A extends unknown[], R>(channel: string, fn: (e: IpcMainInvokeEvent, ...args: A) => R) =>
+  ipcMain.handle(channel, (e, ...args) => {
+    if (!trusted(e)) throw new Error('Not allowed')
+    return fn(e, ...(args as A))
+  })
+const on = (channel: string, fn: (e: IpcMainEvent) => void) =>
+  ipcMain.on(channel, (e) => {
+    if (trusted(e)) fn(e)
+  })
+
+process.on('unhandledRejection', (reason) => console.error('[main] unhandled rejection:', reason))
+process.on('uncaughtException', (err) => console.error('[main] uncaught exception:', err))
+
+// Defaults for every window/webview: no <webview>, no new windows, no navigation away.
+app.on('web-contents-created', (_e, contents) => {
+  contents.on('will-attach-webview', (ev) => ev.preventDefault())
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  contents.on('will-navigate', (ev, url) => {
+    if (!isApp(url) && contents !== browseWin?.webContents) ev.preventDefault()
+  })
+})
 
 // Allow overriding the data folder (useful for testing / portable setups).
 if (process.env.NOTION_CLONE_DATA_DIR) app.setPath('userData', process.env.NOTION_CLONE_DATA_DIR)
@@ -121,7 +159,8 @@ function openTaskInWindow(taskId: string | null) {
 
 function notify(title: string, body: string, onClick?: () => void) {
   if (!Notification.isSupported()) return false
-  const n = new Notification({ title, body, icon: trayIconPath(), silent: false })
+  // A NativeImage (not a path): Windows can't read icon files from inside the app archive.
+  const n = new Notification({ title, body, icon: nativeImage.createFromPath(trayIconPath()), silent: false })
   liveNotifications.add(n)
   const drop = () => liveNotifications.delete(n)
   n.on('click', () => {
@@ -144,24 +183,40 @@ function openLibraryBrowser() {
     return
   }
   const site =
-    process.env.NOTION_CLONE_LIBRARIES_URL ||
+    (isDev && process.env.NOTION_CLONE_LIBRARIES_URL) ||
     'https://libraries.excalidraw.com/?theme=light&sort=default&target=_self&useHash=true&referrer=' +
       encodeURIComponent('https://excalidraw.com/')
+  // A separate, in-memory session: the website can't see the app's storage or the
+  // notion-asset:// protocol, can't ask for permissions and can't download files.
+  const browseSession = session.fromPartition('libraries-browse')
+  browseSession.setPermissionRequestHandler((_wc, _permission, cb) => cb(false))
+  browseSession.setPermissionCheckHandler(() => false)
+  browseSession.on('will-download', (ev) => ev.preventDefault())
   browseWin = new BrowserWindow({
     width: 1180,
     height: 820,
     title: 'Browse libraries',
     parent: win ?? undefined,
     autoHideMenuBar: true,
-    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, session: browseSession, devTools: isDev },
   })
   const siteHost = new URL(site).host
-  const handle = (url: string) => {
-    const lib = addLibraryUrlFrom(url)
+  const handleAdd = (url: string) => {
+    const lib = addLibraryUrlFrom(url, { allowLocalHttp: isDev })
     if (!lib) return false
-    void libraries
-      .installFromUrl(lib)
+    // The website asks to install; the user confirms (a page can't install things on its own).
+    void dialog
+      .showMessageBox(browseWin ?? win!, {
+        type: 'question',
+        buttons: ['Install', 'Cancel'],
+        defaultId: 0,
+        cancelId: 1,
+        message: `Install the library “${libraryNameFrom(lib)}”?`,
+        detail: `It will be downloaded from ${new URL(lib).host} and saved in your libraries.`,
+      })
+      .then(({ response }) => (response === 0 ? libraries.installFromUrl(lib, { allowLocalHttp: isDev }) : null))
       .then((r) => {
+        if (!r) return
         const name = r.data.categories.find((c) => c.id === r.categoryId)?.name ?? libraryNameFrom(lib)
         for (const w of BrowserWindow.getAllWindows()) if (w !== browseWin) w.webContents.send('libraries:installed', { ...r, name })
         notify('Library installed', `“${name}” was added to your libraries.`)
@@ -173,18 +228,24 @@ function openLibraryBrowser() {
   }
   const contents = browseWin.webContents
   contents.on('will-navigate', (e, url) => {
-    if (handle(url)) return e.preventDefault()
+    if (handleAdd(url)) return e.preventDefault()
     // Stay on the libraries site; anything else opens in the normal browser.
-    if (new URL(url).host !== siteHost) {
+    let host = ''
+    try {
+      host = new URL(url).host
+    } catch {
+      // invalid URL: blocked below
+    }
+    if (host !== siteHost) {
       e.preventDefault()
-      if (/^https?:/.test(url)) void shell.openExternal(url)
+      if (isSafeExternalUrl(url)) void shell.openExternal(url)
     }
   })
   contents.on('will-redirect', (e, url) => {
-    if (handle(url)) e.preventDefault()
+    if (handleAdd(url)) e.preventDefault()
   })
   contents.setWindowOpenHandler(({ url }) => {
-    if (!handle(url) && /^https?:/.test(url)) void shell.openExternal(url)
+    if (!handleAdd(url) && isSafeExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
   browseWin.on('closed', () => (browseWin = null))
@@ -222,7 +283,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      webSecurity: true,
       spellcheck: true,
+      devTools: isDev,
     },
   })
 
@@ -261,24 +324,29 @@ function createWindow() {
     const finish = () => {
       if (flushed) return
       flushed = true
-      ipcMain.removeListener('app:flush-done', finish)
+
       if (!target.isDestroyed()) target.close()
     }
     hideDecided = false
-    ipcMain.once('app:flush-done', finish)
+    // Only the window's own page may confirm that it saved everything.
+    const onDone = (e: IpcMainEvent) => {
+      if (e.sender === target.webContents && trusted(e)) finish()
+    }
+    ipcMain.on('app:flush-done', onDone)
+    target.once('closed', () => ipcMain.removeListener('app:flush-done', onDone))
     setTimeout(finish, 3000) // never block closing forever
     target.webContents.send('app:flush-request')
   })
 
   // Open external links in the default browser; never navigate the app window away.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) void shell.openExternal(url)
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
     return { action: 'deny' }
   })
   win.webContents.on('will-navigate', (event, url) => {
-    if (VITE_DEV_SERVER_URL && url.startsWith(VITE_DEV_SERVER_URL)) return
+    if (VITE_DEV_SERVER_URL && isApp(url)) return
     event.preventDefault()
-    if (/^https?:\/\//.test(url)) void shell.openExternal(url)
+    if (isSafeExternalUrl(url)) void shell.openExternal(url)
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -290,17 +358,17 @@ function createWindow() {
 
 function registerIpc() {
   // ---- Page CRUD -------------------------------------------------------
-  ipcMain.handle('get-page-tree', () => storage.getTree())
-  ipcMain.handle('read-page', (_e, id: string) => storage.read(id))
-  ipcMain.handle('save-page', (_e, update: PageUpdate) => storage.save(update))
-  ipcMain.handle('delete-page', (_e, id: string) => storage.delete(id))
-  ipcMain.handle('get-links', () => storage.getLinks())
-  ipcMain.handle('search-pages', (_e, query: string) => storage.search(query))
+  handle('get-page-tree', () => storage.getTree())
+  handle('read-page', (_e, id: string) => storage.read(id))
+  handle('save-page', (_e, update: PageUpdate) => storage.save(update))
+  handle('delete-page', (_e, id: string) => storage.delete(id))
+  handle('get-links', () => storage.getLinks())
+  handle('search-pages', (_e, query: string) => storage.search(query))
   // ---- Drawing libraries ------------------------------------------------
-  ipcMain.handle('libraries:get', () => libraries.get())
-  ipcMain.handle('libraries:save', (_e, data: unknown) => libraries.save(data))
-  ipcMain.handle('libraries:install-url', (_e, url: string) => libraries.installFromUrl(String(url)))
-  ipcMain.handle('libraries:import-file', async (e) => {
+  handle('libraries:get', () => libraries.get())
+  handle('libraries:save', (_e, data: unknown) => libraries.save(data))
+  handle('libraries:install-url', (_e, url: string) => libraries.installFromUrl(String(url), { allowLocalHttp: isDev }))
+  handle('libraries:import-file', async (e) => {
     const parent = BrowserWindow.fromWebContents(e.sender) ?? undefined
     const r = await dialog.showOpenDialog(parent!, {
       title: 'Import library',
@@ -310,40 +378,40 @@ function registerIpc() {
     if (r.canceled || !r.filePaths[0]) return null
     return libraries.importFile(r.filePaths[0])
   })
-  ipcMain.handle('libraries:browse', () => openLibraryBrowser())
+  handle('libraries:browse', () => openLibraryBrowser())
 
   // ---- Tasks & reminders ------------------------------------------------
-  ipcMain.handle('tasks:list', () => tasks.list())
-  ipcMain.handle('tasks:save', async (_e, update: TaskUpdate) => {
+  handle('tasks:list', () => tasks.list())
+  handle('tasks:save', async (_e, update: TaskUpdate) => {
     const t = await tasks.save(update)
     void checkReminders()
     return t
   })
-  ipcMain.handle('tasks:remove', (_e, id: string) => tasks.remove(id))
-  ipcMain.handle('tasks:get-settings', () => tasks.getSettings())
-  ipcMain.handle('tasks:set-settings', async (_e, patch: Partial<TaskSettings>) => {
+  handle('tasks:remove', (_e, id: string) => tasks.remove(id))
+  handle('tasks:get-settings', () => tasks.getSettings())
+  handle('tasks:set-settings', async (_e, patch: Partial<TaskSettings>) => {
     const next = await tasks.setSettings(patch)
     if (!isMac && !next.runInBackground) destroyTray()
     return next
   })
-  ipcMain.handle('tasks:test-notification', () =>
+  handle('tasks:test-notification', () =>
     notify('🔔 Notifications are working', 'You will be reminded about tasks like this.', () => showWindow()),
   )
 
-  ipcMain.handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
+  handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
 
   // ---- Window controls (custom title bar on Windows/Linux) ---------------
   const fromEvent = (e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) =>
     BrowserWindow.fromWebContents(e.sender)
-  ipcMain.on('window:minimize', (e) => fromEvent(e)?.minimize())
-  ipcMain.on('window:toggle-maximize', (e) => {
+  on('window:minimize', (e) => fromEvent(e)?.minimize())
+  on('window:toggle-maximize', (e) => {
     const w = fromEvent(e)
     if (!w) return
     if (w.isMaximized()) w.unmaximize()
     else w.maximize()
   })
-  ipcMain.on('window:close', (e) => fromEvent(e)?.close())
-  ipcMain.handle('window:is-maximized', (e) => fromEvent(e)?.isMaximized() ?? false)
+  on('window:close', (e) => fromEvent(e)?.close())
+  handle('window:is-maximized', (e) => fromEvent(e)?.isMaximized() ?? false)
 }
 
 app.on('before-quit', () => {
@@ -359,7 +427,36 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => showWindow())
 
+function buildMenu() {
+  // Edit commands (copy/paste/undo shortcuts on macOS) and zoom; no reload or dev tools in releases.
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    { role: 'editMenu' },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+        ...(isDev ? [{ type: 'separator' as const }, { role: 'reload' as const }, { role: 'toggleDevTools' as const }] : []),
+      ],
+    },
+    { role: 'windowMenu' },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
 void app.whenReady().then(() => {
+  buildMenu()
+  // Electron grants every permission by default; only allow what the app needs, only to the app.
+  session.defaultSession.setPermissionRequestHandler((wc, permission, cb, details) =>
+    cb(isPermissionAllowed(permission, details.requestingUrl || wc.getURL(), isApp)),
+  )
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, requestingOrigin, details) =>
+    isPermissionAllowed(permission, details.requestingUrl || requestingOrigin, isApp),
+  )
   storage = new PageStorage(app.getPath('userData'))
   assets = new AssetStorage(app.getPath('userData'))
 
@@ -369,7 +466,7 @@ void app.whenReady().then(() => {
     if (!hit) return new Response('Not found', { status: 404 })
     try {
       const res = await net.fetch(pathToFileURL(hit.file).toString())
-      return new Response(res.body, { status: res.status, headers: { 'content-type': hit.mime } })
+      return new Response(res.body, { status: res.status, headers: assetResponseHeaders(hit.mime) })
     } catch {
       return new Response('Not found', { status: 404 })
     }
