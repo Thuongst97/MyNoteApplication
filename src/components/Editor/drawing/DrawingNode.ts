@@ -3,6 +3,7 @@ import { mergeAttributes, Node, ReactNodeViewRenderer } from '@tiptap/react'
 import { insertBlockAtCursor } from '../mermaid/MermaidNode'
 import { DrawingView } from './DrawingView'
 import { EMPTY_DRAWING } from './drawingModel'
+import { borderAttribute } from '../blockBorder'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -39,6 +40,7 @@ export const DrawingNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-align') || 'center',
         renderHTML: (attrs) => ({ 'data-align': attrs.align }),
       },
+      border: borderAttribute,
       isNew: { default: false, rendered: false },
     }
   },

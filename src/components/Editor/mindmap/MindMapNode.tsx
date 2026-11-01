@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
-import { ListTree, PenLine, Trash2 } from 'lucide-react'
+import { ListTree, PenLine, Square, Trash2 } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { insertBlockAtCursor, placeCursorAfter } from '../mermaid/MermaidNode'
@@ -9,6 +9,7 @@ import { countNodes, layoutMindMap, mindMapToList, newMindMap, normalizeMindMap,
 import { MindMapSvg } from './MindMapSvg'
 import { MindMapEditor } from './MindMapEditor'
 import { withBlockBoundary } from '@/components/ui/ErrorBoundary'
+import { blockFrameClass, borderAttribute } from '../blockBorder'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -45,6 +46,7 @@ export const MindMapNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-align') || 'center',
         renderHTML: (attrs) => ({ 'data-align': attrs.align }),
       },
+      border: borderAttribute,
       isNew: { default: false, rendered: false },
     }
   },
@@ -111,8 +113,8 @@ function MindMapView({ node, updateAttributes, deleteNode, selected, editor, get
     <NodeViewWrapper
       data-drag-handle
       className={cn(
-        'mindmap-block group/mm relative my-3 rounded-lg border transition-colors',
-        selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
+        'mindmap-block group/mm relative my-3',
+        blockFrameClass(selected, node.attrs.border !== false),
       )}
     >
       <div contentEditable={false} onDoubleClick={() => editor.isEditable && setOpen(true)} className="relative overflow-x-auto p-2">
@@ -137,6 +139,13 @@ function MindMapView({ node, updateAttributes, deleteNode, selected, editor, get
             <ToolbarButton label="Convert to outline" onClick={toOutline}>
               <ListTree size={14} /> To outline
             </ToolbarButton>
+            <ToolbarButton
+              label={node.attrs.border !== false ? 'Hide border' : 'Show border'}
+              active={node.attrs.border !== false}
+              onClick={() => updateAttributes({ border: node.attrs.border === false })}
+            >
+              <Square size={14} /> Border
+            </ToolbarButton>
             <ToolbarButton label="Delete mind map" onClick={deleteNode}>
               <Trash2 size={14} />
             </ToolbarButton>
@@ -148,14 +157,18 @@ function MindMapView({ node, updateAttributes, deleteNode, selected, editor, get
   )
 }
 
-function ToolbarButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
+function ToolbarButton({ children, label, onClick, active }: { children: React.ReactNode; label: string; onClick: () => void; active?: boolean }) {
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
+      aria-pressed={active}
       onClick={onClick}
-      className="flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]"
+      className={cn(
+        'flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]',
+        active && 'text-blue-600 dark:text-blue-400',
+      )}
     >
       {children}
     </button>

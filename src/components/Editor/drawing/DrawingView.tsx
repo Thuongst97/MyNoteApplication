@@ -1,7 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Loader2, PenLine, Shapes, Trash2 } from 'lucide-react'
+import { Loader2, PenLine, Shapes, Square, Trash2 } from 'lucide-react'
+import { blockFrameClass } from '../blockBorder'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
@@ -39,8 +40,8 @@ export function DrawingView({ node, updateAttributes, deleteNode, selected, edit
     <NodeViewWrapper
       data-drag-handle
       className={cn(
-        'drawing-block group/drawing relative my-3 rounded-lg border transition-colors',
-        selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
+        'drawing-block group/drawing relative my-3',
+        blockFrameClass(selected, node.attrs.border !== false),
       )}
     >
       <div contentEditable={false} onDoubleClick={() => editor.isEditable && setOpen(true)} className="relative p-2">
@@ -67,6 +68,19 @@ export function DrawingView({ node, updateAttributes, deleteNode, selected, edit
               className="flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]"
             >
               <PenLine size={14} /> Edit drawing
+            </button>
+            <button
+              type="button"
+              aria-pressed={node.attrs.border !== false}
+              title={node.attrs.border !== false ? 'Hide border' : 'Show border'}
+              aria-label={node.attrs.border !== false ? 'Hide border' : 'Show border'}
+              onClick={() => updateAttributes({ border: node.attrs.border === false })}
+              className={cn(
+                'flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs shadow-sm hover:bg-white dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]',
+                node.attrs.border !== false && 'text-blue-600 dark:text-blue-400',
+              )}
+            >
+              <Square size={14} /> Border
             </button>
             <button
               type="button"
