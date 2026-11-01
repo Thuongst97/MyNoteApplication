@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ErrorBoundary, withBlockBoundary } from '@/components/ui/ErrorBoundary'
@@ -8,6 +8,18 @@ function Boom() {
   if (shouldThrow) throw new Error('corrupted data')
   return <p>All good</p>
 }
+
+// These tests throw on purpose ("corrupted data") to check that the app shows a message instead
+// of crashing. React (dev mode) re-dispatches such errors as window "error" events, which the test
+// DOM prints as stack traces — mark exactly this expected error as handled so the log stays clean.
+const silenceExpected = (e: ErrorEvent) => {
+  if (e.error?.message === 'corrupted data') e.preventDefault()
+}
+beforeEach(() => window.addEventListener('error', silenceExpected))
+afterEach(() => {
+  window.removeEventListener('error', silenceExpected)
+  vi.restoreAllMocks()
+})
 
 describe('ErrorBoundary', () => {
   it('shows a message instead of crashing, and can try again', async () => {
