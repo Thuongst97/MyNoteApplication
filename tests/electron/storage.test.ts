@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -202,5 +202,39 @@ describe('PageStorage', () => {
     const t2 = performance.now()
     expect(t1 - t0).toBeLessThan(2000)
     expect(t2 - t1).toBeLessThan(100)
+  })
+
+  it('search: case-insensitive (also Vietnamese), literal special characters, titles first, at most 100', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'vi', title: 'Ghi chú', content: doc(para('Học TIẾNG VIỆT mỗi ngày')) })
+    await s.save({ id: 'cpp', title: 'Code', content: doc(para('I like C++ and a.b paths')) })
+    expect((await s.search('tiếng việt'))[0]).toMatchObject({ id: 'vi', snippet: 'Học TIẾNG VIỆT mỗi ngày' })
+    expect((await s.search('C++')).map((r) => r.id)).toEqual(['cpp'])
+    expect(await s.search('a.c')).toEqual([]) // "." is not a wildcard
+    expect(await s.search('(')).toEqual([]) // no regex errors
+    await Promise.all(Array.from({ length: 130 }, (_, i) => s.save({ id: `n${i}`, title: i === 129 ? 'needle title' : `Note ${i}`, content: doc(para('a needle in text')) })))
+    const hits = await s.search('needle')
+    expect(hits).toHaveLength(100)
+    expect(hits[0].id).toBe('n129') // title match first
+    expect(hits[1].snippet).toBe('a needle in text')
+  })
+
+  it('knows which stored images pages use without reading files (and says so when unsure)', async () => {
+    const img = (n: number) => `notion-asset://local/0000000${n}-0000-0000-0000-000000000000.png`
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', content: doc({ type: 'image', attrs: { src: img(1) } }) })
+    await s.save({ id: 'b', cover: img(2), content: doc({ type: 'whiteboard', scene: { files: { f: { dataURL: img(3) } } } }) })
+    const names = (await s.referencedAssets())!
+    expect([...names].sort()).toEqual([1, 2, 3].map((n) => img(n).split('/').pop()))
+    await s.delete('b')
+    expect([...(await s.referencedAssets())!]).toEqual([img(1).split('/').pop()])
+    await s.flushIndex()
+    // From the startup cache, without parsing pages:
+    expect([...(await new PageStorage(root).referencedAssets())!]).toEqual([img(1).split('/').pop()])
+    // A page that can't be read: unknown → keep all images.
+    await fs.writeFile(path.join(root, 'pages', 'broken.json'), '{nope')
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await new PageStorage(root).referencedAssets()).toBeNull()
+    err.mockRestore()
   })
 })

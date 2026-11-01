@@ -59,10 +59,10 @@ export function WhiteboardPage({ pageId }: { pageId: string }) {
     }
   }, [pageId])
 
-  // App shortcuts pause while the canvas is on screen (it has its own).
+  // App shortcuts that the canvas also uses pause while it's on screen (see useGlobalShortcuts).
   useEffect(() => {
-    document.body.classList.add('drawing-open')
-    return () => document.body.classList.remove('drawing-open')
+    document.body.classList.add('whiteboard-open')
+    return () => document.body.classList.remove('whiteboard-open')
   }, [])
 
   if (!meta) return null

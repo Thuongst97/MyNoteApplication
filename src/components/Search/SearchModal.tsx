@@ -65,7 +65,8 @@ export function SearchModal() {
       const existing = out.get(hit.id)
       out.set(hit.id, { page, snippet: existing?.snippet ?? hit.snippet })
     })
-    return [...out.values()]
+    // A long list isn't useful and is slow to draw: show the best 100.
+    return [...out.values()].slice(0, 100)
   }, [pages, query, contentHits])
 
   useEffect(() => setSelected(0), [query])

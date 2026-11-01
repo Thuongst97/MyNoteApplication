@@ -26,9 +26,19 @@ export const MAX_PAGE_BYTES = 100 * 1024 * 1024
 /** Searchable text kept in memory per page (enough for any real note; caps runaway pages). */
 export const MAX_SEARCH_TEXT = 200_000
 
+/** Most search results returned (the search box shows the best ones; titles first). */
+export const MAX_RESULTS = 100
+
+/** A short excerpt around a match at `at` (only that part of the text is copied). */
+function snippetAt(text: string, at: number, len: number): string {
+  const start = Math.max(0, at - 50)
+  const raw = text.slice(start, at + len + 70).replace(/\s+/g, ' ').trim()
+  return makeSnippet(raw, text.slice(at, at + len)) ?? raw
+}
+
 /** Name of the startup index cache, stored next to the pages folder. */
 export const INDEX_FILE = 'pages-index.json'
-const INDEX_VERSION = 1
+const INDEX_VERSION = 2
 /** Files read/parsed at once during startup. */
 const LOAD_CONCURRENCY = 16
 
@@ -38,6 +48,17 @@ interface IndexEntry {
   meta: PageMeta
   links: string[]
   text: string
+  /** Stored images the page uses (asset file names). */
+  assets: string[]
+}
+
+const ASSET_REF = /notion-asset:\/\/local\/([0-9a-f-]{36}\.[a-z]+)/g
+
+/** Asset file names referenced anywhere in a page's JSON. */
+export function assetNames(json: string): string[] {
+  const out = new Set<string>()
+  for (const m of json.matchAll(ASSET_REF)) out.add(m[1])
+  return [...out]
 }
 
 function searchText(content: unknown): string {
@@ -77,6 +98,10 @@ export class PageStorage {
   private texts = new Map<string, string>()
   /** mtime/size of each page file as last seen (validates the index cache). */
   private stats = new Map<string, { mtimeMs: number; size: number }>()
+  /** Stored images each page uses (for image cleanup without reading every page). */
+  private assetRefs = new Map<string, string[]>()
+  /** A page file couldn't be read at startup: image cleanup must keep everything. */
+  private unreadable = false
   private indexTimer: ReturnType<typeof setTimeout> | null = null
   private indexWrite: Promise<void> = Promise.resolve()
 
@@ -104,11 +129,12 @@ export class PageStorage {
     }
   }
 
-  private remember(id: string, meta: PageMeta, links: string[], text: string, stat: { mtimeMs: number; size: number }) {
+  private remember(id: string, meta: PageMeta, links: string[], text: string, stat: { mtimeMs: number; size: number }, assets: string[]) {
     this.index.set(id, meta)
     this.links.set(id, links)
     this.texts.set(id, text)
     this.stats.set(id, stat)
+    this.assetRefs.set(id, assets)
   }
 
   private async load() {
@@ -125,15 +151,17 @@ export class PageStorage {
           const stat = { mtimeMs: st.mtimeMs, size: st.size }
           const hit = cache.get(name)
           if (hit && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size && hit.meta?.id) {
-            this.remember(hit.meta.id, cleanPageMeta(hit.meta), Array.isArray(hit.links) ? hit.links : [], typeof hit.text === 'string' ? hit.text : '', stat)
+            this.remember(hit.meta.id, cleanPageMeta(hit.meta), Array.isArray(hit.links) ? hit.links : [], typeof hit.text === 'string' ? hit.text : '', stat, Array.isArray(hit.assets) ? hit.assets : [])
             return
           }
           changed = true
-          const page = JSON.parse(await fs.readFile(file, 'utf8')) as Page
+          const raw = await fs.readFile(file, 'utf8')
+          const page = JSON.parse(raw) as Page
           if (page && typeof page.id === 'string') {
-            this.remember(page.id, toMeta(page), extractLinks(page.content), searchText(page.content), stat)
+            this.remember(page.id, toMeta(page), extractLinks(page.content), searchText(page.content), stat, assetNames(raw))
           }
         } catch (err) {
+          this.unreadable = true
           console.error(`[storage] Skipping unreadable page file ${name}:`, err)
         }
       },
@@ -162,7 +190,7 @@ export class PageStorage {
       for (const [id, meta] of this.index) {
         const stat = this.stats.get(id)
         if (!stat) continue
-        entries[`${id}.json`] = { ...stat, meta, links: this.links.get(id) ?? [], text: this.texts.get(id) ?? '' }
+        entries[`${id}.json`] = { ...stat, meta, links: this.links.get(id) ?? [], text: this.texts.get(id) ?? '', assets: this.assetRefs.get(id) ?? [] }
       }
       const tmp = `${this.indexFile}.${process.pid}.tmp`
       try {
@@ -205,10 +233,22 @@ export class PageStorage {
     await fs.writeFile(tmp, json, 'utf8')
     await fs.rename(tmp, target)
     const st = await fs.stat(target)
-    return { mtimeMs: st.mtimeMs, size: st.size }
+    return { mtimeMs: st.mtimeMs, size: st.size, assets: assetNames(json) }
   }
 
-  /** Paths of every page file (used for asset garbage collection). */
+  /**
+   * Every stored image used by some page, from memory (no page files are read), or null
+   * when that isn't known for sure (a page file couldn't be read) — then keep all images.
+   */
+  async referencedAssets(): Promise<Set<string> | null> {
+    await this.ensureLoaded()
+    if (this.unreadable) return null
+    const out = new Set<string>()
+    for (const names of this.assetRefs.values()) for (const n of names) out.add(n)
+    return out
+  }
+
+  /** Paths of every page file. */
   async pageFiles(): Promise<string[]> {
     await this.ensureLoaded()
     return [...this.index.keys()].map((id) => this.file(id))
@@ -274,10 +314,11 @@ export class PageStorage {
         id: update.id,
         updatedAt: now,
       }
-      const stat = await this.writeToDisk(page)
+      const { assets, ...stat } = await this.writeToDisk(page)
       const meta = toMeta(page)
       this.index.set(page.id, meta)
       this.stats.set(page.id, stat)
+      this.assetRefs.set(page.id, assets)
       if (update.content !== undefined || !this.links.has(page.id)) {
         this.links.set(page.id, extractLinks(page.content))
         this.texts.set(page.id, searchText(page.content))
@@ -308,6 +349,7 @@ export class PageStorage {
           this.links.delete(pid)
           this.texts.delete(pid)
           this.stats.delete(pid)
+          this.assetRefs.delete(pid)
         }),
       ),
     )
@@ -317,16 +359,23 @@ export class PageStorage {
 
   async search(query: string): Promise<SearchResult[]> {
     await this.ensureLoaded()
-    const q = String(query ?? '').trim().toLowerCase()
+    const q = String(query ?? '').trim()
     if (!q) return []
-    const results: SearchResult[] = []
-    // In-memory: no page files are read, so search stays fast however many pages exist.
+    // In-memory: no page files are read. One case-insensitive scan per page (no lowercase
+    // copies of every page's text), snippets only around the match, at most MAX_RESULTS.
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'iu')
+    const titled: SearchResult[] = []
+    const others: SearchResult[] = []
     for (const meta of this.index.values()) {
-      const titleHit = meta.title.toLowerCase().includes(q)
+      const titleHit = re.test(meta.title)
       const text = this.texts.get(meta.id) ?? ''
-      const snippet = text.toLowerCase().includes(q) ? makeSnippet(text, q) : null
-      if (titleHit || snippet) results.push({ id: meta.id, snippet })
+      const at = text.search(re)
+      if (!titleHit && at < 0) continue
+      const hit = { id: meta.id, snippet: at < 0 ? null : snippetAt(text, at, q.length) }
+      if (titleHit) titled.push(hit)
+      else others.push(hit)
+      if (titled.length >= MAX_RESULTS) break
     }
-    return results
+    return [...titled, ...others].slice(0, MAX_RESULTS)
   }
 }

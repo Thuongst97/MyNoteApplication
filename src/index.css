@@ -360,6 +360,7 @@ body {
   font-size: var(--code-size);
   line-height: var(--code-line);
   color: #8c959f;
+  white-space: pre;
   user-select: none;
 }
 .dark .notion-editor .code-block-gutter { color: #4b5263; }

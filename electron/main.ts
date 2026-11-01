@@ -683,8 +683,8 @@ void app.whenReady().then(() => {
 
   // Remove images no page uses anymore (in the background).
   void storage
-    .pageFiles()
-    .then((files) => assets.collectGarbage(files))
+    .referencedAssets()
+    .then((refs) => assets.collectGarbage(refs))
     .catch((err) => console.error('[assets] cleanup failed:', err))
 
   tasks = new TaskStore(app.getPath('userData'))

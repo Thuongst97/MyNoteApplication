@@ -75,11 +75,15 @@ export function languageLabel(id: string | null | undefined) {
   return LABELS[id] ?? id
 }
 
-/** Small LRU cache: highlighting re-runs for every code block whenever any code block changes. */
-const CACHE_LIMIT = 300
-function lru<V>() {
+/**
+ * LRU cache limited by the total size of its keys (≈ the code text), not by entry count:
+ * keys are whole code blocks, so a count limit could hold many large blocks (and every
+ * version of a block being edited). Entries bigger than `maxEntry` aren't cached.
+ */
+export function sizedLru<V>(budget: number, maxEntry: number) {
   const map = new Map<string, V>()
-  return (key: string, compute: () => V): V => {
+  let used = 0
+  const fn = (key: string, compute: () => V): V => {
     if (map.has(key)) {
       const hit = map.get(key)!
       map.delete(key)
@@ -87,13 +91,23 @@ function lru<V>() {
       return hit
     }
     const value = compute()
+    if (key.length > maxEntry) return value
     map.set(key, value)
-    if (map.size > CACHE_LIMIT) map.delete(map.keys().next().value!)
+    used += key.length
+    while (used > budget && map.size) {
+      const oldest = map.keys().next().value!
+      map.delete(oldest)
+      used -= oldest.length
+    }
     return value
   }
+  fn.stats = () => ({ entries: map.size, chars: used })
+  return fn
 }
-const highlightCache = lru<Root>()
-const detectCache = lru<string | null>()
+// Code blocks in the editor are cached per block by highlightPlugin; this cache serves the
+// rest (Markdown/HTML code, detection runs) and stays small.
+const highlightCache = sizedLru<Root>(300_000, 60_000)
+const detectCache = sizedLru<string | null>(200_000, 5_000)
 
 /** Very long blocks are auto-detected from their beginning only (detection is the slow part). */
 const AUTO_SAMPLE = 4000

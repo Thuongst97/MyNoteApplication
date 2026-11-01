@@ -48,21 +48,19 @@ describe('AssetStorage', () => {
     const old = new Date(Date.now() - 60_000)
     for (const u of [used, unused]) await fs.utimes(a.resolve(u)!.file, old, old)
     const fresh = await a.save(png, 'image/gif') // saved "just now"
-    const pageFile = path.join(root, 'page.json')
-    await fs.writeFile(pageFile, JSON.stringify({ content: { attrs: { src: used } } }))
-    await a.collectGarbage([pageFile])
+    await a.collectGarbage(new Set([path.basename(used)]))
     const left = await fs.readdir(a.dir)
     expect(left).toContain(path.basename(used))
     expect(left).toContain(path.basename(fresh))
     expect(left).not.toContain(path.basename(unused))
   })
 
-  it('keeps everything if a page cannot be read', async () => {
+  it('keeps everything when the used images are not known for sure', async () => {
     const a = new AssetStorage(root)
     const url = await a.save(png, 'image/png')
     const old = new Date(Date.now() - 60_000)
     await fs.utimes(a.resolve(url)!.file, old, old)
-    await a.collectGarbage([path.join(root, 'missing.json')])
+    await a.collectGarbage(null)
     expect(await fs.readdir(a.dir)).toHaveLength(1)
   })
 })

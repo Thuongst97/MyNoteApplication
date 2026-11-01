@@ -1,6 +1,7 @@
-import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { CodeBlock } from '@tiptap/extension-code-block'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { lowlight } from './codeHighlight'
+import { codeHighlightPlugin } from './highlightPlugin'
 import { CodeBlockView } from './CodeBlockView'
 
 /**
@@ -8,7 +9,7 @@ import { CodeBlockView } from './CodeBlockView'
  * user picks one; Tab / Shift+Tab indent and outdent inside the block.
  * Mermaid code blocks ("Mermaid doc") also show the rendered diagram below the code.
  */
-export const CodeBlockNode = CodeBlockLowlight.extend({
+export const CodeBlockNode = CodeBlock.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -29,8 +30,13 @@ export const CodeBlockNode = CodeBlockLowlight.extend({
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView)
   },
+  addProseMirrorPlugins() {
+    // The base code block's own plugins (paste from VS Code…), called directly: `this.parent`
+    // would point back to this method when the node is extended again (tests, node views).
+    const base = CodeBlock.config.addProseMirrorPlugins?.call(this) ?? []
+    return [...base, codeHighlightPlugin({ name: this.name, highlighter: lowlight })]
+  },
 }).configure({
-  lowlight,
   enableTabIndentation: true,
   tabSize: 4,
   HTMLAttributes: { spellcheck: 'false' },

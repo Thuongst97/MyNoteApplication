@@ -72,8 +72,10 @@ export class AssetStorage {
   /**
    * Deletes stored images no page refers to anymore (e.g. the image was removed
    * or its page was deleted). Run at startup, when no undo history exists.
+   * `referenced` comes from the page index; null means "not sure" and keeps everything.
    */
-  async collectGarbage(pageFiles: string[]) {
+  async collectGarbage(referenced: Set<string> | null) {
+    if (!referenced) return
     // Never touch images saved after cleanup started (their page may not be saved yet).
     const startedAt = Date.now() - 1000
     let names: string[]
@@ -83,17 +85,6 @@ export class AssetStorage {
       return
     }
     if (names.length === 0) return
-    const referenced = new Set<string>()
-    const re = new RegExp(`${ASSET_SCHEME}://${ASSET_HOST}/([0-9a-f-]{36}\\.[a-z]+)`, 'g')
-    for (const file of pageFiles) {
-      try {
-        const raw = await fs.readFile(file, 'utf8')
-        for (const m of raw.matchAll(re)) referenced.add(m[1])
-      } catch {
-        // If any page can't be read, keep everything to be safe.
-        return
-      }
-    }
     await Promise.all(
       names
         .filter((n) => !referenced.has(n))

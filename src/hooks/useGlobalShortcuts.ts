@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/useAppStore'
 import { useTabsStore } from '@/stores/useTabsStore'
+import { isMacLike } from '@/lib/utils'
 
 /**
  * App-wide keyboard shortcuts:
@@ -14,16 +15,20 @@ import { useTabsStore } from '@/stores/useTabsStore'
  *  - Ctrl/⌘+T new tab · Ctrl/⌘+W close tab · Ctrl/⌘+1…8 go to tab, 9 = last tab
  *  - Ctrl+Tab / Ctrl+Shift+Tab (also Ctrl+PageDown/PageUp) next / previous tab
  *  - Alt+← / Alt+→ (⌘+[ / ⌘+] on Mac, mouse back/forward buttons) back / forward
+ * On a whiteboard, Ctrl+K / Ctrl+Shift+G / Ctrl+Shift+L belong to the canvas.
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
-      // The full-window drawing editor has its own shortcuts.
+      // Full-window editors (drawing, mind map, diagram viewer) have their own shortcuts.
       if (document.body.classList.contains('drawing-open')) return
+      // On a whiteboard, keys the canvas uses itself (Ctrl+K link, Ctrl+Shift+G ungroup,
+      // Ctrl+Shift+L lock) are left to it; tabs, back/forward, new page… still work.
+      const onBoard = document.body.classList.contains('whiteboard-open')
       const tabs = useTabsStore.getState()
-      // Back / forward
-      if (e.altKey && !mod && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      // Back / forward: Alt+←/→ (not on Mac, where Option+←/→ moves by word while typing).
+      if (!isMacLike() && e.altKey && !mod && !e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault()
         if (e.key === 'ArrowLeft') tabs.back()
         else tabs.forward()
@@ -51,6 +56,7 @@ export function useGlobalShortcuts() {
       }
       const s = useAppStore.getState()
       const key = e.key.toLowerCase()
+      if (onBoard && (key === 'k' || (e.shiftKey && (key === 'g' || key === 'l')))) return
       if (key === 't' && !e.shiftKey) {
         e.preventDefault()
         tabs.newTab()

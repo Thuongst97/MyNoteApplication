@@ -5,7 +5,9 @@ export type PlantUmlResult = { svg: string } | { error: string }
 const MAX_SVG_BYTES = 5 * 1024 * 1024
 const TIMEOUT_MS = 15_000
 const cache = new Map<string, string>()
-const CACHE_SIZE = 60
+/** Total size of cached diagrams (they can be big; keep memory bounded). */
+const CACHE_BUDGET = 8 * 1024 * 1024
+let cached = 0
 
 /**
  * Fetches a diagram's SVG from a PlantUML server (main process: no CSP / CORS issues).
@@ -28,9 +30,14 @@ export async function renderPlantUml(serverInput: unknown, source: unknown, fetc
     const text = await res.text()
     if (!/svg/i.test(type) || !/<svg[\s>]/i.test(text)) return { error: `The server didn't return a diagram (HTTP ${res.status}).` }
     if (text.length > MAX_SVG_BYTES) return { error: 'The diagram is too large.' }
-    if (res.ok) {
+    if (res.ok && text.length <= CACHE_BUDGET / 4) {
       cache.set(url, text)
-      if (cache.size > CACHE_SIZE) cache.delete(cache.keys().next().value!)
+      cached += text.length
+      while (cached > CACHE_BUDGET && cache.size) {
+        const [oldUrl, oldSvg] = cache.entries().next().value!
+        cache.delete(oldUrl)
+        cached -= oldSvg.length
+      }
     }
     return { svg: text }
   } catch (err) {
@@ -44,4 +51,5 @@ export async function renderPlantUml(serverInput: unknown, source: unknown, fetc
 /** For tests. */
 export function clearPlantUmlCache() {
   cache.clear()
+  cached = 0
 }

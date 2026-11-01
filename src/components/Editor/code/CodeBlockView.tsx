@@ -113,10 +113,9 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
         </button>
       </div>
       <div className="code-block-body">
+        {/* One text node for all numbers (cheap to update on big blocks). */}
         <div className="code-block-gutter" contentEditable={false} aria-hidden="true">
-          {Array.from({ length: lines }, (_, i) => (
-            <div key={i}>{i + 1}</div>
-          ))}
+          {lineNumbers(lines)}
         </div>
         <pre spellCheck={false}>
           <NodeViewContent<'code'> as="code" className={effective ? `hljs language-${effective}` : 'hljs'} />
@@ -125,6 +124,18 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
       {isMermaid && preview && <MermaidPreview code={code} />}
     </NodeViewWrapper>
   )
+}
+
+const numberCache = new Map<number, string>()
+/** "1\n2\n…\nn" (memoized: recomputed only when the line count changes). */
+function lineNumbers(n: number): string {
+  let s = numberCache.get(n)
+  if (!s) {
+    s = Array.from({ length: n }, (_, i) => i + 1).join('\n')
+    if (numberCache.size > 50) numberCache.clear()
+    numberCache.set(n, s)
+  }
+  return s
 }
 
 /** Live diagram under a Mermaid code block (re-rendered shortly after typing stops). */
