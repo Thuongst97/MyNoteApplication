@@ -73,7 +73,7 @@ describe('App (integration)', () => {
     fireEvent.keyDown(window, { key: 'L', ctrlKey: true, shiftKey: true })
     await waitFor(() => expect(document.documentElement.classList.contains('dark')).toBe(true))
     fireEvent.keyDown(window, { key: 'T', ctrlKey: true, shiftKey: true })
-    expect(await screen.findByText(/Eisenhower Matrix/)).toBeInTheDocument()
+    expect(await screen.findByText(/Eisenhower matrix/)).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'G', ctrlKey: true, shiftKey: true })
     expect(await screen.findByRole('heading', { name: /Graph view/ })).toBeInTheDocument()
     fireEvent.keyDown(window, { key: 'n', ctrlKey: true })

@@ -48,26 +48,45 @@ describe('TaskMatrix', () => {
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Color of Do first' }))
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Use #8fbf9f' }))
     expect(setSettings).toHaveBeenLastCalledWith({ quadrantColors: { do: '#8fbf9f' } })
-    // The quadrant is painted with the custom color (inline), others keep the default.
-    expect(doFirst.style.borderColor).toBe('rgba(143, 191, 159, 0.45)')
+    // The quadrant's dot (and border/glow) use the custom color; others keep the Onyx default.
+    const dot = (region: HTMLElement) => within(region).getByTestId('quadrant-dot').style.background
+    expect(dot(doFirst)).toBe('rgb(143, 191, 159)')
+    expect(doFirst.style.borderColor).toBe('rgba(143, 191, 159, 0.35)')
+    expect(dot(screen.getByRole('region', { name: 'Schedule' }))).toBe('rgb(79, 127, 201)')
     expect(screen.getByRole('region', { name: 'Schedule' }).style.borderColor).toBe('')
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Color of Do first' }))
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Default' }))
     expect(setSettings).toHaveBeenLastCalledWith({ quadrantColors: {} })
     expect(doFirst.style.borderColor).toBe('')
+    expect(dot(doFirst)).toBe('rgb(212, 90, 90)')
   })
 
-  it('shows the four quadrants with axis labels', () => {
+  it('shows the four quadrants with their meaning', () => {
     render(<TaskMatrix />)
     for (const q of ['Do first', 'Schedule', 'Delegate', 'Eliminate']) expect(screen.getByRole('region', { name: q })).toBeInTheDocument()
-    expect(screen.getByText('Urgent')).toBeInTheDocument()
-    expect(screen.getByText('Not important')).toBeInTheDocument()
+    expect(screen.getByText('Important & urgent')).toBeInTheDocument()
+    expect(screen.getByText('Urgent, not important')).toBeInTheDocument()
+    expect(screen.getAllByText('Clear. Keep it that way.')).toHaveLength(4)
+  })
+
+  it('"New task" in the header opens a new Do-first task; closing it without a name discards it', async () => {
+    render(<TaskMatrix />)
+    await userEvent.click(screen.getByRole('button', { name: /New task/ }))
+    expect(useTaskStore.getState().tasks).toHaveLength(1)
+    expect(useTaskStore.getState().tasks[0]).toMatchObject({ important: true, urgent: true, title: '' })
+    await userEvent.keyboard('{Escape}')
+    expect(useTaskStore.getState().tasks).toHaveLength(0)
+    // With a name it's kept.
+    await userEvent.click(screen.getByRole('button', { name: /New task/ }))
+    await userEvent.keyboard('Call the bank{Enter}')
+    await act(async () => {})
+    expect(useTaskStore.getState().tasks.map((t) => t.title)).toEqual(['Call the bank'])
   })
 
   it('adds a task to a quadrant, moves it by drag & drop and completes it', async () => {
     render(<TaskMatrix />)
     const schedule = screen.getByRole('region', { name: 'Schedule' })
-    await userEvent.click(within(schedule).getByText('New task'))
+    await userEvent.click(within(schedule).getByText('Add task'))
     await userEvent.type(within(schedule).getByPlaceholderText('Task name, then Enter'), 'Learn Rust{Enter}')
     expect(await within(schedule).findByText('Learn Rust')).toBeInTheDocument()
     expect(useTaskStore.getState().tasks[0]).toMatchObject({ important: true, urgent: false })

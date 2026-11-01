@@ -14,11 +14,14 @@ interface TaskCardProps {
   task: Task
   now: number
   highlighted: boolean
+  /** The quadrant's accent color (fills the checkbox when done). */
+  accent?: string
   onToggle: () => void
   onOpen: () => void
 }
 
-export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardProps) {
+/** One task row in the matrix ("Midnight Onyx": soft rounded row, square checkbox, date on the right). */
+export function TaskCard({ task, now, highlighted, accent = '#4F7FC9', onToggle, onOpen }: TaskCardProps) {
   const state = dueState(task, now)
   return (
     <div
@@ -33,10 +36,12 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
       tabIndex={0}
       role="button"
       className={cn(
-        'group flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#EEF0F3] bg-white px-3 py-2.5 text-sm text-[#1F2937] outline-none transition',
-        'shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:-translate-y-px hover:border-[#E2E5EA] hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)]',
-        'focus-visible:ring-2 focus-visible:ring-[#93B4DD] dark:border-white/[0.06] dark:bg-[#202227] dark:text-[#E5E7EB] dark:shadow-[0_4px_20px_rgba(0,0,0,0.25)] dark:hover:border-white/[0.12]',
-        highlighted && 'animate-pulse ring-2 ring-blue-500',
+        'group flex cursor-pointer items-center gap-3 rounded-[14px] border px-3.5 py-3 text-[14.5px] outline-none transition',
+        task.completed
+          ? 'border-transparent bg-transparent'
+          : 'border-[#EFECE6] bg-[#F8F7F4] hover:border-[#E3DED5] hover:bg-[#F4F2EE] dark:border-white/[0.05] dark:bg-white/[0.035] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055]',
+        'focus-visible:ring-2 focus-visible:ring-[#C9A563]/60',
+        highlighted && 'animate-pulse ring-2 ring-[#C9A563]',
       )}
     >
       <button
@@ -49,42 +54,39 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
           onToggle()
         }}
         className={cn(
-          'mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-colors',
-          task.completed ? 'border-[#5B83B7] bg-[#5B83B7] text-white' : 'border-[#CBD0D8] hover:border-[#5B83B7] hover:bg-[#5B83B7]/10 dark:border-white/25',
+          'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-[1.5px] transition-colors',
+          !task.completed && 'border-[#CFC9BE] bg-white hover:border-[#A8843F] dark:border-white/25 dark:bg-transparent dark:hover:border-[#D9B97A]',
         )}
+        style={task.completed ? { background: accent, borderColor: accent } : undefined}
       >
-        {task.completed && <Check size={12} strokeWidth={3} />}
+        {task.completed && <Check size={12} strokeWidth={3} className="text-white dark:text-[#0E0F13]" />}
       </button>
       <div className="min-w-0 flex-1">
-        <div className={cn('break-words leading-snug', task.completed && 'text-[#9CA3AF] line-through dark:text-[#6B7280]', !task.title && 'opacity-50')}>
+        <div
+          className={cn(
+            'break-words leading-snug',
+            task.completed ? 'text-[#B3AEA5] line-through dark:text-[#6D6A65]' : 'text-[#1C1B19] dark:text-[#ECE7DD]',
+            !task.title && 'opacity-50',
+          )}
+        >
           {task.title || 'Untitled task'}
         </div>
-        {(task.dueAt !== null || task.notes) && (
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-            {task.dueAt !== null && (
-              <span
-                className={cn(
-                  'flex items-center gap-1',
-                  state === 'overdue' && 'font-medium text-[#D25C5C] dark:text-[#F19A9A]',
-                  state === 'soon' && 'text-[#B48A4C] dark:text-[#D7B57E]',
-                  (state === 'later' || state === null) && 'text-[#6B7280] dark:text-[#9CA3AF]',
-                )}
-              >
-                <Calendar size={12} />
-                {state === 'overdue' && 'Overdue · '}
-                {formatDueDate(task.dueAt, now)}
-              </span>
-            )}
-            {task.dueAt !== null && task.reminders.length > 0 && !task.completed && (
-              <span className="flex items-center gap-0.5 text-[#9CA3AF]" title={`${task.reminders.length} reminder(s)`}>
-                <Bell size={11} />
-                {task.reminders.length}
-              </span>
-            )}
-            {task.notes && <span className="truncate text-[#6B7280] dark:text-[#9CA3AF]">{task.notes.split('\n')[0]}</span>}
-          </div>
-        )}
+        {task.notes && !task.completed && <div className="mt-0.5 truncate text-[12.5px] text-[#9A958C] dark:text-[#7E7B76]">{task.notes.split('\n')[0]}</div>}
       </div>
+      {task.dueAt !== null && !task.completed && (
+        <span
+          className={cn(
+            'flex shrink-0 items-center gap-1 whitespace-nowrap text-xs',
+            state === 'overdue' && 'font-medium text-[#C24848] dark:text-[#E07A7A]',
+            state === 'soon' && 'font-medium text-[#A8843F] dark:text-[#D9B97A]',
+            (state === 'later' || state === null) && 'text-[#8A857D] dark:text-[#9C978E]',
+          )}
+        >
+          {state === 'overdue' ? 'Overdue · ' : <Calendar size={12} className="opacity-70" />}
+          {formatDueDate(task.dueAt, now)}
+          {task.reminders.length > 0 && <Bell size={11} className="ml-1 opacity-50" aria-label={`${task.reminders.length} reminder(s)`} />}
+        </span>
+      )}
     </div>
   )
 }

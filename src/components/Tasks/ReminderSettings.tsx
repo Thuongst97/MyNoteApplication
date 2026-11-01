@@ -5,6 +5,7 @@ import { useTaskStore } from '@/stores/useTaskStore'
 import { api, isElectron, platform } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Popover } from '@/components/ui/Popover'
+import { PILL } from './quadrantStyle'
 
 /** "At due time, 15 min before" — a short summary of the selected reminder offsets. */
 export function summarizeReminders(minutes: number[]): string {
@@ -56,7 +57,7 @@ export function ReminderSettings() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+        className={PILL}
       >
         <Settings2 size={15} /> Reminders
       </button>

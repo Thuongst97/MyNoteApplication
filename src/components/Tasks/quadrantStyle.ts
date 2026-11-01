@@ -74,3 +74,23 @@ export function useQuadrantCustom(id: Quadrant) {
 
 /** The color shown on a quadrant's color button (its custom color or its default accent). */
 export const QUADRANT_DEFAULT_HEX: Record<Quadrant, string> = { do: '#f87171', schedule: '#7fa7d9', delegate: '#d7b57e', eliminate: '#9ca3af' }
+
+/** Midnight Onyx accents per quadrant (dot, corner glow, done checkbox), light and dark. */
+export const ONYX_ACCENT: Record<'light' | 'dark', Record<Quadrant, string>> = {
+  light: { do: '#D45A5A', schedule: '#4F7FC9', delegate: '#B8913F', eliminate: '#8E939C' },
+  dark: { do: '#E07A7A', schedule: '#7FA6E0', delegate: '#D9B97A', eliminate: '#8E939C' },
+}
+
+/** A quadrant's accent color: the user's custom color, or the Onyx default for the theme. */
+export function useQuadrantAccent(id: Quadrant): string {
+  const custom = useTaskStore((s) => s.settings.quadrantColors?.[id])
+  const theme = useAppStore((s) => s.theme)
+  return custom ?? ONYX_ACCENT[theme][id]
+}
+
+/** `#rrggbb` + alpha (0–1) → `#rrggbbaa`. */
+export const withAlpha = (hex: string, a: number) => `${hex}${Math.round(Math.min(1, Math.max(0, a)) * 255).toString(16).padStart(2, '0')}`
+
+/** Shared "pill" button look of the header (Hide completed, Reminders). */
+export const PILL =
+  'flex items-center gap-1.5 rounded-xl border border-[#E8E4DC] bg-white px-4 py-2 text-[13px] text-[#57524A] shadow-[0_1px_2px_rgba(28,27,25,0.04)] transition-colors hover:border-[#D9D3C8] hover:text-[#1C1B19] dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-[#BDB7AC] dark:shadow-none dark:hover:border-white/[0.14] dark:hover:text-[#ECE7DD]'
