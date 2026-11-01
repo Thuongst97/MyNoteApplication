@@ -10,7 +10,7 @@ export type Theme = 'light' | 'dark'
 
 const PREFS_KEY = 'notion-clone:prefs'
 
-export type View = 'page' | 'tasks' | 'graph'
+export type View = 'page' | 'tasks' | 'graph' | 'home'
 
 interface Prefs {
   view: View
@@ -57,6 +57,8 @@ interface AppState extends Prefs {
   /** Block to scroll to and flash after navigating (block references). */
   highlightBlockId: string | null
   openGraph: () => void
+  /** The new-tab page (recent pages). */
+  openHome: () => void
   toast: { id: number; message: string } | null
   showToast: (message: string) => void
   /** Bumped whenever page links may have changed (backlinks, graph). */
@@ -96,6 +98,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().activePageId
     if (prev) void autoSaver.flush(prev)
     set({ view: 'graph' })
+  },
+
+  openHome: () => {
+    const prev = get().activePageId
+    if (prev) void autoSaver.flush(prev)
+    set({ view: 'home' })
   },
 
   openTasks: (highlightTaskId = null) => {

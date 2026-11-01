@@ -1,6 +1,7 @@
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { FileText, FileX, Shapes } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
+import { openPageFromClick } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
 
 /** Inline link to a page, or to a block on a page (block reference). */
@@ -47,7 +48,7 @@ function MentionView({ node, selected }: NodeViewProps) {
   const open = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (page) useAppStore.getState().setActivePage(pageId, { blockId })
+    if (page) openPageFromClick(pageId, e, { blockId })
   }
   return (
     <NodeViewWrapper as="span">
@@ -56,6 +57,7 @@ function MentionView({ node, selected }: NodeViewProps) {
         role="link"
         title={page ? (blockId ? `Go to block in “${page.title || 'Untitled'}”` : `Open “${page.title || 'Untitled'}”`) : 'This page was deleted'}
         onClick={open}
+        onAuxClick={(e) => e.button === 1 && open(e)}
         data-mention
         className={cn(
           'mx-[1px] inline-flex max-w-full cursor-pointer items-baseline gap-1 rounded px-1 align-baseline transition-colors hover:bg-black/[0.06] dark:hover:bg-white/[0.08]',

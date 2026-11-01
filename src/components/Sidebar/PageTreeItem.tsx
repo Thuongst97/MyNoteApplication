@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronRight, FileDown, FileText, FileUp, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
+import { ChevronRight, FileDown, FileText, FileUp, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus, PanelTop } from 'lucide-react'
 import { exportPageToFile, importPageFile } from '@/components/Editor/pageFiles'
 import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { MenuItem, Popover } from '@/components/ui/Popover'
+import { openPageFromClick, useTabsStore } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
 
 interface PageTreeItemProps {
@@ -60,7 +61,9 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
         aria-selected={isActive}
         aria-expanded={hasChildren ? isExpanded : undefined}
         tabIndex={0}
-        onClick={() => !renaming && setActivePage(page.id)}
+        onClick={(e) => !renaming && openPageFromClick(page.id, e)}
+        onAuxClick={(e) => !renaming && e.button === 1 && openPageFromClick(page.id, e)}
+        onMouseDown={(e) => e.button === 1 && e.preventDefault()}
         onKeyDown={(e) => {
           if (renaming) return
           if (e.key === 'Enter') setActivePage(page.id)
@@ -144,6 +147,15 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
 
         <div onClick={(e) => e.stopPropagation()}>
           <Popover open={menuOpen} onClose={closeMenu} anchor={menuButton} className="w-52">
+            <MenuItem
+              icon={<PanelTop size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                useTabsStore.getState().openInNewTab(`page:${page.id}`)
+              }}
+            >
+              Open in new tab
+            </MenuItem>
             <MenuItem
               icon={<FilePlus size={14} />}
               onClick={() => {

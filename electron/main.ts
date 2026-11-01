@@ -627,7 +627,16 @@ function buildMenu() {
         ...(isDev ? [{ type: 'separator' as const }, { role: 'reload' as const }, { role: 'toggleDevTools' as const }] : []),
       ],
     },
-    { role: 'windowMenu' },
+    // Ctrl/⌘+W closes the current tab (handled by the page), so "Close window" moves to
+    // Ctrl/⌘+Shift+W.
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        ...(isMac ? [{ role: 'zoom' as const }, { type: 'separator' as const }, { role: 'front' as const }] : []),
+        { role: 'close', accelerator: 'CmdOrCtrl+Shift+W' },
+      ],
+    },
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }

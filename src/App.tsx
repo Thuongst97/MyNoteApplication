@@ -10,6 +10,8 @@ import { WhiteboardPage } from '@/components/Whiteboard/WhiteboardPage'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
+import '@/stores/useTabsStore'
+import { NewTabView } from '@/components/Tabs/NewTabView'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
 import { useAppZoom } from '@/hooks/useAppZoom'
 import { api } from '@/lib/api'
@@ -68,6 +70,8 @@ export default function App() {
             <TaskMatrix />
           ) : view === 'graph' ? (
             <GraphView />
+          ) : view === 'home' ? (
+            <NewTabView />
           ) : activePageId && activeExists && activePage?.kind === 'whiteboard' ? (
             <WhiteboardPage key={activePageId} pageId={activePageId} />
           ) : activePageId && activeExists ? (

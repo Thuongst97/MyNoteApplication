@@ -26,11 +26,13 @@ const { default: App } = await import('@/App')
 const { useAppStore } = await import('@/stores/useAppStore')
 const { autoSaver } = await import('@/lib/autoSave')
 const { api } = await import('@/lib/api')
+const { resetTabs } = await import('@/stores/useTabsStore')
 
 const initial = useAppStore.getState()
 beforeEach(() => {
   localStorage.clear()
   useAppStore.setState({ ...initial, pages: [], activePageId: null, expanded: {}, view: 'page', isLoaded: false, isSearchOpen: false, theme: 'light' }, true)
+  resetTabs()
 })
 const s = () => useAppStore.getState()
 const editorEl = () => document.querySelector('.ProseMirror') as HTMLElement & { editor: import('@tiptap/react').Editor }

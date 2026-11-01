@@ -1,6 +1,7 @@
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { ArrowUpRight, FileText, FileX, Shapes } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
+import { openPageFromClick } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
 
 declare module '@tiptap/core' {
@@ -54,7 +55,7 @@ export const PageLinkNode = Node.create({
 function PageLinkView({ node, selected }: NodeViewProps) {
   const pageId = node.attrs.pageId as string
   const page = useAppStore((s) => s.pages.find((p) => p.id === pageId))
-  const open = () => page && useAppStore.getState().setActivePage(pageId)
+  const open = (e?: React.MouseEvent) => page && openPageFromClick(pageId, e)
   const Icon = !page ? FileX : page.kind === 'whiteboard' ? Shapes : FileText
 
   return (
@@ -64,6 +65,7 @@ function PageLinkView({ node, selected }: NodeViewProps) {
         role="link"
         tabIndex={0}
         onClick={open}
+        onAuxClick={(e) => e.button === 1 && open(e)}
         onKeyDown={(e) => e.key === 'Enter' && open()}
         className={cn(
           'group/pl flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',

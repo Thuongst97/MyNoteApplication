@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ChevronRight, FileText, Link2, Shapes } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/stores/useAppStore'
+import { openPageFromClick } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
 
 /** "Linked from" — pages that link to this page. */
@@ -35,7 +36,8 @@ export function Backlinks({ pageId }: { pageId: string }) {
             <button
               key={p!.id}
               type="button"
-              onClick={() => useAppStore.getState().setActivePage(p!.id)}
+              onClick={(e) => openPageFromClick(p!.id, e)}
+              onAuxClick={(e) => e.button === 1 && openPageFromClick(p!.id, e)}
               className="flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
             >
               <span className="flex w-5 justify-center leading-none">

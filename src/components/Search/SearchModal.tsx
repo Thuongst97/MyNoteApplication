@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CornerDownLeft, FileText, Search, Shapes } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
+import { openPageFromClick } from '@/stores/useTabsStore'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import type { PageMeta, SearchResult } from '@/types'
@@ -10,7 +11,7 @@ import { cn } from '@/lib/utils'
 export function SearchModal() {
   const open = useAppStore((s) => s.isSearchOpen)
   const pages = useAppStore((s) => s.pages)
-  const { setSearchOpen, setActivePage } = useAppStore.getState()
+  const { setSearchOpen } = useAppStore.getState()
   const [query, setQuery] = useState('')
   const [contentHits, setContentHits] = useState<SearchResult[]>([])
   const [selected, setSelected] = useState(0)
@@ -74,9 +75,10 @@ export function SearchModal() {
 
   if (!open) return null
 
-  const choose = (id: string) => {
+  /** Opens a result (Ctrl/⌘+Enter or Ctrl/⌘+click: in a new tab). */
+  const choose = (id: string, e?: { ctrlKey?: boolean; metaKey?: boolean; button?: number }) => {
     setSearchOpen(false)
-    setActivePage(id)
+    openPageFromClick(id, e)
   }
 
   const pathOf = (page: PageMeta) => {
@@ -117,7 +119,7 @@ export function SearchModal() {
                 e.preventDefault()
                 setSelected((s) => Math.max(s - 1, 0))
               } else if (e.key === 'Enter' && results[selected]) {
-                choose(results[selected].page.id)
+                choose(results[selected].page.id, e)
               }
             }}
           />
@@ -135,7 +137,7 @@ export function SearchModal() {
                 type="button"
                 data-index={index}
                 onMouseEnter={() => setSelected(index)}
-                onClick={() => choose(page.id)}
+                onClick={(e) => choose(page.id, e)}
                 className={cn(
                   'flex w-full items-start gap-3 rounded-md px-2 py-2 text-left',
                   index === selected && 'bg-black/5 dark:bg-white/10',
