@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BellRing, CheckSquare, Eye, EyeOff, Plus, Settings2 } from 'lucide-react'
+import { CheckSquare, Eye, EyeOff, Plus } from 'lucide-react'
 import type { Task } from '@/types'
-import { QUADRANTS, REMINDER_PRESETS, quadrantOf, type Quadrant } from '@/lib/reminders'
+import { QUADRANTS, quadrantOf, type Quadrant } from '@/lib/reminders'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
-import { api, isElectron, platform } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { Popover } from '@/components/ui/Popover'
+import { ReminderSettings } from './ReminderSettings'
 import { MATRIX_TEXT, MATRIX_TEXT_SECONDARY, QUADRANT_DEFAULT_HEX, QUADRANT_PRESETS, QUADRANT_STYLE, SOFT_SHADOW, useQuadrantCustom } from './quadrantStyle'
 import { ColorPicker } from '@/components/ui/ColorPicker'
 import { TaskCard, dueState } from './TaskCard'
-import { Chip, TaskDialog } from './TaskDialog'
+import { TaskDialog } from './TaskDialog'
 
 /** Sort: open tasks first, then by due date (no date last), then by creation. */
 function sortTasks(a: Task, b: Task) {
@@ -261,67 +260,3 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
   )
 }
 
-function ReminderSettings() {
-  const settings = useTaskStore((s) => s.settings)
-  const { setSettings } = useTaskStore.getState()
-  const [open, setOpen] = useState(false)
-  const [testResult, setTestResult] = useState<string | null>(null)
-  const showBackground = isElectron && platform !== 'darwin'
-
-  const toggle = (m: number) => {
-    const cur = settings.defaultReminders
-    void setSettings({ defaultReminders: cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m] })
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
-      >
-        <Settings2 size={15} /> Reminders
-      </button>
-      <Popover open={open} onClose={() => setOpen(false)} className="right-0 top-10 w-[340px] p-3">
-        <div className="mb-1 text-sm font-medium">Default reminders</div>
-        <p className="mb-2 text-xs opacity-55">Used for new tasks once they have a due date. You can change them per task.</p>
-        <div className="flex flex-wrap gap-1.5">
-          {REMINDER_PRESETS.map((p) => (
-            <Chip key={p.minutes} active={settings.defaultReminders.includes(p.minutes)} onClick={() => toggle(p.minutes)}>
-              {p.label}
-            </Chip>
-          ))}
-        </div>
-
-        {showBackground && (
-          <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={settings.runInBackground}
-              onChange={(e) => void setSettings({ runInBackground: e.target.checked })}
-              className="mt-0.5 accent-blue-500"
-            />
-            <span>
-              Keep running in the system tray after closing the window
-              <span className="block text-xs opacity-55">Needed for reminders while the window is closed.</span>
-            </span>
-          </label>
-        )}
-
-        <div className="mt-4 flex items-center gap-2 border-t border-black/5 pt-3 dark:border-white/10">
-          <button
-            type="button"
-            onClick={async () => {
-              const ok = await api.tasks.testNotification()
-              setTestResult(ok ? 'Sent — check your system notifications.' : 'Notifications are not available or are blocked.')
-            }}
-            className="flex items-center gap-1.5 rounded-md border border-black/10 px-2.5 py-1 text-sm hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/10"
-          >
-            <BellRing size={14} /> Send test notification
-          </button>
-        </div>
-        {testResult && <div className="mt-1.5 text-xs opacity-60">{testResult}</div>}
-      </Popover>
-    </div>
-  )
-}

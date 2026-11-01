@@ -1,35 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor, type JSONContent, type Editor as TiptapEditor } from '@tiptap/react'
 import type { EditorView } from '@tiptap/pm/view'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
-import TaskList from '@tiptap/extension-task-list'
-import TaskItem from '@tiptap/extension-task-item'
-import Image from '@tiptap/extension-image'
-import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
 import { FormattingToolbar } from './FormattingToolbar'
+import { createEditorExtensions } from './extensions'
 import { TableToolbar } from './TableToolbar'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
-import { SlashCommand } from './SlashCommand'
-import { CodeBlockNode } from './code/CodeBlockNode'
-import { MarkdownNode } from './markdown/MarkdownNode'
-import { TableKit } from '@tiptap/extension-table'
 import { looksLikeMarkdown, markdownToHtml } from '@/lib/markdown'
-import { ImageSelection } from './ImageSelection'
-import { MermaidNode } from './mermaid/MermaidNode'
-import { ChartNode } from './chart/ChartNode'
-import { DrawingNode } from './drawing/DrawingNode'
-import { MindMapNode } from './mindmap/MindMapNode'
-import { BlockIds, blockSnippet } from './links/BlockIds'
-import { PageLinkNode } from './links/PageLinkNode'
-import { MentionNode } from './links/MentionNode'
-import { PageSuggestion } from './links/PageSuggestion'
-import { BlockFlash } from './links/BlockFlash'
+import { blockSnippet } from './links/BlockIds'
 import { parsePageUrl } from '@/lib/links'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/stores/useAppStore'
 import { MERMAID_START } from './mermaid/renderMermaid'
-import { blockDrag, computeBlockDrop, MoveBlockShortcuts, performBlockDrop } from './blockMove'
+import { blockDrag, computeBlockDrop, performBlockDrop } from './blockMove'
 import { BlockHandle } from './BlockHandle'
 
 interface EditorProps {
@@ -53,67 +35,7 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
   const editorRef = useRef<TiptapEditor | null>(null)
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        // Replaced by the syntax-highlighted CodeBlockNode below.
-        codeBlock: false,
-        // Blue line showing where a dragged block will land.
-        dropcursor: { color: '#2383e2', width: 3 },
-        link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
-      }),
-      Placeholder.configure({
-        includeChildren: false,
-        placeholder: ({ node }) => {
-          if (node.type.name === 'heading') return `Heading ${node.attrs.level}`
-          if (node.type.name === 'codeBlock') return ''
-          return "Write something, or press '/' for commands…"
-        },
-      }),
-      CodeBlockNode,
-      TableKit.configure({ table: { resizable: false } }),
-      MarkdownNode,
-      TextStyle,
-      Color,
-      BackgroundColor,
-      FontSize,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Image.extend({
-        addAttributes() {
-          return {
-            ...this.parent?.(),
-            align: {
-              default: 'left',
-              parseHTML: (el) => el.getAttribute('data-align') || 'left',
-              renderHTML: (attrs) => ({ 'data-align': attrs.align }),
-            },
-          }
-        },
-      }).configure({
-        inline: false,
-        allowBase64: true,
-        resize: {
-          enabled: true,
-          directions: ['left', 'right', 'bottom-left', 'bottom-right'],
-          minWidth: 60,
-          minHeight: 40,
-          alwaysPreserveAspectRatio: true,
-        },
-      }),
-      ImageSelection,
-      MermaidNode,
-      ChartNode,
-      DrawingNode,
-      MindMapNode,
-      BlockIds,
-      PageLinkNode,
-      MentionNode,
-      PageSuggestion,
-      BlockFlash,
-      MoveBlockShortcuts,
-      SlashCommand,
-    ],
+    extensions: createEditorExtensions(),
     content: initialContent ?? '',
     editorProps: {
       attributes: {

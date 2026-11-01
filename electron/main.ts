@@ -10,6 +10,8 @@ import { addLibraryUrlFrom, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
 import { assetResponseHeaders, isAppUrl, isPermissionAllowed, isSafeExternalUrl } from './security'
 import { defaultRestoreBounds, fillsWorkArea } from './windowState'
+import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT, parseBundle } from './pageTransfer'
+import fs from 'node:fs/promises'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -424,6 +426,48 @@ function registerIpc() {
   )
 
   handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
+
+  // ---- Page files (export / import) ---------------------------------------
+  handle('pages:export', async (e, id: string, includeChildren: boolean) => {
+    const page = await storage.read(id)
+    if (!page) throw new Error('Page not found')
+    const parent = BrowserWindow.fromWebContents(e.sender) ?? win!
+    const r = await dialog.showSaveDialog(parent, {
+      title: 'Export page',
+      defaultPath: path.join(app.getPath('documents'), fileNameFor(page.title, PAGE_FILE_EXT)),
+      filters: [{ name: 'NotionClone page', extensions: [PAGE_FILE_EXT] }],
+    })
+    if (r.canceled || !r.filePath) return { ok: false as const }
+    const bundle = await exportPages(storage, assets, id, includeChildren === true)
+    await fs.writeFile(r.filePath, JSON.stringify(bundle), 'utf8')
+    return { ok: true as const, path: r.filePath, pages: bundle.pages.length, images: Object.keys(bundle.assets).length }
+  })
+  handle('pages:import', async (e, parentId: string | null) => {
+    if (parentId !== null && !(await storage.read(parentId))) throw new Error('Page not found')
+    const parent = BrowserWindow.fromWebContents(e.sender) ?? win!
+    const r = await dialog.showOpenDialog(parent, {
+      title: 'Import page',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Pages (NotionClone, Markdown)', extensions: [PAGE_FILE_EXT, 'md', 'markdown', 'txt'] },
+        { name: 'NotionClone page', extensions: [PAGE_FILE_EXT] },
+        { name: 'Markdown', extensions: ['md', 'markdown', 'txt'] },
+      ],
+    })
+    const file = r.filePaths[0]
+    if (r.canceled || !file) return null
+    const { size } = await fs.stat(file)
+    const ext = path.extname(file).slice(1).toLowerCase()
+    const name = path.basename(file, path.extname(file))
+    if (ext !== PAGE_FILE_EXT) {
+      // Markdown is converted in the renderer (it needs the editor schema).
+      if (size > 10 * 1024 * 1024) throw new Error('This Markdown file is too large (over 10 MB).')
+      return { kind: 'markdown' as const, name, text: await fs.readFile(file, 'utf8') }
+    }
+    if (size > MAX_IMPORT_BYTES) throw new Error('This page file is too large (over 300 MB).')
+    const bundle = parseBundle(await fs.readFile(file, 'utf8'))
+    return { kind: 'pages' as const, ...(await importPages(storage, assets, bundle, parentId)) }
+  })
 
   // ---- Window controls (custom title bar on Windows/Linux) ---------------
   const fromEvent = (e: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) =>

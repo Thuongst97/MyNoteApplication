@@ -1,10 +1,11 @@
 import { useCallback, useRef } from 'react'
-import { CheckSquare, ChevronsLeft, Moon, Network, Plus, Search, Shapes, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { selectChildren, useAppStore } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
 import { PageTreeItem } from './PageTreeItem'
+import { importPageFile } from '@/components/Editor/pageFiles'
 
 export function Sidebar() {
   const pages = useAppStore((s) => s.pages)
@@ -122,6 +123,15 @@ export function Sidebar() {
           >
             <Shapes size={16} className="opacity-70" />
             <span className="flex-1 text-left">New whiteboard</span>
+          </button>
+          <button
+            type="button"
+            title="Import a page file (.ncpage) or a Markdown file"
+            onClick={() => void importPageFile(null)}
+            className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+          >
+            <FileDown size={16} className="opacity-70" />
+            <span className="flex-1 text-left">Import</span>
           </button>
         </div>
 

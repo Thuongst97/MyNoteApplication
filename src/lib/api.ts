@@ -88,6 +88,14 @@ function createBrowserApi(): ElectronAPI {
       for (let i = 0; i < data.length; i += 0x8000) bin += String.fromCharCode(...data.subarray(i, i + 0x8000))
       return `data:${mime};base64,${btoa(bin)}`
     },
+    pageFiles: {
+      export: async () => {
+        throw new Error('Exporting pages is available in the desktop app.')
+      },
+      import: async () => {
+        throw new Error('Importing pages is available in the desktop app.')
+      },
+    },
     zoom: {
       // Plain browser: CSS zoom on the root element.
       get: () => Number(document.documentElement.style.zoom) || 1,

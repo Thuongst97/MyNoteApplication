@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronRight, FileText, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
+import { ChevronRight, FileDown, FileText, FileUp, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
+import { exportPageToFile, importPageFile } from '@/components/Editor/pageFiles'
 import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
 import { selectChildren, useAppStore } from '@/stores/useAppStore'
@@ -168,6 +169,24 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
               }}
             >
               Copy link to page
+            </MenuItem>
+            <MenuItem
+              icon={<FileUp size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                void exportPageToFile(page.id, true)
+              }}
+            >
+              {hasChildren ? 'Export with sub-pages…' : 'Export…'}
+            </MenuItem>
+            <MenuItem
+              icon={<FileDown size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                void importPageFile(page.id)
+              }}
+            >
+              Import inside…
             </MenuItem>
             <MenuItem
               icon={<Pencil size={14} />}

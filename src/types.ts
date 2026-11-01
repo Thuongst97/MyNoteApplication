@@ -94,6 +94,11 @@ export interface ElectronAPI {
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */
   saveAsset: (data: Uint8Array, mime: string) => Promise<string>
+  /** Export a page (with sub-pages) to a .ncpage file, or import a .ncpage / Markdown file. */
+  pageFiles: {
+    export: (id: string, includeChildren: boolean) => Promise<{ ok: false } | { ok: true; path: string; pages: number; images: number }>
+    import: (parentId: string | null) => Promise<PageImportResult | null>
+  }
   /** Page zoom (1 = 100%). */
   zoom: {
     get: () => number
@@ -132,3 +137,8 @@ export interface ElectronAPI {
   /** Called by main before the window closes so pending saves can be flushed. */
   onFlushRequest: (cb: () => Promise<void>) => () => void
 }
+
+/** Result of choosing a file to import: a page file is imported by the main process; Markdown is converted by the app. */
+export type PageImportResult =
+  | { kind: 'pages'; rootId: string; count: number; skippedImages: number }
+  | { kind: 'markdown'; name: string; text: string }

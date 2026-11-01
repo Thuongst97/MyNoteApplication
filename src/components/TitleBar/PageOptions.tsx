@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { MoreHorizontal, MoveHorizontal } from 'lucide-react'
+import { FileUp, MoreHorizontal, MoveHorizontal } from 'lucide-react'
+import { exportPageToFile } from '@/components/Editor/pageFiles'
 import { Popover } from '@/components/ui/Popover'
 import { useAppStore } from '@/stores/useAppStore'
 import { effectiveWidth, MAX_PAGE_WIDTH, MIN_PAGE_WIDTH, normalizeWidth, WIDTH_PRESETS, widthLabel } from '@/lib/pageWidth'
@@ -63,6 +64,18 @@ export function PageOptions({ pageId }: { pageId: string }) {
           className="mt-3 w-full accent-blue-500"
         />
         <p className="mt-1.5 text-[11px] opacity-50">Tip: you can also drag the left or right edge of the page. Double-click the edge to reset.</p>
+        <div className="-mx-3 my-3 h-px bg-black/5 dark:bg-white/10" />
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            void exportPageToFile(pageId, true)
+          }}
+          className="-mx-1 flex w-[calc(100%+0.5rem)] items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          <FileUp size={15} className="opacity-60" /> Export page…
+          <span className="ml-auto text-[11px] opacity-45">.ncpage</span>
+        </button>
       </Popover>
     </div>
   )

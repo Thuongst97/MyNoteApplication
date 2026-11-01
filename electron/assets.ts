@@ -45,6 +45,17 @@ export class AssetStorage {
     return `${ASSET_SCHEME}://${ASSET_HOST}/${name}`
   }
 
+  /** Reads one of our stored images by its notion-asset:// URL (null if missing or not ours). */
+  async read(url: string): Promise<{ data: Uint8Array; mime: string } | null> {
+    const hit = this.resolve(url)
+    if (!hit) return null
+    try {
+      return { data: new Uint8Array(await fs.readFile(hit.file)), mime: hit.mime }
+    } catch {
+      return null
+    }
+  }
+
   /** Resolves a request URL to a file on disk, or null if it isn't one of ours. */
   resolve(url: string): { file: string; mime: string } | null {
     let parsed: URL
