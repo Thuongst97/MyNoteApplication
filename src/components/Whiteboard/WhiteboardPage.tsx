@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, Shapes } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
@@ -17,7 +17,6 @@ export interface WhiteboardContent {
 export function WhiteboardPage({ pageId }: { pageId: string }) {
   const meta = useAppStore((s) => s.pages.find((p) => p.id === pageId))
   const theme = useAppStore((s) => s.theme)
-  const updatePageMeta = useAppStore((s) => s.updatePageMeta)
   const [content, setContent] = useState<WhiteboardContent | null>(null)
 
   // Saves keep images as asset files, not base64 inside the page. New images are
@@ -69,18 +68,8 @@ export function WhiteboardPage({ pageId }: { pageId: string }) {
   if (!meta) return null
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 px-6 pb-2 pt-1">
-        <span className="text-xl leading-none">{meta.icon ?? <Shapes size={18} className="opacity-60" />}</span>
-        <input
-          value={meta.title}
-          onChange={(e) => updatePageMeta(pageId, { title: e.target.value })}
-          placeholder="Untitled whiteboard"
-          className="min-w-0 flex-1 bg-transparent text-2xl font-bold tracking-tight outline-none placeholder:text-ink-light/25 dark:placeholder:text-ink-dark/25"
-          aria-label="Whiteboard title"
-        />
-        <span className="text-xs opacity-40">Infinite canvas · scroll to pan, Ctrl+scroll to zoom</span>
-      </div>
-      <div className="relative min-h-0 flex-1 border-t border-black/5 dark:border-white/5">
+      {/* No title row: the name is in the tab (rename by double-clicking the tab or in the sidebar). */}
+      <div className="relative min-h-0 flex-1">
         {content ? (
           <Suspense fallback={<Centered />}>
             <WhiteboardCanvas

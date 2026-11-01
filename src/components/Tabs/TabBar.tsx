@@ -60,6 +60,7 @@ export function TabBar() {
             index={i}
             active={tab.id === activeTabId}
             label={tabLabel(current(tab), byId)}
+            pageId={current(tab).startsWith('page:') && byId.has(current(tab).slice(5)) ? current(tab).slice(5) : null}
             onlyTab={tabs.length === 1}
             dropBefore={dropAt === i && dragId !== tab.id}
             dropAfter={dropAt === tabs.length && i === tabs.length - 1}
@@ -85,6 +86,7 @@ function TabItem({
   tab,
   index,
   active,
+  pageId,
   label,
   onlyTab,
   dropBefore,
@@ -98,6 +100,8 @@ function TabItem({
   tab: Tab
   index: number
   active: boolean
+  /** The tab's page (renamable by double-click), if it shows one. */
+  pageId: string | null
   label: { title: string; icon: React.ReactNode }
   onlyTab: boolean
   dropBefore: boolean
@@ -109,12 +113,17 @@ function TabItem({
   onDragOverAt: (after: boolean) => void
 }) {
   const mod = isMacLike() ? '⌘' : 'Ctrl'
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const commit = () => {
+    if (renaming !== null && pageId) useAppStore.getState().updatePageMeta(pageId, { title: renaming.trim() })
+    setRenaming(null)
+  }
   return (
     <div
       role="tab"
       aria-selected={active}
       tabIndex={0}
-      title={index < 9 ? `${label.title} (${mod}+${index + 1})` : label.title}
+      title={`${index < 9 ? `${label.title} (${mod}+${index + 1})` : label.title}${pageId ? ' · double-click to rename' : ''}`}
       data-tab-id={tab.id}
       draggable
       onDragStart={(e) => {
@@ -134,6 +143,12 @@ function TabItem({
         if (e.button === 1) onClose() // middle-click closes, like browsers
       }}
       onClick={onSelect}
+      onDoubleClick={() => {
+        // Double-click renames the page (the page itself no longer shows a title row for whiteboards).
+        if (!pageId) return
+        const page = useAppStore.getState().pages.find((p) => p.id === pageId)
+        setRenaming(page?.title ?? '')
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -150,7 +165,28 @@ function TabItem({
       {dropBefore && <span className="absolute -left-[2px] top-1 bottom-1 w-[3px] rounded bg-blue-500" />}
       {dropAfter && <span className="absolute -right-[2px] top-1 bottom-1 w-[3px] rounded bg-blue-500" />}
       <span className="flex shrink-0 items-center">{label.icon}</span>
-      <span className="min-w-0 flex-1 truncate">{label.title}</span>
+      {renaming !== null ? (
+        <input
+          autoFocus
+          aria-label="Rename page"
+          value={renaming}
+          onChange={(e) => setRenaming(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onBlur={commit}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') setRenaming(null)
+          }}
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          className="min-w-0 flex-1 rounded bg-white px-1 text-[13px] outline outline-1 outline-blue-400 dark:bg-[#2a2a2a]"
+        />
+      ) : (
+        <span className="min-w-0 flex-1 truncate">{label.title}</span>
+      )}
       {!(onlyTab && label.title === 'New tab') && (
         <button
           type="button"
