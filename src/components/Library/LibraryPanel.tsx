@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CaptureUpdateAction, exportToSvg, MIME_TYPES, restoreElements, serializeLibraryAsJSON } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI, LibraryItems } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
@@ -211,6 +211,8 @@ function CategorySection({
 }) {
   const store = useLibraryStore.getState()
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuButton = useRef<HTMLButtonElement>(null)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(c.name)
   const open = forceOpen || !c.collapsed
@@ -250,6 +252,7 @@ function CategorySection({
         </button>
         <div className="relative">
           <button
+            ref={menuButton}
             type="button"
             aria-label={`${c.name} options`}
             onClick={() => setMenuOpen((o) => !o)}
@@ -257,7 +260,7 @@ function CategorySection({
           >
             <MoreHorizontal size={15} />
           </button>
-          <Popover open={menuOpen} onClose={() => setMenuOpen(false)} className="right-0 top-7 w-48">
+          <Popover open={menuOpen} onClose={closeMenu} anchor={menuButton} className="w-48">
             <MenuItem icon={<Pencil size={14} />} onClick={() => (setMenuOpen(false), setDraft(c.name), setRenaming(true))}>
               Rename
             </MenuItem>

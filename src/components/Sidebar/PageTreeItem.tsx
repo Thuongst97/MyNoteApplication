@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronRight, FileText, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
 import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
@@ -19,6 +19,8 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
   const { setActivePage, toggleExpanded, createPage, deletePage, updatePageMeta } = useAppStore.getState()
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuButton = useRef<HTMLButtonElement>(null)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
   const [renaming, setRenaming] = useState(false)
   const [draft, setDraft] = useState(page.title)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -116,6 +118,7 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
         {!renaming && (
           <div className={cn('flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100', menuOpen && 'opacity-100')}>
             <IconButton
+              buttonRef={menuButton}
               label="More actions"
               onClick={(e) => {
                 e.stopPropagation()
@@ -137,7 +140,7 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
         )}
 
         <div onClick={(e) => e.stopPropagation()}>
-          <Popover open={menuOpen} onClose={() => setMenuOpen(false)} className="right-0 top-7 w-52">
+          <Popover open={menuOpen} onClose={closeMenu} anchor={menuButton} className="w-52">
             <MenuItem
               icon={<FilePlus size={14} />}
               onClick={() => {
@@ -211,13 +214,16 @@ function IconButton({
   children,
   label,
   onClick,
+  buttonRef,
 }: {
   children: React.ReactNode
   label: string
   onClick: (e: React.MouseEvent) => void
+  buttonRef?: React.Ref<HTMLButtonElement>
 }) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       title={label}
       aria-label={label}
