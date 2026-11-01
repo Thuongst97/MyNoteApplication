@@ -1,4 +1,4 @@
-# NotionClone — a Notion-like desktop notes app
+# PremiumNote — a block-based desktop notes app
 
 Block-based note-taking app built with **Electron + React 18 + TypeScript + Tailwind CSS + TipTap + Zustand**.
 Runs on Windows and macOS (and Linux), stores everything locally, and uses a frameless window.
@@ -236,9 +236,11 @@ resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
 
 Each page (document or whiteboard) is a JSON file at `<userData>/pages/<id>.json`, where `<userData>` is:
 
-- Windows: `%APPDATA%\notion-clone`
-- macOS: `~/Library/Application Support/notion-clone`
-- Linux: `~/.config/notion-clone`
+- Windows: `%APPDATA%\PremiumNote`
+- macOS: `~/Library/Application Support/PremiumNote`
+- Linux: `~/.config/PremiumNote`
+
+(The app used to be called NotionClone. If a data folder from that name exists — `NotionClone` or `notion-clone` — the app keeps using it, so existing notes stay where they are.)
 
 Images are stored as separate files in `<userData>/assets/` and referenced from pages as
 `notion-asset://local/<file>`, so page files stay small. The app only serves files from that folder with
@@ -258,9 +260,9 @@ Tasks are stored in `<userData>/tasks.json` and reminder settings in `<userData>
 - **macOS:** the app keeps running in the Dock after its window closes, as usual. Reminders stop when you quit with ⌘Q.
 - Each reminder fires once. Reminders whose time had already passed when you set the due date don't fire. Changing the due date sets up its reminders again.
 - If the app wasn't running when reminders were due, you get one *missed reminder* notification per task the next time it starts. Reminders more than 7 days old are skipped.
-- Use *Tasks → Reminders → Send test notification* to check that your OS allows notifications. On macOS, allow NotionClone under System Settings → Notifications. On Windows, check Focus Assist.
+- Use *Tasks → Reminders → Send test notification* to check that your OS allows notifications. On macOS, allow PremiumNote under System Settings → Notifications. On Windows, check Focus Assist.
 
-Set `NOTION_CLONE_DATA_DIR=/some/folder` to use a different folder (handy for testing).
+Set `PREMIUMNOTE_DATA_DIR=/some/folder` to use a different folder (handy for testing).
 
 How saving stays safe:
 

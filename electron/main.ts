@@ -12,6 +12,7 @@ import { assetResponseHeaders, FONT_SCHEME, isAppUrl, isPermissionAllowed, isSaf
 import { defaultRestoreBounds, fillsWorkArea } from './windowState'
 import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT, parseBundle } from './pageTransfer'
 import fs from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -72,7 +73,22 @@ app.on('web-contents-created', (_e, contents) => {
 })
 
 // Allow overriding the data folder (useful for testing / portable setups).
-if (process.env.NOTION_CLONE_DATA_DIR) app.setPath('userData', process.env.NOTION_CLONE_DATA_DIR)
+const dataDirOverride = process.env.PREMIUMNOTE_DATA_DIR || process.env.NOTION_CLONE_DATA_DIR
+if (dataDirOverride) app.setPath('userData', dataDirOverride)
+else {
+  // The app was renamed (NotionClone → PremiumNote), which changes Electron's default data
+  // folder. Keep using the existing notes folder so nothing is lost or duplicated.
+  const current = app.getPath('userData')
+  if (!existsSync(path.join(current, 'pages'))) {
+    for (const old of ['NotionClone', 'notion-clone']) {
+      const dir = path.join(app.getPath('appData'), old)
+      if (existsSync(path.join(dir, 'pages'))) {
+        app.setPath('userData', dir)
+        break
+      }
+    }
+  }
+}
 
 // Must happen before the app is ready.
 protocol.registerSchemesAsPrivileged([
@@ -82,6 +98,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: FONT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ])
 
+// Kept from the app's former name so installs upgrade in place and notifications keep working.
 const APP_ID = 'com.thuong.notionclone'
 const REMINDER_CHECK_MS = 15_000
 
@@ -129,10 +146,10 @@ function trayIconPath() {
 function ensureTray() {
   if (isMac || tray) return
   tray = new Tray(nativeImage.createFromPath(trayIconPath()))
-  tray.setToolTip('NotionClone')
+  tray.setToolTip('PremiumNote')
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Open NotionClone', click: () => showWindow() },
+      { label: 'Open PremiumNote', click: () => showWindow() },
       { label: 'Open Tasks', click: () => openTaskInWindow(null) },
       { type: 'separator' },
       {
@@ -376,7 +393,7 @@ function createWindow() {
           ensureTray()
           if (!toldAboutBackground) {
             toldAboutBackground = true
-            notify('NotionClone is still running', 'Task reminders will keep arriving. Quit from the tray icon.')
+            notify('PremiumNote is still running', 'Task reminders will keep arriving. Quit from the tray icon.')
           }
         } else {
           hideDecided = true
@@ -472,7 +489,7 @@ function registerIpc() {
     const r = await dialog.showSaveDialog(parent, {
       title: 'Export page',
       defaultPath: path.join(app.getPath('documents'), fileNameFor(page.title, PAGE_FILE_EXT)),
-      filters: [{ name: 'NotionClone page', extensions: [PAGE_FILE_EXT] }],
+      filters: [{ name: 'PremiumNote page', extensions: [PAGE_FILE_EXT] }],
     })
     if (r.canceled || !r.filePath) return { ok: false as const }
     const bundle = await exportPages(storage, assets, id, includeChildren === true)
@@ -486,8 +503,8 @@ function registerIpc() {
       title: 'Import page',
       properties: ['openFile'],
       filters: [
-        { name: 'Pages (NotionClone, Markdown)', extensions: [PAGE_FILE_EXT, 'md', 'markdown', 'txt'] },
-        { name: 'NotionClone page', extensions: [PAGE_FILE_EXT] },
+        { name: 'Pages (PremiumNote, Markdown)', extensions: [PAGE_FILE_EXT, 'md', 'markdown', 'txt'] },
+        { name: 'PremiumNote page', extensions: [PAGE_FILE_EXT] },
         { name: 'Markdown', extensions: ['md', 'markdown', 'txt'] },
       ],
     })

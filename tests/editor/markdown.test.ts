@@ -58,7 +58,7 @@ describe('Markdown → editor blocks', () => {
     expect(tables).toBe(4)
     expect(json.filter((n) => n.type === 'heading').length).toBeGreaterThan(8)
     const text = editor.getText()
-    for (const s of ['NotionClone', 'Keyboard shortcuts', 'npm install', 'Toggle sidebar', 'How reminders work']) expect(text).toContain(s)
+    for (const s of ['PremiumNote', 'Keyboard shortcuts', 'npm install', 'Toggle sidebar', 'How reminders work']) expect(text).toContain(s)
     // Relative screenshots can't load, so they show as placeholders with their alt text.
     expect(text).toContain('🖼 Page in dark mode')
   })

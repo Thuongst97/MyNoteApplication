@@ -79,10 +79,10 @@ export function parseBundle(text: string): PageBundle {
   try {
     raw = JSON.parse(text)
   } catch {
-    throw new Error('This file is not a NotionClone page file.')
+    throw new Error('This file is not a PremiumNote page file.')
   }
   const b = raw as Partial<PageBundle>
-  if (!b || typeof b !== 'object' || b.format !== PAGE_FILE_FORMAT) throw new Error('This file is not a NotionClone page file.')
+  if (!b || typeof b !== 'object' || b.format !== PAGE_FILE_FORMAT) throw new Error('This file is not a PremiumNote page file.')
   if (typeof b.version !== 'number' || b.version > PAGE_FILE_VERSION) throw new Error('This page file was made by a newer version of the app.')
   if (!Array.isArray(b.pages) || b.pages.length === 0) throw new Error('The page file contains no pages.')
   if (b.pages.length > MAX_PAGES) throw new Error(`The page file contains too many pages (max ${MAX_PAGES}).`)

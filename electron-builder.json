@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.thuong.notionclone",
-  "productName": "NotionClone",
+  "productName": "PremiumNote",
   "directories": {
     "output": "dist_electron",
     "buildResources": "resources"

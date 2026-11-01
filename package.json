@@ -2,7 +2,7 @@
   "name": "notion-clone",
   "private": true,
   "version": "0.1.0",
-  "description": "A Notion-like block-based note-taking desktop app",
+  "description": "PremiumNote — a block-based note-taking desktop app",
   "author": "Thuong Nguyen",
   "main": "dist-electron/main.js",
   "type": "module",

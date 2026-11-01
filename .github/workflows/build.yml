@@ -35,15 +35,15 @@ jobs:
       - name: Verify macOS signatures
         if: runner.os == 'macOS'
         run: |
-          for app in dist_electron/mac*/NotionClone.app; do
+          for app in dist_electron/mac*/PremiumNote.app; do
             echo "== $app"
             codesign --verify --deep --strict --verbose=2 "$app"
             codesign -dv "$app" 2>&1 | grep -E "Signature|Identifier|Format"
-            lipo -archs "$app/Contents/MacOS/NotionClone"
+            lipo -archs "$app/Contents/MacOS/PremiumNote"
           done
       - uses: actions/upload-artifact@v5
         with:
-          name: NotionClone-${{ matrix.os }}
+          name: PremiumNote-${{ matrix.os }}
           path: |
             dist_electron/*.exe
             dist_electron/*.dmg

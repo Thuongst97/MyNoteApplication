@@ -97,8 +97,8 @@ describe('page files', () => {
   })
 
   it('rejects files that are not page files or are damaged', () => {
-    expect(() => parseBundle('not json')).toThrow(/not a NotionClone page file/)
-    expect(() => parseBundle(JSON.stringify({ format: 'other' }))).toThrow(/not a NotionClone page file/)
+    expect(() => parseBundle('not json')).toThrow(/not a PremiumNote page file/)
+    expect(() => parseBundle(JSON.stringify({ format: 'other' }))).toThrow(/not a PremiumNote page file/)
     expect(() => parseBundle(JSON.stringify({ format: PAGE_FILE_FORMAT, version: 99, pages: [{}] }))).toThrow(/newer version/)
     expect(() => parseBundle(JSON.stringify({ format: PAGE_FILE_FORMAT, version: 1, pages: [] }))).toThrow(/no pages/)
     // Short ids would make id remapping unsafe; duplicates are damage.
