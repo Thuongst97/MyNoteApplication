@@ -77,6 +77,16 @@ describe('chart, drawing, page link and mention nodes', () => {
     expect((para.content![0] as { attrs?: object }).attrs).toMatchObject({ pageId: 'p2', blockId: 'b9', label: 'Some text' })
   })
 
+  it('mind maps insert with the cursor after them and round-trip through HTML', async () => {
+    const { newMindMap } = await import('@/components/Editor/mindmap/mindmapModel')
+    const map = newMindMap('Ideas', ['One', 'Two'])
+    editor = makeEditor(doc(p()))
+    editor.commands.insertMindMap(map)
+    expect(outline(editor)).toEqual(['mindmap', 'p:'])
+    editor.commands.setContent(editor.getHTML())
+    expect(editor.getJSON().content![0].attrs!.map).toEqual(map)
+  })
+
   it('image alignment is stored and rendered', () => {
     editor = makeEditor(doc({ type: 'image', attrs: { src: 'data:,', align: 'center' } }))
     expect(editor.getHTML()).toContain('data-align="center"')

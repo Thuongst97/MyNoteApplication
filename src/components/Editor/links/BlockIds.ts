@@ -15,6 +15,7 @@ export const REFERENCEABLE = [
   'mermaid',
   'chart',
   'drawing',
+  'mindmap',
   'pageLink',
 ]
 
@@ -99,7 +100,7 @@ export function ensureBlockId(editor: Editor, pos: number): string | null {
 /** A short text excerpt of a block (for reference labels). */
 export function blockSnippet(node: PMNode | null | undefined, max = 60): string {
   if (!node) return ''
-  const names: Record<string, string> = { image: 'Image', mermaid: 'Diagram', chart: 'Chart', drawing: 'Drawing' }
+  const names: Record<string, string> = { image: 'Image', mermaid: 'Diagram', chart: 'Chart', drawing: 'Drawing', mindmap: 'Mind map' }
   const text = node.textContent.replace(/\s+/g, ' ').trim()
   const label = text || names[node.type.name] || 'Block'
   return label.length > max ? label.slice(0, max - 1) + '…' : label

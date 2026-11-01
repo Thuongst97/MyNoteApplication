@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import type { Slice } from '@tiptap/pm/model'
-import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Copy, GripVertical, Link2, Plus, Trash2 } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Copy, GripVertical, Link2, ListTree, Plus, Trash2 } from 'lucide-react'
 import { ensureBlockId, REFERENCEABLE } from './links/BlockIds'
 import { pageUrl } from '@/lib/links'
 import { useAppStore } from '@/stores/useAppStore'
+import { listToMindMap } from './mindmap/mindmapModel'
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { cn, isMacLike } from '@/lib/utils'
 import { blockAt, blockDrag, computeBlockDrop, deleteBlock, duplicateBlock, moveBlock, performBlockDrop, type BlockTarget } from './blockMove'
@@ -17,7 +18,7 @@ interface HandleState extends BlockTarget {
   box: { top: number; bottom: number; textLeft: number }
 }
 
-const ALIGNABLE = new Set(['image', 'mermaid', 'chart', 'drawing'])
+const ALIGNABLE = new Set(['image', 'mermaid', 'chart', 'drawing', 'mindmap'])
 
 /**
  * Notion-style block handle: hover a block to show "+" and a "⋮⋮" grip.
@@ -309,6 +310,11 @@ export function BlockHandle({ editor, containerRef, pageId }: { editor: Editor; 
               Copy link to block
             </MenuItem>
           )}
+          {(state.node.type.name === 'listItem' || state.node.type.name === 'taskItem') && (
+            <MenuItem icon={<ListTree size={14} />} onClick={() => run((t) => turnListIntoMindMap(editor, t.pos))}>
+              Turn list into mind map
+            </MenuItem>
+          )}
           <div className="my-1 h-px bg-black/5 dark:bg-white/10" />
           <MenuItem icon={<Trash2 size={14} />} danger shortcut="Del" onClick={() => run((t) => deleteBlock(editor, t))}>
             Delete
@@ -318,4 +324,21 @@ export function BlockHandle({ editor, containerRef, pageId }: { editor: Editor; 
     </div>
     </>
   )
+}
+
+/** Replaces the top-level list containing `pos` with a mind map of its items. */
+export function turnListIntoMindMap(editor: Editor, pos: number) {
+  const $pos = editor.state.doc.resolve(pos)
+  if ($pos.depth < 1) return
+  const from = $pos.before(1)
+  const list = editor.state.doc.nodeAt(from)
+  if (!list) return
+  const { pages, activePageId } = useAppStore.getState()
+  const title = pages.find((p) => p.id === activePageId)?.title.trim() || 'Central topic'
+  const map = listToMindMap(list.toJSON(), title)
+  editor
+    .chain()
+    .focus()
+    .insertContentAt({ from, to: from + list.nodeSize }, { type: 'mindmap', attrs: { map } })
+    .run()
 }

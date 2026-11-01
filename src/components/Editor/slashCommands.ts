@@ -3,12 +3,14 @@ import { pickAndInsertImages } from '@/lib/images'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver } from '@/lib/autoSave'
 import { newId } from '@/lib/utils'
+import { newMindMap } from './mindmap/mindmapModel'
 import {
   CheckSquare,
   Code2,
   Heading1,
   Heading2,
   Heading3,
+  ListTree,
   FilePlus,
   Link2,
   Shapes,
@@ -148,6 +150,17 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: Shapes,
     keywords: ['draw', 'drawing', 'sketch', 'whiteboard', 'shapes', 'canvas', 'powerpoint', 'slide', 'diagram'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertDrawing().run(),
+  },
+  {
+    title: 'Mind map',
+    description: 'Brainstorm and document ideas as a map of topics.',
+    icon: ListTree,
+    keywords: ['mindmap', 'mind', 'map', 'brainstorm', 'ideas', 'tree', 'xmind'],
+    run: (e, r) => {
+      const { pages, activePageId } = useAppStore.getState()
+      const title = pages.find((p) => p.id === activePageId)?.title.trim()
+      e.chain().focus().deleteRange(r).insertMindMap(newMindMap(title || 'Central topic')).run()
+    },
   },
   {
     title: 'Divider',

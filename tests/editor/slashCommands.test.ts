@@ -25,6 +25,8 @@ describe('slash menu filtering', () => {
     expect(filterSlashCommands('heading 2')[0].title).toBe('Heading 2')
     expect(filterSlashCommands('todo')[0].title).toBe('To-do list')
     expect(filterSlashCommands('draw')[0].title).toBe('Drawing')
+    expect(filterSlashCommands('mind')[0].title).toBe('Mind map')
+    expect(filterSlashCommands('brainstorm')[0].title).toBe('Mind map')
     expect(filterSlashCommands('zzzz')).toEqual([])
   })
 })
@@ -41,6 +43,7 @@ describe('slash commands', () => {
     ['Mermaid diagram', 'mermaid'],
     ['Chart', 'chart'],
     ['Drawing', 'drawing'],
+    ['Mind map', 'mindmap'],
     ['Divider', 'horizontalRule'],
   ])('%s turns the line into %s', (title, expected) => {
     editor = makeEditor(doc(p()))

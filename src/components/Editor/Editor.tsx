@@ -14,6 +14,7 @@ import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
 import { ChartNode } from './chart/ChartNode'
 import { DrawingNode } from './drawing/DrawingNode'
+import { MindMapNode } from './mindmap/MindMapNode'
 import { BlockIds, blockSnippet } from './links/BlockIds'
 import { PageLinkNode } from './links/PageLinkNode'
 import { MentionNode } from './links/MentionNode'
@@ -94,6 +95,7 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
       MermaidNode,
       ChartNode,
       DrawingNode,
+      MindMapNode,
       BlockIds,
       PageLinkNode,
       MentionNode,

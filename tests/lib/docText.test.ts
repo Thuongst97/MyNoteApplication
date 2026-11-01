@@ -21,10 +21,11 @@ describe('docToText', () => {
         { type: 'chart', attrs: { spec: { title: 'Revenue', labels: ['Q1'], series: [{ name: 'Sales' }] } } },
         { type: 'drawing', attrs: { data: { scene: { elements: [{ type: 'text', text: 'Sketch' }, { type: 'rectangle' }] } } } },
         { type: 'paragraph', content: [{ type: 'mention', attrs: { label: 'Some block' } }] },
+        { type: 'mindmap', attrs: { map: { root: { text: 'Brainstorm', note: 'MapNote', children: [{ text: 'Branch', children: [] }] } } } },
       ],
     }
     const text = docToText(doc)
-    for (const word of ['Alpha', 'Revenue', 'Q1', 'Sales', 'Sketch', 'Some block']) expect(text).toContain(word)
+    for (const word of ['Alpha', 'Revenue', 'Q1', 'Sales', 'Sketch', 'Some block', 'Brainstorm', 'MapNote', 'Branch']) expect(text).toContain(word)
     expect(docToText({ type: 'whiteboard', scene: { elements: [{ type: 'text', text: 'Board text' }] } } as never)).toBe('Board text')
   })
 

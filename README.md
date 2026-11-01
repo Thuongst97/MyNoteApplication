@@ -21,7 +21,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Charts](docs/screenshots/24-charts-dark.png) | ![Drawing in a note](docs/screenshots/27-drawing-in-note-dark.png) |
 | ![Drawing editor](docs/screenshots/25-drawing-editor-light.png) | ![Page links](docs/screenshots/28-page-links-light.png) |
 | ![Block reference jump](docs/screenshots/29-block-reference-jump-light.png) | ![Whiteboard](docs/screenshots/30-whiteboard-light.png) |
-| ![Graph view](docs/screenshots/31-graph-view-dark.png) | |
+| ![Graph view](docs/screenshots/31-graph-view-dark.png) | ![Mind map in a page](docs/screenshots/34-mindmap-in-note-dark.png) |
+| ![Mind map editor](docs/screenshots/32-mindmap-editor-light.png) | ![Mind map (light)](docs/screenshots/33-mindmap-in-note-light.png) |
 
 ## Features
 
@@ -34,6 +35,21 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Text formatting**: select text to get a toolbar with *Turn into* (text, H1–H3, bulleted/numbered/to-do list, quote, code), **text size** (Small → Huge), bold/italic/underline/strike/code, links, and **text & background colors**. Colors adapt to dark/light mode.
 - **Charts**: `/chart` adds a chart block. Pick *Columns, Bars, Line, Area* or *Parts of a whole*, type the data into the grid or **paste it from Excel/Google Sheets/CSV**, and save. Charts have hover tooltips, a legend, a *Table* view of the exact numbers, and colors that work for color-blind readers in both themes.
 - **Drawings (PowerPoint-style)**: `/drawing` opens a full-window drawing editor (Excalidraw) with rectangles, diamonds, ellipses, arrows that stay attached to shapes, lines, text and text inside shapes, freehand pen, images, fill/stroke colors, layers, grouping and alignment. Clean lines and a regular font by default. Saved drawings appear in the note as sharp images that match the theme. Double-click a drawing to edit it, and text inside drawings is searchable.
+- **Mind maps**: `/mindmap` adds a mind map (its central topic starts as the page title), or use **⋮⋮ → Turn list into mind map** on any bullet/numbered/to-do list. The full-window editor is keyboard-driven:
+
+  | Key | Action |
+  | --- | --- |
+  | **Tab** | Add a sub-topic |
+  | **Enter** | Add a topic at the same level |
+  | Start typing / **F2** / double-click | Edit the selected topic |
+  | **Delete** | Remove the selected topic |
+  | **Space** | Fold or unfold a branch |
+  | **Arrow keys** | Move between topics |
+  | **Alt+↑/↓** | Reorder topics |
+  | **Home** | Jump to the central topic |
+  | `Ctrl/⌘+Z` | Undo |
+
+  You can also drag a topic onto another to move it. Pick branch colors, choose a *both sides* or *right-only* layout, and pan or zoom the map. The **Notes** panel lets you document each topic; topics with notes show a dot, and hovering them in the page shows the notes. Maps appear in the page as sharp images that match the theme, can be turned back into an outline (**To outline**), and all their topics and notes are searchable.
 - **Sub-pages in documents**: `/page` creates a sub-page and opens it. The parent keeps a clickable link block. Sub-pages also appear nested in the sidebar.
 - **Page links & block references**: type `[[` (anywhere) or `@` (after a space) to link to any page, or create one on the spot. To link to a specific block, open the block's **⋮⋮ → Copy link to block** and paste it into any page. It shows as *Page › start of block*, and clicking it opens the page, scrolls to the block and highlights it. Each page lists **Linked from** (backlinks) at the bottom. **Copy link to page** is in the sidebar page menu.
 - **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.
@@ -84,9 +100,9 @@ Unit tests use [Vitest](https://vitest.dev) with jsdom and React Testing Library
 | --- | --- |
 | `tests/lib` | Reminder rules, links, search text, dates, auto-save engine, image helpers, the browser fallback API |
 | `tests/electron` | Main-process storage in a temp folder: pages (atomic writes, cascade delete, link index, path checks), image assets and cleanup, tasks/settings |
-| `tests/editor` | A real TipTap editor with the app's nodes: moving/duplicating/dropping blocks, block ids & references, Mermaid/chart/drawing/link nodes, slash commands, chart data parsing, text formatting |
+| `tests/editor` | A real TipTap editor with the app's nodes: moving/duplicating/dropping blocks, block ids & references, Mermaid/chart/drawing/mind map/link nodes, slash commands, chart data parsing, mind map edits/layout/navigation/list conversion, text formatting |
 | `tests/stores` | Page/navigation store and task store |
-| `tests/components` | UI behavior: Eisenhower Matrix, task dialog, menus, sidebar, search, breadcrumbs, backlinks, graph, plus an integration test of the whole app (editor, shortcuts, page header, Mermaid, charts, drawings, page links) |
+| `tests/components` | UI behavior: Eisenhower Matrix, task dialog, mind map editor (keyboard, notes, folding, undo), menus, sidebar, search, breadcrumbs, backlinks, graph, plus an integration test of the whole app (editor, shortcuts, page header, Mermaid, charts, drawings, page links) |
 
 Other commands:
 
@@ -150,6 +166,7 @@ src/
     Search/        # Ctrl+K search palette
     Tasks/         # Eisenhower Matrix, task cards, task dialog, reminder settings
     Editor/mermaid/  # Mermaid diagram block (node, view, lazy renderer)
+    Editor/mindmap/  # Mind map block: model (edits, layout, list conversion), SVG renderer, editor
 resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
 ```
 

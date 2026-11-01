@@ -7,6 +7,7 @@ import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-t
 import { MermaidNode } from '@/components/Editor/mermaid/MermaidNode'
 import { ChartNode } from '@/components/Editor/chart/ChartNode'
 import { DrawingNode } from '@/components/Editor/drawing/DrawingNode'
+import { MindMapNode } from '@/components/Editor/mindmap/MindMapNode'
 import { PageLinkNode } from '@/components/Editor/links/PageLinkNode'
 import { MentionNode } from '@/components/Editor/links/MentionNode'
 import { BlockIds } from '@/components/Editor/links/BlockIds'
@@ -42,6 +43,7 @@ export function makeEditor(content: JSONContent | string = '') {
       noView(MermaidNode),
       noView(ChartNode),
       noView(DrawingNode),
+      noView(MindMapNode),
       noView(PageLinkNode),
       noView(MentionNode),
       BlockIds,
