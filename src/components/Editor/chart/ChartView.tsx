@@ -8,6 +8,7 @@ import {
   ClipboardPaste,
   Code2,
   LineChart as LineIcon,
+  PieChart as PieIcon,
   Loader2,
   Plus,
   Rows3,
@@ -22,14 +23,17 @@ import { placeCursorAfter } from '../mermaid/MermaidNode'
 import {
   CHART_TYPES,
   MAX_SERIES,
-  SERIES_COLORS,
   formatNumber,
   normalizeSpec,
+  partColor,
+  partsOf,
   parseTable,
+  seriesColor,
   toNumber,
   type ChartSpec,
   type ChartType,
 } from './chartModel'
+import { ColorPicker } from './ColorPicker'
 
 const ChartRender = lazy(() => import('./ChartRender'))
 
@@ -38,6 +42,7 @@ const TYPE_ICONS: Record<ChartType, LucideIcon> = {
   hbar: BarChartHorizontal,
   line: LineIcon,
   area: AreaIcon,
+  pie: PieIcon,
   parts: Rows3,
 }
 
@@ -80,16 +85,15 @@ export function ChartView({ node, updateAttributes, deleteNode, selected, editor
       )}
     >
       {editing ? (
-        <ChartEditor
-          draft={draft}
-          setDraft={setDraft}
-          theme={theme}
-          onSave={save}
-          onCancel={cancel}
-        />
+        <ChartEditor draft={draft} setDraft={setDraft} theme={theme} onSave={save} onCancel={cancel} />
       ) : (
         <div contentEditable={false} onDoubleClick={() => editor.isEditable && setEditing(true)} className="relative px-3 py-3">
-          <div className={cn('mx-auto', align === 'left' && 'ml-0', align === 'right' && 'mr-0')} style={{ maxWidth: spec.type === 'parts' ? 640 : 760 }}>
+          <div
+            className={cn('mx-auto', align === 'left' && 'ml-0', align === 'right' && 'mr-0')}
+            style={{
+              maxWidth: spec.type === 'parts' || spec.type === 'pie' ? 640 : 760,
+            }}
+          >
             {spec.title && <div className="mb-2 px-1 text-[15px] font-semibold">{spec.title}</div>}
             <ChartPreview spec={spec} theme={theme} />
             {showTable && <DataTable spec={spec} />}
@@ -173,8 +177,15 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [pasteError, setPasteError] = useState<string | null>(null)
-  const colors = SERIES_COLORS[theme]
   const mod = isMacLike() ? '⌘' : 'Ctrl'
+  const byRow = draft.type === 'pie' || draft.type === 'parts'
+  // Pie / parts colors follow each row; automatic colors depend on the row's rank by value.
+  const rowColors = useMemo(() => {
+    const spec = normalizeSpec(draft)
+    const out = spec.labels.map(() => null as string | null)
+    partsOf(spec).forEach((p, rank) => p.index >= 0 && (out[p.index] = partColor(spec, p.index, rank, theme)))
+    return out
+  }, [draft, theme])
 
   const update = (fn: (d: ChartSpec) => ChartSpec) => setDraft((d) => fn(structuredClone(d)))
   const setCell = (series: number, row: number, raw: string) =>
@@ -189,7 +200,8 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
       setPasteError('Paste at least a header row and one data row (first column = labels).')
       return
     }
-    update((d) => ({ ...d, ...parsed }))
+    // New rows: row colors no longer match, series colors are kept.
+    update((d) => ({ ...d, ...parsed, labelColors: undefined }))
     setPasteOpen(false)
     setPasteText('')
     setPasteError(null)
@@ -239,7 +251,18 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
             )
           })}
         </div>
+        {draft.type === 'pie' && (
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-black/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#191919]">
+            <input type="checkbox" checked={!!draft.donut} onChange={(e) => update((d) => ({ ...d, donut: e.target.checked }))} />
+            Donut
+          </label>
+        )}
       </div>
+      {byRow && (
+        <div className="mt-2 text-xs opacity-60">
+          Each row is one {draft.type === 'pie' ? 'slice' : 'part'} (values from the first series). Click a row's color square to change its color.
+        </div>
+      )}
 
       {/* Data grid */}
       <div className="mt-3 max-h-[300px] overflow-auto rounded-md border border-black/10 bg-white dark:border-white/10 dark:bg-[#191919]">
@@ -252,7 +275,27 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
               {draft.series.map((s, i) => (
                 <th key={i} className="sticky top-0 z-10 border-b border-l border-black/10 bg-white p-0 dark:border-white/10 dark:bg-[#191919]">
                   <div className="flex items-center gap-1 px-1.5">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: colors[i] }} />
+                    {byRow ? (
+                      i === 0 ? null : (
+                        <span className="text-[10px] opacity-40" title="Pie and parts charts use the first series">
+                          unused
+                        </span>
+                      )
+                    ) : (
+                      <ColorPicker
+                        label={s.name || `Series ${i + 1}`}
+                        color={seriesColor(draft, i, theme)}
+                        custom={draft.seriesColors?.[i]}
+                        onChange={(c) =>
+                          update((d) => {
+                            const list = d.series.map((_, k) => d.seriesColors?.[k] ?? null)
+                            list[i] = c
+                            d.seriesColors = list
+                            return d
+                          })
+                        }
+                      />
+                    )}
                     <input
                       value={s.name}
                       onChange={(e) => update((d) => ((d.series[i].name = e.target.value), d))}
@@ -264,7 +307,13 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
                         type="button"
                         title="Remove series"
                         aria-label={`Remove series ${s.name}`}
-                        onClick={() => update((d) => ((d.series = d.series.filter((_, k) => k !== i)), d))}
+                        onClick={() =>
+                          update((d) => {
+                            d.series = d.series.filter((_, k) => k !== i)
+                            if (d.seriesColors) d.seriesColors = d.seriesColors.filter((_, k) => k !== i)
+                            return d
+                          })
+                        }
                         className="rounded p-0.5 opacity-40 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
                       >
                         <X size={12} />
@@ -281,7 +330,11 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
                   disabled={draft.series.length >= MAX_SERIES}
                   onClick={() =>
                     update((d) => {
-                      d.series.push({ name: `Series ${d.series.length + 1}`, values: d.labels.map(() => null) })
+                      d.series.push({
+                        name: `Series ${d.series.length + 1}`,
+                        values: d.labels.map(() => null),
+                      })
+                      d.seriesColors?.push(null)
                       return d
                     })
                   }
@@ -296,12 +349,31 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
             {draft.labels.map((label, r) => (
               <tr key={r} className="group/row">
                 <td className="border-b border-black/5 p-0 dark:border-white/5">
-                  <input
-                    value={label}
-                    onChange={(e) => update((d) => ((d.labels[r] = e.target.value), d))}
-                    aria-label={`Row ${r + 1} label`}
-                    className="w-full bg-transparent px-2 py-1 outline-none focus:bg-blue-500/5"
-                  />
+                  <div className="flex items-center">
+                    {byRow && (
+                      <span className="pl-2">
+                        <ColorPicker
+                          label={label || `Row ${r + 1}`}
+                          color={rowColors[r] ?? '#a3a29e'}
+                          custom={draft.labelColors?.[r]}
+                          onChange={(c) =>
+                            update((d) => {
+                              const list = d.labels.map((_, k) => d.labelColors?.[k] ?? null)
+                              list[r] = c
+                              d.labelColors = list
+                              return d
+                            })
+                          }
+                        />
+                      </span>
+                    )}
+                    <input
+                      value={label}
+                      onChange={(e) => update((d) => ((d.labels[r] = e.target.value), d))}
+                      aria-label={`Row ${r + 1} label`}
+                      className="w-full bg-transparent px-2 py-1 outline-none focus:bg-blue-500/5"
+                    />
+                  </div>
                 </td>
                 {draft.series.map((s, i) => (
                   <td key={i} className="border-b border-l border-black/5 p-0 dark:border-white/5">
@@ -325,6 +397,7 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
                       update((d) => {
                         d.labels.splice(r, 1)
                         d.series.forEach((s) => s.values.splice(r, 1))
+                        d.labelColors?.splice(r, 1)
                         return d
                       })
                     }
@@ -345,6 +418,7 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
             update((d) => {
               d.labels.push('')
               d.series.forEach((s) => s.values.push(null))
+              d.labelColors?.push(null)
               return d
             })
           }
@@ -370,7 +444,9 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
             rows={5}
-            placeholder={'Copy cells from Excel / Google Sheets / CSV and paste here.\nFirst row = series names, first column = labels, e.g.\nMonth\tSales\tTarget\nJan\t120\t100'}
+            placeholder={
+              'Copy cells from Excel / Google Sheets / CSV and paste here.\nFirst row = series names, first column = labels, e.g.\nMonth\tSales\tTarget\nJan\t120\t100'
+            }
             className="block w-full resize-y rounded-md border border-black/10 bg-white p-2 font-mono text-xs outline-none focus:border-blue-400 dark:border-white/10 dark:bg-[#191919]"
           />
           <div className="mt-1 flex items-center gap-2">

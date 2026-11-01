@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webFrame, type IpcRendererEvent } from 'electron'
 import type { ElectronAPI, PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
 
 const api: ElectronAPI = {
@@ -40,6 +40,12 @@ const api: ElectronAPI = {
       const listener = () => cb()
       ipcRenderer.on('tasks:changed', listener)
       return () => ipcRenderer.removeListener('tasks:changed', listener)
+    },
+  },
+  zoom: {
+    get: () => webFrame.getZoomFactor(),
+    set: (factor: number) => {
+      if (Number.isFinite(factor)) webFrame.setZoomFactor(Math.min(3, Math.max(0.5, factor)))
     },
   },
   window: {

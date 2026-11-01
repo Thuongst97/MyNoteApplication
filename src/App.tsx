@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
+import { useAppZoom } from '@/hooks/useAppZoom'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 
@@ -25,6 +26,7 @@ export default function App() {
   const { loadPages, createPage } = useAppStore.getState()
 
   useGlobalShortcuts()
+  const zoom = useAppZoom()
 
   useEffect(() => {
     void loadPages()
@@ -86,6 +88,20 @@ export default function App() {
         </div>
       </main>
       <SearchModal />
+      {zoom.visible && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-4 top-14 z-[300] flex animate-pop-in items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-1.5 text-sm shadow-lg dark:border-white/10 dark:bg-[#252525]"
+        >
+          <span className="tabular-nums">Zoom {Math.round(zoom.zoom * 100)}%</span>
+          {Math.abs(zoom.zoom - 1) > 0.001 && (
+            <button type="button" onClick={zoom.reset} className="rounded px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-500/10 dark:text-blue-400">
+              Reset
+            </button>
+          )}
+        </div>
+      )}
       {toast && (
         <div
           key={toast.id}

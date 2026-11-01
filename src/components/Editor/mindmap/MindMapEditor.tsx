@@ -442,6 +442,7 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onWheel={onWheel}
+          data-own-zoom=""
         >
           <svg className="h-full w-full" role="img" aria-label="Mind map">
             <g transform={`translate(${size.w / 2 + view.x},${size.h / 2 + view.y}) scale(${view.k})`}>

@@ -16,6 +16,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Code highlighting](docs/screenshots/31-code-highlight-light.png) | ![Mermaid doc](docs/screenshots/32-mermaid-doc-dark.png) |
 | ![Markdown block editing](docs/screenshots/47-markdown-editing-light.png) | ![Rendered Markdown](docs/screenshots/48-markdown-rendered-light.png) |
 | ![Pasted Markdown](docs/screenshots/49-markdown-pasted-light.png) | ![Table toolbar](docs/screenshots/50-table-toolbar-dark.png) |
+| ![Donut chart](docs/screenshots/51-pie-donut-light.png) | ![Pie colors](docs/screenshots/52-pie-colors-editor-light.png) |
 | ![Tasks matrix](docs/screenshots/12-tasks-matrix-dark.png) | ![Tasks matrix light](docs/screenshots/13-tasks-matrix-light.png) |
 | ![Task dialog](docs/screenshots/14-task-dialog-light.png) | ![Reminder settings](docs/screenshots/15-reminder-settings-light.png) |
 | ![Block handle menu](docs/screenshots/16-block-handle-menu-light.png) | ![Dragging a block](docs/screenshots/18-drag-drop-line-light.png) |
@@ -46,7 +47,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Tasks – Eisenhower Matrix** (sidebar → **Tasks**, or `Ctrl/⌘+Shift+T`): four quadrants: *Do first* (important & urgent), *Schedule* (important), *Delegate* (urgent) and *Eliminate* (neither). Add tasks per quadrant, drag them between quadrants, tick them off, show or hide completed ones. The sidebar badge counts tasks due today or overdue.
 - **Due dates & reminders**: click a task to set a due date (with *Today 17:00 / Tomorrow 9:00 / Next week* shortcuts) and reminders: at the due time, 5 min, 15 min, 30 min, 1 h, 3 h, 1 day or 1 week before. **Reminders → Default reminders** sets which ones new tasks get. Reminders are native OS notifications, and clicking one opens the task.
 - **Text formatting**: select text to get a toolbar with *Turn into* (text, H1–H3, bulleted/numbered/to-do list, quote, code), **text size** (Small → Huge), bold/italic/underline/strike/code, links, and **text & background colors**. Colors adapt to dark/light mode.
-- **Charts**: `/chart` adds a chart block. Pick *Columns, Bars, Line, Area* or *Parts of a whole*, type the data into the grid or **paste it from Excel/Google Sheets/CSV**, and save. Charts have hover tooltips, a legend, a *Table* view of the exact numbers, and colors that work for color-blind readers in both themes.
+- **Charts**: `/chart` adds a chart block. Pick *Columns, Bars, Line, Area, Pie* (optionally as a **donut**, with percentages on the slices) or *Parts of a whole*, type the data into the grid or **paste it from Excel/Google Sheets/CSV**, and save. Charts have hover tooltips, a legend, a *Table* view of the exact numbers, and colors that work for color-blind readers in both themes. **Colors are editable**: click the color square of a series (or of a row, for pie and parts charts) to pick a palette color, any custom color, or *Auto*.
 - **Drawings (PowerPoint-style)**: `/drawing` opens a full-window drawing editor (Excalidraw) with rectangles, diamonds, ellipses, arrows that stay attached to shapes, lines, text and text inside shapes, freehand pen, images, fill/stroke colors, layers, grouping and alignment. Clean lines and a regular font by default. Saved drawings appear in the note as sharp images that match the theme. Double-click a drawing to edit it, and text inside drawings is searchable.
 - **Mind maps**: `/mindmap` adds a mind map (its central topic starts as the page title), or use **⋮⋮ → Turn list into mind map** on any bullet/numbered/to-do list. The full-window editor is keyboard-driven:
 
@@ -86,6 +87,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Adjustable page width** (per page): drag the left or right edge of a page to make it wider or narrower (a live label shows the width; drag to the window edge for full width, double-click the edge to reset), or use **••• → Page width** in the top bar for *Narrow / Default / Wide / Full* and a slider.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.
+- **Zoom**: `Ctrl` + mouse wheel (or a trackpad pinch) zooms the whole app in steps from 50% to 300%, like a browser; `Ctrl/⌘ +`, `Ctrl/⌘ −` and `Ctrl/⌘ 0` work too. A small indicator shows the level with a *Reset* button, and the zoom is remembered. Whiteboards, drawings, mind maps and the graph keep `Ctrl` + wheel for zooming their canvas.
 - **Dark / light theme** using the Notion palette (`#191919`/`#202020`/`#D4D4D4` and `#FFFFFF`/`#F7F7F5`/`#37352F`).
 - **Auto-save** 500 ms after you stop typing, with a Saving…/Saved indicator.
 - **Frameless window**: native traffic lights on macOS, custom minimize/maximize/close on Windows/Linux.

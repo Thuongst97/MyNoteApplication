@@ -26,7 +26,10 @@ export function isAppUrl(url: string | undefined | null, opts: { devServerUrl?: 
   }
   if (u.protocol !== 'file:') return false
   try {
-    return path.resolve(fileURLToPath(`file://${u.host}${u.pathname}`)) === path.resolve(opts.rendererIndexFile)
+    const a = path.resolve(fileURLToPath(`file://${u.host}${u.pathname}`))
+    const b = path.resolve(opts.rendererIndexFile)
+    // Windows paths are case-insensitive (e.g. "d:\\…" vs "D:\\…" depending on how the app was started).
+    return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b
   } catch {
     return false
   }

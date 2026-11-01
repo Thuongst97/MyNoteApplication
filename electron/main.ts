@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
@@ -9,6 +9,7 @@ import { LibraryStore } from './libraries'
 import { addLibraryUrlFrom, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
 import { assetResponseHeaders, isAppUrl, isPermissionAllowed, isSafeExternalUrl } from './security'
+import { defaultRestoreBounds, fillsWorkArea } from './windowState'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -266,6 +267,16 @@ async function checkReminders() {
   }
 }
 
+/** Last non-maximized bounds per window, for Restore. */
+const normalBounds = new Map<number, Electron.Rectangle>()
+
+function isWindowMaximized(w: BrowserWindow) {
+  if (w.isMaximized()) return true
+  if (w.isMinimized() || w.isFullScreen()) return false
+  const b = w.getBounds()
+  return fillsWorkArea(b, screen.getDisplayMatching(b).workArea)
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280,
@@ -291,9 +302,23 @@ function createWindow() {
 
   win.once('ready-to-show', () => win?.show())
 
-  const sendMaximized = () => win?.webContents.send('window:maximized-changed', win.isMaximized())
+  // Keep the title-bar button in sync, including OS snapping that fires no maximize events.
+  let lastMaximized: boolean | null = null
+  const sendMaximized = () => {
+    if (!win || win.isDestroyed()) return
+    const maximized = isWindowMaximized(win)
+    if (!maximized && !win.isMinimized() && !win.isFullScreen()) normalBounds.set(win.id, win.getBounds())
+    if (maximized === lastMaximized) return
+    lastMaximized = maximized
+    win.webContents.send('window:maximized-changed', maximized)
+  }
   win.on('maximize', sendMaximized)
   win.on('unmaximize', sendMaximized)
+  win.on('restore', sendMaximized)
+  win.on('resize', sendMaximized)
+  win.on('move', sendMaximized)
+  win.on('enter-full-screen', sendMaximized)
+  win.on('leave-full-screen', sendMaximized)
 
   // Ask the renderer to flush any pending debounced saves before closing.
   let flushed = false
@@ -407,11 +432,28 @@ function registerIpc() {
   on('window:toggle-maximize', (e) => {
     const w = fromEvent(e)
     if (!w) return
-    if (w.isMaximized()) w.unmaximize()
-    else w.maximize()
+    if (w.isFullScreen()) {
+      w.setFullScreen(false)
+      return
+    }
+    if (!isWindowMaximized(w)) {
+      w.maximize()
+      return
+    }
+    w.unmaximize()
+    // Snapped/OS-maximized frameless windows may ignore unmaximize(): restore the size ourselves.
+    setTimeout(() => {
+      if (w.isDestroyed() || !isWindowMaximized(w)) return
+      const area = screen.getDisplayMatching(w.getBounds()).workArea
+      const saved = normalBounds.get(w.id)
+      w.setBounds(saved && !fillsWorkArea(saved, area) ? saved : defaultRestoreBounds(area))
+    }, 50)
   })
   on('window:close', (e) => fromEvent(e)?.close())
-  handle('window:is-maximized', (e) => fromEvent(e)?.isMaximized() ?? false)
+  handle('window:is-maximized', (e) => {
+    const w = fromEvent(e)
+    return w ? isWindowMaximized(w) : false
+  })
 }
 
 app.on('before-quit', () => {

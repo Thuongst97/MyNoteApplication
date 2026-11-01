@@ -5,8 +5,11 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,24 +18,27 @@ import {
 } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import type { Theme } from '@/stores/useAppStore'
-import { CHART_TOKENS, SERIES_COLORS, formatNumber, partsOf, type ChartSpec } from './chartModel'
+import { CHART_TOKENS, formatNumber, partColor, partsOf, seriesColor, textOn, type ChartSpec } from './chartModel'
 
 const HEIGHT = 300
 
 /** Renders a chart spec. Loaded lazily (recharts is large). */
 export default function ChartRender({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   if (spec.type === 'parts') return <PartsBar spec={spec} theme={theme} />
+  if (spec.type === 'pie') return <PieView spec={spec} theme={theme} />
   return <CartesianChart spec={spec} theme={theme} />
 }
 
 function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
-  const colors = SERIES_COLORS[theme]
+  const colors = spec.series.map((_, j) => seriesColor(spec, j, theme))
   const t = CHART_TOKENS[theme]
   const multi = spec.series.length >= 2
   const rows = useMemo(
     () =>
       spec.labels.map((label, i) => {
-        const row: Record<string, string | number | null> = { label: label || `#${i + 1}` }
+        const row: Record<string, string | number | null> = {
+          label: label || `#${i + 1}`,
+        }
         spec.series.forEach((s, j) => (row[`s${j}`] = s.values[i] ?? null))
         return row
       }),
@@ -41,7 +47,13 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
 
   const tick = { fill: t.textSecondary, fontSize: 12 }
   const axisCommon = { tickLine: false, axisLine: false, tick } as const
-  const valueAxis = { ...axisCommon, tickFormatter: (v: number) => compact(v), width: 48, tickCount: 6, allowDecimals: true }
+  const valueAxis = {
+    ...axisCommon,
+    tickFormatter: (v: number) => compact(v),
+    width: 48,
+    tickCount: 6,
+    allowDecimals: true,
+  }
   const grid = <CartesianGrid stroke={t.grid} strokeWidth={1} vertical={spec.type === 'hbar'} horizontal={spec.type !== 'hbar'} />
   const tooltip = (
     <Tooltip
@@ -72,7 +84,12 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
             strokeLinecap="round"
             strokeLinejoin="round"
             dot={rows.length <= 12 ? { r: 4, fill: colors[j], stroke: t.surface, strokeWidth: 2 } : false}
-            activeDot={{ r: 5, fill: colors[j], stroke: t.surface, strokeWidth: 2 }}
+            activeDot={{
+              r: 5,
+              fill: colors[j],
+              stroke: t.surface,
+              strokeWidth: 2,
+            }}
             connectNulls
             isAnimationActive={false}
             label={endLabels ? (endLabel(s.name, rows.length, t.textSecondary) as never) : undefined}
@@ -97,7 +114,12 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
             strokeWidth={2}
             fill={colors[j]}
             fillOpacity={0.28}
-            activeDot={{ r: 5, fill: colors[j], stroke: t.surface, strokeWidth: 2 }}
+            activeDot={{
+              r: 5,
+              fill: colors[j],
+              stroke: t.surface,
+              strokeWidth: 2,
+            }}
             isAnimationActive={false}
           />
         ))}
@@ -150,7 +172,16 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   )
 }
 
-function TooltipCard({ active, payload, label, spec, colors }: TooltipContentProps<ValueType, NameType> & { spec: ChartSpec; colors: string[] }) {
+function TooltipCard({
+  active,
+  payload,
+  label,
+  spec,
+  colors,
+}: TooltipContentProps<ValueType, NameType> & {
+  spec: ChartSpec
+  colors: string[]
+}) {
   if (!active || !payload?.length) return null
   return (
     <div className="min-w-[140px] rounded-lg border border-black/10 bg-white px-3 py-2 text-xs shadow-lg dark:border-white/10 dark:bg-[#252525]">
@@ -184,8 +215,8 @@ function Legend({ names, colors }: { names: string[]; colors: string[] }) {
 
 /** Tall segmented bar for "parts of a whole" (instead of a pie). */
 function PartsBar({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
-  const colors = SERIES_COLORS[theme]
   const parts = partsOf(spec)
+  const colors = parts.map((p, rank) => partColor(spec, p.index, rank, theme))
   const total = parts.reduce((s, p) => s + p.value, 0)
   const [hover, setHover] = useState<number | null>(null)
   if (!parts.length || total <= 0) return <div className="py-6 text-center text-sm opacity-50">Add positive values to show parts of a whole.</div>
@@ -213,7 +244,11 @@ function PartsBar({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
             onFocus={() => setHover(i)}
             onBlur={() => setHover(null)}
             className="h-full rounded-[4px] outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-blue-400"
-            style={{ width: `${(p.value / total) * 100}%`, background: colors[i], opacity: hover !== null && hover !== i ? 0.55 : 1 }}
+            style={{
+              width: `${(p.value / total) * 100}%`,
+              background: colors[i],
+              opacity: hover !== null && hover !== i ? 0.55 : 1,
+            }}
           />
         ))}
       </div>
@@ -237,9 +272,108 @@ function endLabel(name: string, count: number, color: string) {
 }
 
 function compact(v: number) {
-  return Math.abs(v) >= 1000 ? Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(v) : String(v)
+  return Math.abs(v) >= 1000
+    ? Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+      }).format(v)
+    : String(v)
 }
 
 function truncate(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s
+}
+
+/** Pie (or donut) chart of the first series, with percentage labels and a legend. */
+function PieView({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
+  const t = CHART_TOKENS[theme]
+  const parts = partsOf(spec)
+  const total = parts.reduce((s, p) => s + p.value, 0)
+  const colors = parts.map((p, rank) => partColor(spec, p.index, rank, theme))
+  const [hover, setHover] = useState<number | null>(null)
+  if (!parts.length || total <= 0) return <div className="py-6 text-center text-sm opacity-50">Add positive values to draw the pie.</div>
+  const pct = (v: number) => (v / total) * 100
+  const fmtPct = (v: number) => `${pct(v) < 10 ? pct(v).toFixed(1) : Math.round(pct(v))}%`
+  const shown = hover !== null ? parts[hover] : null
+  return (
+    <div className="w-full">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:justify-center">
+        <div className="relative h-[280px] w-full max-w-[360px]" role="img" aria-label={parts.map((p) => `${p.label} ${fmtPct(p.value)}`).join(', ')}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={parts}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                outerRadius="78%"
+                innerRadius={spec.donut ? '50%' : 0}
+                startAngle={90}
+                endAngle={-270}
+                paddingAngle={parts.length > 1 ? 1 : 0}
+                stroke={t.surface}
+                strokeWidth={2}
+                isAnimationActive={false}
+                labelLine={false}
+                label={(props: { cx?: number; cy?: number; midAngle?: number; innerRadius?: number; outerRadius?: number; value?: number; index?: number }) => {
+                  const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0, index = 0 } = props
+                  if (pct(value) < 4) return null
+                  const r = innerRadius + (outerRadius - innerRadius) * (spec.donut ? 0.5 : 0.62)
+                  const x = cx + r * Math.cos((-midAngle * Math.PI) / 180)
+                  const y = cy + r * Math.sin((-midAngle * Math.PI) / 180)
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill={textOn(colors[index])}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fontSize={12}
+                      fontWeight={600}
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {fmtPct(value)}
+                    </text>
+                  )
+                }}
+                onMouseEnter={(_: unknown, i: number) => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+              >
+                {parts.map((p, i) => (
+                  <Cell key={p.index} fill={colors[i]} opacity={hover !== null && hover !== i ? 0.55 : 1} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          {spec.donut && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-xs opacity-60">{shown ? shown.label : spec.series[0]?.name || 'Total'}</span>
+              <span className="text-lg font-semibold tabular-nums">{shown ? fmtPct(shown.value) : formatNumber(total)}</span>
+            </div>
+          )}
+        </div>
+        <ul className="flex min-w-[160px] flex-col gap-1.5 text-sm">
+          {parts.map((p, i) => (
+            <li
+              key={p.index}
+              className="flex items-center gap-2 rounded px-1 transition-opacity"
+              style={{ opacity: hover !== null && hover !== i ? 0.55 : 1 }}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+            >
+              <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: colors[i] }} />
+              <span className="flex-1 truncate">{p.label}</span>
+              <span className="tabular-nums opacity-70">{fmtPct(p.value)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {shown && !spec.donut && (
+        <div className="mt-1 text-center text-xs opacity-80">
+          {shown.label}: <b className="tabular-nums">{formatNumber(shown.value)}</b> ({fmtPct(shown.value)})
+        </div>
+      )}
+    </div>
+  )
 }

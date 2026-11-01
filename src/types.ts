@@ -92,6 +92,11 @@ export interface ElectronAPI {
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */
   saveAsset: (data: Uint8Array, mime: string) => Promise<string>
+  /** Page zoom (1 = 100%). */
+  zoom: {
+    get: () => number
+    set: (factor: number) => void
+  }
   libraries: {
     get: () => Promise<LibraryData>
     save: (data: LibraryData) => Promise<LibraryData>

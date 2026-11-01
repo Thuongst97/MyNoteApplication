@@ -203,6 +203,7 @@ export function GraphView() {
           ref={svgRef}
           className={cn('h-full w-full touch-none select-none', drag.current?.kind === 'pan' ? 'cursor-grabbing' : 'cursor-grab')}
           onWheel={onWheel}
+          data-own-zoom=""
           onPointerDown={(e) => onPointerDown(e)}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
