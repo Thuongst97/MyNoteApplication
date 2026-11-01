@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Blocks, Check, Code2, Copy, Trash2, X, type LucideIcon } from 'lucide-react'
+import { Blocks, Check, Code2, Copy, Maximize2, Trash2, X, type LucideIcon } from 'lucide-react'
+import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { cn, isMacLike } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
 
@@ -17,6 +18,8 @@ export interface SourceKind {
   Render: (props: { source: string; className?: string }) => React.ReactElement
   /** HTML to replace the block with when turning it into editable blocks (none: no button). */
   toBlocksHtml?: (source: string) => string
+  /** Diagram blocks: offer a full-window viewer (zoom & pan) for the rendered SVG. */
+  expandable?: boolean
   /** Extra controls under the editor (e.g. the PlantUML server). */
   EditorFooter?: () => React.ReactElement
 }
@@ -57,6 +60,11 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
   const [draft, setDraft] = useState(source)
   const [preview, setPreview] = useState(source)
   const [copied, setCopied] = useState(false)
+  const [expandedSvg, setExpandedSvg] = useState<string | null>(null)
+  const expand = () => {
+    const svg = renderedRef.current?.querySelector('svg')
+    if (svg) setExpandedSvg(svg.outerHTML)
+  }
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Live preview while editing (debounced so big documents stay smooth).
@@ -195,6 +203,11 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
           <Render source={source} className="markdown-body selectable-text" />
           {editor.isEditable && (
             <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover/md:opacity-100">
+              {kind.expandable && (
+                <ToolbarButton label="Expand diagram" onClick={expand}>
+                  <Maximize2 size={14} /> Expand
+                </ToolbarButton>
+              )}
               <ToolbarButton label={`Edit ${kind.name}`} onClick={startEdit}>
                 <Code2 size={14} /> Edit
               </ToolbarButton>
@@ -213,6 +226,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
           )}
         </div>
       )}
+      {expandedSvg && <DiagramViewer svg={expandedSvg} title={`${kind.name} diagram`} onClose={() => setExpandedSvg(null)} />}
     </NodeViewWrapper>
   )
 }

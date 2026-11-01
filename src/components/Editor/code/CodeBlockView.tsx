@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, Maximize2 } from 'lucide-react'
+import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { useAppStore } from '@/stores/useAppStore'
 import { renderMermaid, type MermaidResult } from '../mermaid/renderMermaid'
 import { CODE_LANGUAGES, detectLanguage, languageLabel } from './codeHighlight'
@@ -81,6 +82,7 @@ function MermaidPreview({ code }: { code: string }) {
   const theme = useAppStore((s) => s.theme)
   const [result, setResult] = useState<MermaidResult | null>(null)
   const [pending, setPending] = useState(true)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -100,7 +102,19 @@ function MermaidPreview({ code }: { code: string }) {
   }, [code, theme])
 
   return (
-    <div className="code-block-preview" contentEditable={false}>
+    <div className="code-block-preview group/preview relative" contentEditable={false}>
+      {result?.svg && (
+        <button
+          type="button"
+          title="Expand diagram"
+          aria-label="Expand diagram"
+          onClick={() => setExpanded(true)}
+          className="absolute right-2 top-2 z-[1] flex items-center gap-1 rounded-md border border-black/10 bg-white/95 px-2 py-1 text-xs opacity-0 shadow-sm transition-opacity hover:bg-white group-hover/preview:opacity-100 dark:border-white/10 dark:bg-[#2a2a2a]/95 dark:hover:bg-[#333]"
+        >
+          <Maximize2 size={13} /> Expand
+        </button>
+      )}
+      {expanded && result?.svg && <DiagramViewer svg={result.svg} title="Mermaid diagram" onClose={() => setExpanded(false)} />}
       {result?.svg ? (
         <div className="mermaid-svg flex justify-center overflow-x-auto" dangerouslySetInnerHTML={{ __html: result.svg }} />
       ) : pending ? (

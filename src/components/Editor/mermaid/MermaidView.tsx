@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Trash2, Workflow, X } from 'lucide-react'
+import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Maximize2, Trash2, Workflow, X } from 'lucide-react'
+import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { useAppStore } from '@/stores/useAppStore'
 import { cn, isMacLike } from '@/lib/utils'
 import { MERMAID_TEMPLATE, renderMermaid, type MermaidResult } from './renderMermaid'
@@ -14,6 +15,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
   const [draft, setDraft] = useState(code)
   const [saved, setSaved] = useState<MermaidResult | null>(null)
   const [preview, setPreview] = useState<MermaidResult | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Render the saved code.
@@ -165,8 +167,20 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
       ) : (
         <div contentEditable={false} onDoubleClick={startEdit} className="relative px-2 py-3">
           <DiagramOutput result={shown} onFix={startEdit} align={node.attrs.align} />
+          {shown?.svg && !editor.isEditable && (
+            <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/mermaid:opacity-100">
+              <ToolbarButton label="Expand diagram" onClick={() => setExpanded(true)}>
+                <Maximize2 size={14} />
+              </ToolbarButton>
+            </div>
+          )}
           {editor.isEditable && (
             <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/mermaid:opacity-100">
+              {shown?.svg && (
+                <ToolbarButton label="Expand diagram" onClick={() => setExpanded(true)}>
+                  <Maximize2 size={14} /> Expand
+                </ToolbarButton>
+              )}
               {(
                 [
                   ['left', AlignLeft],
@@ -188,6 +202,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
           )}
         </div>
       )}
+      {expanded && shown?.svg && <DiagramViewer svg={shown.svg} title="Mermaid diagram" onClose={() => setExpanded(false)} />}
     </NodeViewWrapper>
   )
 }
