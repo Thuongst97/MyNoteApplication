@@ -182,7 +182,9 @@ describe('PageStorage', () => {
     expect(tree.map((p) => p.title).sort()).toEqual(['Beta edited elsewhere', 'From cache'])
     expect((await fresh.search('new words'))[0]?.id).toBe('b')
     expect((await fresh.search('alpha text'))[0]?.id).toBe('a')
-    // A broken cache is ignored.
+    // A broken cache is ignored. (Let `fresh` finish writing its own cache first, or its
+    // delayed write could replace the broken file during the check.)
+    await fresh.flushIndex()
     await fs.writeFile(path.join(root, INDEX_FILE), '{oops')
     expect((await new PageStorage(root).getTree()).map((p) => p.title).sort()).toEqual(['Alpha', 'Beta edited elsewhere'])
   })
