@@ -54,7 +54,7 @@ export function Sidebar() {
         {/* Header / drag region (leaves room for macOS traffic lights) */}
         <div className={cn('drag flex h-11 shrink-0 items-center gap-1 px-2', isMac && 'pl-[78px]')}>
           <div className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink-light dark:text-ink-dark">
-            {!isMac && <span className="mr-1.5">📓</span>}My Notes
+            {!isMac && <img src="./app-icon.png" alt="" aria-hidden className="mr-1.5 inline-block h-[18px] w-[18px] -translate-y-px align-middle" draggable={false} />}My Notes
           </div>
           <SidebarIconButton label="Close sidebar (Ctrl+\)" onClick={toggleSidebar} className="opacity-0 group-hover/sidebar:opacity-100">
             <ChevronsLeft size={17} />

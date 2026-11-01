@@ -316,6 +316,8 @@ function createWindow() {
     titleBarStyle: 'hidden',
     ...(isMac ? { trafficLightPosition: { x: 14, y: 14 } } : { frame: false }),
     backgroundColor: '#191919',
+    // Window/taskbar icon on Windows & Linux (macOS uses the app bundle's icon).
+    ...(!isMac && { icon: nativeImage.createFromPath(path.join(process.env.VITE_PUBLIC, 'app-icon.png')) }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
