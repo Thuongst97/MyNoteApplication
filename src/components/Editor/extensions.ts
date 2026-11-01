@@ -8,6 +8,7 @@ import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-t
 import { SlashCommand } from './SlashCommand'
 import { CodeBlockNode } from './code/CodeBlockNode'
 import { MarkdownNode } from './markdown/MarkdownNode'
+import { HtmlNode } from './html/HtmlNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
@@ -46,6 +47,7 @@ export function createEditorExtensions(): AnyExtension[] {
     CodeBlockNode,
     TableKit.configure({ table: { resizable: false } }),
     MarkdownNode,
+    HtmlNode,
     TextStyle,
     Color,
     BackgroundColor,

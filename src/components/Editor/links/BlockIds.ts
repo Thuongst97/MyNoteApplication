@@ -14,6 +14,7 @@ export const REFERENCEABLE = [
   'image',
   'mermaid',
   'markdown',
+  'htmlBlock',
   'table',
   'chart',
   'drawing',

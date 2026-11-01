@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/react'
 import { drawingText } from '@/components/Editor/drawing/drawingModel'
 import { mindMapText } from '@/components/Editor/mindmap/mindmapModel'
+import { htmlToText } from './html'
 
 /** Flattens a TipTap JSON document into plain text (blocks separated by newlines). */
 export function docToText(node: JSONContent | null | undefined): string {
@@ -10,6 +11,7 @@ export function docToText(node: JSONContent | null | undefined): string {
   if (node.type === 'mention') return String(node.attrs?.label ?? '')
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
   if (node.type === 'markdown') return String(node.attrs?.source ?? '')
+  if (node.type === 'htmlBlock') return htmlToText(String(node.attrs?.source ?? ''))
   if (node.type === 'drawing') return drawingText(node.attrs?.data)
   if (node.type === 'mindmap') return mindMapText(node.attrs?.map)
   if (node.type === 'chart') {

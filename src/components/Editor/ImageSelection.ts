@@ -50,7 +50,10 @@ export const ImageSelection = Extension.create({
             copy(view) {
               const sel = window.getSelection()
               const node = sel && !sel.isCollapsed ? sel.anchorNode : null
-              const el = node ? (node instanceof Element ? node : node.parentElement) : null
+              let el = node ? (node instanceof Element ? node : node.parentElement) : null
+              // Text inside an HTML block lives in a shadow root: look from its host.
+              const root = el?.getRootNode()
+              if (root instanceof ShadowRoot) el = root.host
               return !!el?.closest('.selectable-text') && view.dom.contains(el)
             },
           },

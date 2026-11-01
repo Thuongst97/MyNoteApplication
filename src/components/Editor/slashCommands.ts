@@ -19,6 +19,7 @@ import {
   Workflow,
   FileCode,
   FileText,
+  CodeXml,
   Table2,
   ImageIcon,
   List,
@@ -160,6 +161,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: FileText,
     keywords: ['md', 'markdown', 'readme', 'doc', 'import', 'gfm'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertMarkdown().run(),
+  },
+  {
+    title: 'HTML',
+    description: 'Write HTML & CSS and see it rendered (styles stay in the block).',
+    icon: CodeXml,
+    keywords: ['html', 'css', 'web', 'embed', 'custom', 'code', 'layout'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertHtmlBlock().run(),
   },
   {
     title: 'Table',
