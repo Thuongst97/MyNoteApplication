@@ -11,6 +11,7 @@ export function docToText(node: JSONContent | null | undefined): string {
   if (node.type === 'mention') return String(node.attrs?.label ?? '')
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
   if (node.type === 'markdown') return String(node.attrs?.source ?? '')
+  if (node.type === 'equation') return String(node.attrs?.source ?? '')
   if (node.type === 'htmlBlock') return htmlToText(String(node.attrs?.source ?? ''))
   if (node.type === 'drawing') return drawingText(node.attrs?.data)
   if (node.type === 'mindmap') return mindMapText(node.attrs?.map)

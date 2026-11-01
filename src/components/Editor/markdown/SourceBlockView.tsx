@@ -15,8 +15,8 @@ export interface SourceKind {
   template: string
   /** Renders the source (read-only, selectable). */
   Render: (props: { source: string; className?: string }) => React.ReactElement
-  /** HTML to replace the block with when turning it into editable blocks. */
-  toBlocksHtml: (source: string) => string
+  /** HTML to replace the block with when turning it into editable blocks (none: no button). */
+  toBlocksHtml?: (source: string) => string
 }
 
 /**
@@ -115,7 +115,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
     editor
       .chain()
       .focus()
-      .insertContentAt({ from: pos, to: pos + node.nodeSize }, kind.toBlocksHtml(source))
+      .insertContentAt({ from: pos, to: pos + node.nodeSize }, kind.toBlocksHtml?.(source) ?? '')
       .run()
   }
 
@@ -195,9 +195,11 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
               <ToolbarButton label={`Edit ${kind.name}`} onClick={startEdit}>
                 <Code2 size={14} /> Edit
               </ToolbarButton>
-              <ToolbarButton label="Turn into editable blocks" onClick={convert}>
+              {kind.toBlocksHtml && (
+                <ToolbarButton label="Turn into editable blocks" onClick={convert}>
                 <Blocks size={14} /> To blocks
               </ToolbarButton>
+              )}
               <ToolbarButton label={`Copy ${kind.name}`} onClick={copy}>
                 {copied ? <Check size={14} /> : <Copy size={14} />}
               </ToolbarButton>

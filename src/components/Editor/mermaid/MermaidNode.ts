@@ -10,10 +10,28 @@ import type { Node as PMNode } from '@tiptap/pm/model'
  */
 export function insertBlockAtCursor(tr: Transaction, state: EditorState, node: PMNode) {
   const { $from, empty } = tr.selection
-  const parent = $from.depth > 0 ? $from.node($from.depth) : null
-  const replaceEmpty = empty && parent?.isTextblock && parent.content.size === 0 && $from.depth === 1
-  const from = replaceEmpty ? $from.before(1) : $from.depth > 0 ? $from.after(1) : $from.pos
-  const to = replaceEmpty ? $from.after(1) : from
+  // Work at the level of the line the cursor is in, so blocks inserted inside a callout,
+  // column, toggle or list stay there (instead of jumping after the whole container).
+  const d = $from.depth
+  const line = d > 0 ? $from.node(d) : null
+  const holder = d > 0 ? $from.node(d - 1) : null
+  const index = d > 0 ? $from.index(d - 1) : 0
+  const replaceEmpty = empty && !!line?.isTextblock && line.content.size === 0 && !!holder?.canReplaceWith(index, index + 1, node.type)
+  let from = $from.pos
+  if (replaceEmpty) from = $from.before(d)
+  else {
+    // After the current line, or after the nearest enclosing block that may be followed by
+    // this block (e.g. a toggle's title line can't be followed by a diagram).
+    for (let k = d; k >= 1; k--) {
+      const parent = $from.node(k - 1)
+      const at = $from.indexAfter(k - 1)
+      if (parent.canReplaceWith(at, at, node.type)) {
+        from = $from.after(k)
+        break
+      }
+    }
+  }
+  const to = replaceEmpty ? $from.after(d) : from
   tr.replaceWith(from, to, node)
   const after = from + node.nodeSize
   if (!tr.doc.nodeAt(after)?.isTextblock) tr.insert(after, state.schema.nodes.paragraph.create())

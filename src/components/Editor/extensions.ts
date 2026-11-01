@@ -9,6 +9,10 @@ import { SlashCommand } from './SlashCommand'
 import { CodeBlockNode } from './code/CodeBlockNode'
 import { MarkdownNode } from './markdown/MarkdownNode'
 import { HtmlNode } from './html/HtmlNode'
+import { CalloutNode } from './blocks/CalloutNode'
+import { ColumnNode, ColumnsNode } from './blocks/ColumnsNode'
+import { DetailsContent, DetailsSummary, ToggleNode } from './blocks/ToggleNode'
+import { EquationNode } from './equation/EquationNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
@@ -29,7 +33,7 @@ import { MoveBlockShortcuts } from './blockMove'
 export function createEditorExtensions(): AnyExtension[] {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
+      heading: { levels: [1, 2, 3, 4] },
       // Replaced by the syntax-highlighted CodeBlockNode below.
       codeBlock: false,
       // Blue line showing where a dragged block will land.
@@ -37,10 +41,12 @@ export function createEditorExtensions(): AnyExtension[] {
       link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
     }),
     Placeholder.configure({
-      includeChildren: false,
+      // Also inside callouts, columns and toggles (only the line with the cursor shows it).
+      includeChildren: true,
       placeholder: ({ node }) => {
         if (node.type.name === 'heading') return `Heading ${node.attrs.level}`
         if (node.type.name === 'codeBlock') return ''
+        if (node.type.name === 'detailsSummary') return 'Toggle'
         return "Write something, or press '/' for commands…"
       },
     }),
@@ -48,6 +54,13 @@ export function createEditorExtensions(): AnyExtension[] {
     TableKit.configure({ table: { resizable: false } }),
     MarkdownNode,
     HtmlNode,
+    CalloutNode,
+    ColumnsNode,
+    ColumnNode,
+    ToggleNode,
+    DetailsSummary,
+    DetailsContent,
+    EquationNode,
     TextStyle,
     Color,
     BackgroundColor,

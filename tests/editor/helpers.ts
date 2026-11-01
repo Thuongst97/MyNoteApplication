@@ -17,6 +17,11 @@ import { MoveBlockShortcuts } from '@/components/Editor/blockMove'
 import { CodeBlockNode } from '@/components/Editor/code/CodeBlockNode'
 import { MarkdownNode } from '@/components/Editor/markdown/MarkdownNode'
 import { TableKit } from '@tiptap/extension-table'
+import { HtmlNode } from '@/components/Editor/html/HtmlNode'
+import { CalloutNode } from '@/components/Editor/blocks/CalloutNode'
+import { ColumnNode, ColumnsNode } from '@/components/Editor/blocks/ColumnsNode'
+import { DetailsContent, DetailsSummary, ToggleNode } from '@/components/Editor/blocks/ToggleNode'
+import { EquationNode } from '@/components/Editor/equation/EquationNode'
 
 /** Same nodes as the app, without React node views (plain DOM rendering). */
 const noView = <T extends AnyExtension>(ext: T) => (ext as unknown as { extend: (c: object) => T }).extend({ addNodeView: () => null })
@@ -28,9 +33,17 @@ export function makeEditor(content: JSONContent | string = '') {
     element,
     content,
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3, 4] }, codeBlock: false }),
       noView(CodeBlockNode),
       noView(MarkdownNode),
+      noView(HtmlNode),
+      noView(CalloutNode),
+      ColumnsNode,
+      ColumnNode,
+      ToggleNode,
+      DetailsSummary,
+      DetailsContent,
+      noView(EquationNode),
       TableKit.configure({ table: { resizable: false } }),
       TaskList,
       TaskItem.configure({ nested: true }),
