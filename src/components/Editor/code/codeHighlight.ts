@@ -211,3 +211,13 @@ export function languageFromFileName(name: string | null | undefined): string | 
 function base_has(lang: string) {
   return base.registered(lang)
 }
+
+/**
+ * Uncached highlighter for the editor's code blocks: highlightPlugin already remembers results
+ * per block, so going through the text-keyed cache would only keep a second copy.
+ */
+export const editorHighlighter = {
+  highlight: (language: string, value: string) => base.highlight(language, value),
+  highlightAuto: (value: string) => base.highlight(detectLanguage(value) ?? 'plaintext', value),
+  registered: (language: string) => base.registered(language),
+}

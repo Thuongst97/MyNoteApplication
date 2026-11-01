@@ -1,6 +1,6 @@
 import { CodeBlock } from '@tiptap/extension-code-block'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import { lowlight } from './codeHighlight'
+import { editorHighlighter } from './codeHighlight'
 import { codeHighlightPlugin } from './highlightPlugin'
 import { CodeBlockView } from './CodeBlockView'
 
@@ -34,7 +34,7 @@ export const CodeBlockNode = CodeBlock.extend({
     // The base code block's own plugins (paste from VS Code…), called directly: `this.parent`
     // would point back to this method when the node is extended again (tests, node views).
     const base = CodeBlock.config.addProseMirrorPlugins?.call(this) ?? []
-    return [...base, codeHighlightPlugin({ name: this.name, highlighter: lowlight })]
+    return [...base, codeHighlightPlugin({ name: this.name, highlighter: editorHighlighter })]
   },
 }).configure({
   enableTabIndentation: true,
