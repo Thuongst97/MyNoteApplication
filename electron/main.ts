@@ -331,6 +331,18 @@ function isWindowMaximized(w: BrowserWindow) {
   return fillsWorkArea(b, screen.getDisplayMatching(b).workArea)
 }
 
+/**
+ * Windows: the multi-size .ico shipped next to the app (sharp at 16/24/32/48 px in the
+ * title bar and taskbar). Elsewhere, and in development, the 256 px PNG.
+ */
+function windowIcon() {
+  if (process.platform === 'win32' && app.isPackaged) {
+    const ico = path.join(process.resourcesPath, 'icon.ico')
+    if (existsSync(ico)) return ico
+  }
+  return nativeImage.createFromPath(path.join(process.env.VITE_PUBLIC, 'app-icon.png'))
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280,
@@ -344,7 +356,7 @@ function createWindow() {
     ...(isMac ? { trafficLightPosition: { x: 14, y: 14 } } : { frame: false }),
     backgroundColor: '#191919',
     // Window/taskbar icon on Windows & Linux (macOS uses the app bundle's icon).
-    ...(!isMac && { icon: nativeImage.createFromPath(path.join(process.env.VITE_PUBLIC, 'app-icon.png')) }),
+    ...(!isMac && { icon: windowIcon() }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -356,6 +368,17 @@ function createWindow() {
     },
   })
 
+  if (process.platform === 'win32' && app.isPackaged) {
+    // Tell the taskbar explicitly which app this window is and which icon to use, so it
+    // never shows a stale icon Windows cached for this app id (e.g. Electron's default).
+    win.setAppDetails({
+      appId: APP_ID,
+      appIconPath: process.execPath,
+      appIconIndex: 0,
+      relaunchCommand: `"${process.execPath}"`,
+      relaunchDisplayName: 'PremiumNote',
+    })
+  }
   win.once('ready-to-show', () => win?.show())
 
   // Keep the title-bar button in sync, including OS snapping that fires no maximize events.

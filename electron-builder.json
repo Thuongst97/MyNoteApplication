@@ -76,5 +76,11 @@
     "resetAdHocDarwinSignature": true
   },
   "asar": true,
-  "publish": null
+  "publish": null,
+  "extraResources": [
+    {
+      "from": "resources/icon.ico",
+      "to": "icon.ico"
+    }
+  ]
 }

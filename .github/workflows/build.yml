@@ -41,6 +41,16 @@ jobs:
             codesign -dv "$app" 2>&1 | grep -E "Signature|Identifier|Format"
             lipo -archs "$app/Contents/MacOS/PremiumNote"
           done
+      - name: Verify Windows app icon
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          node scripts/verify-win-icon.cjs dist_electron/win-unpacked/PremiumNote.exe
+          # Also check the exe users actually get, from inside the installer.
+          7z x -y -o_inst dist_electron/PremiumNote\ Setup\ *.exe '$PLUGINSDIR/app-64.7z' > /dev/null
+          7z x -y -o_inst/app '_inst/$PLUGINSDIR/app-64.7z' > /dev/null
+          node scripts/verify-win-icon.cjs _inst/app/PremiumNote.exe
+          test -f _inst/app/resources/icon.ico && echo "OK   resources/icon.ico shipped"
       - uses: actions/upload-artifact@v5
         with:
           name: PremiumNote-${{ matrix.os }}
