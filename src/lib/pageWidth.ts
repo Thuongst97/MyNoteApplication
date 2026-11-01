@@ -23,15 +23,27 @@ export function normalizeWidth(value: unknown): PageWidth {
   return w === DEFAULT_PAGE_WIDTH ? null : w
 }
 
+/**
+ * Space kept free beside the column for every width except Full (up to 160px in total,
+ * at most 12% of the page area). Without it, on a small or zoomed window, Default/Wide
+ * would fill the whole page and look exactly like Full.
+ */
+export const SIDE_GUTTER_PX = 160
+export const SIDE_GUTTER_RATIO = 0.12
+
 /** CSS max-width for the content column. */
 export function widthStyle(width: PageWidth | undefined): { maxWidth: string } {
-  return { maxWidth: width === 'full' ? 'none' : `${width ?? DEFAULT_PAGE_WIDTH}px` }
+  if (width === 'full') return { maxWidth: 'none' }
+  return { maxWidth: `min(${width ?? DEFAULT_PAGE_WIDTH}px, calc(100% - min(${SIDE_GUTTER_PX}px, ${SIDE_GUTTER_RATIO * 100}%)))` }
 }
 
 /** The width in px a page actually uses (for the slider), given the space available. */
 export function effectiveWidth(width: PageWidth | undefined, available: number): number {
-  if (width === 'full') return Math.max(MIN_PAGE_WIDTH, Math.round(available))
-  return Math.min(width ?? DEFAULT_PAGE_WIDTH, Math.max(MIN_PAGE_WIDTH, Math.round(available)))
+  const avail = Math.round(available)
+  if (width === 'full') return Math.max(MIN_PAGE_WIDTH, avail)
+  // Same limit as widthStyle: a non-full page keeps its side gutter.
+  const limit = avail - Math.min(SIDE_GUTTER_PX, avail * SIDE_GUTTER_RATIO)
+  return Math.round(Math.min(width ?? DEFAULT_PAGE_WIDTH, limit))
 }
 
 /**

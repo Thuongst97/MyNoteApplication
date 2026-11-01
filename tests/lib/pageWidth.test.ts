@@ -13,9 +13,10 @@ describe('page width', () => {
 
   it('produces the column max-width', () => {
     // Default is 1200px (what used to be "Wide").
-    expect(widthStyle(null)).toEqual({ maxWidth: '1200px' })
-    expect(widthStyle(undefined)).toEqual({ maxWidth: '1200px' })
-    expect(widthStyle(1500)).toEqual({ maxWidth: '1500px' })
+    // Non-full widths keep a side gutter so they never look like Full on small windows.
+    expect(widthStyle(null)).toEqual({ maxWidth: 'min(1200px, calc(100% - min(160px, 12%)))' })
+    expect(widthStyle(undefined)).toEqual(widthStyle(null))
+    expect(widthStyle(1500)).toEqual({ maxWidth: 'min(1500px, calc(100% - min(160px, 12%)))' })
     expect(widthStyle('full')).toEqual({ maxWidth: 'none' })
   })
 
@@ -30,8 +31,11 @@ describe('page width', () => {
   it('reports the width actually used and a label', () => {
     expect(effectiveWidth('full', 1660)).toBe(1660)
     expect(effectiveWidth(null, 1660)).toBe(1200)
-    expect(effectiveWidth(null, 1000)).toBe(1000) // narrow window
-    expect(effectiveWidth(1400, 1000)).toBe(1000) // can't be wider than the window
+    // Regression: on a small/zoomed window Default used to equal Full (slider at the end).
+    expect(effectiveWidth(null, 873)).toBe(768) // 873 − 12%
+    expect(effectiveWidth(null, 873)).toBeLessThan(effectiveWidth('full', 873))
+    expect(effectiveWidth(1400, 1000)).toBe(880) // can't be wider than the window minus its gutter
+    expect(effectiveWidth(null, 1500)).toBe(1200) // big window: the real default
     expect(widthLabel(null)).toBe('Default')
     expect(widthLabel(900)).toBe('Narrow')
     expect(widthLabel(1500)).toBe('Wide')
