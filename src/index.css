@@ -747,3 +747,38 @@ body.block-dragging .prosemirror-dropcursor-inline {
     animation: none;
   }
 }
+
+/* Grip that lets the user drag the shape-properties panel (see movablePanel.ts). */
+.excalidraw .selected-shape-actions[data-movable] {
+  pointer-events: auto;
+}
+.excalidraw .pn-panel-grip {
+  display: flex;
+  height: 14px;
+  margin-bottom: 2px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px 8px 4px 4px;
+  background: var(--island-bg-color);
+  box-shadow: var(--shadow-island);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.excalidraw .pn-panel-grip span {
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-gray-40, #b0b0b0);
+  opacity: 0.7;
+}
+.excalidraw .pn-panel-grip:hover span {
+  opacity: 1;
+  background: var(--color-primary, #6965db);
+}
+.excalidraw .pn-panel-moving .pn-panel-grip {
+  cursor: grabbing;
+}
+.excalidraw .pn-panel-moving {
+  transition: none !important;
+}

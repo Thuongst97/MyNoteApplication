@@ -10,6 +10,7 @@ import { canvasBackground, type DrawingData } from './drawingModel'
 import { externalizeFiles, inlineFiles, replaceInSvg } from '@/lib/sceneFiles'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { useTwoWayArrowTool } from '@/components/Whiteboard/twoWayArrow'
+import { useMovableShapePanel } from '@/components/Whiteboard/movablePanel'
 
 interface Props {
   initial: DrawingData
@@ -27,6 +28,8 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
   const twoWay = useTwoWayArrowTool(library.api)
 
   const rootRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
+  useMovableShapePanel(canvasRef)
   // Stored images are asset files; load them back inline for Excalidraw (once).
   const [initialData] = useState(() =>
     inlineFiles(initial.scene.files).then((files): ExcalidrawInitialDataState => ({
@@ -131,7 +134,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
         </button>
       </div>
-      <div className={`relative min-h-0 flex-1${twoWay.active ? ' two-way-arrow-host' : ''}`}>
+      <div ref={canvasRef} className={`relative min-h-0 flex-1${twoWay.active ? ' two-way-arrow-host' : ''}`}>
         <Excalidraw
           excalidrawAPI={(api) => {
             apiRef.current = api

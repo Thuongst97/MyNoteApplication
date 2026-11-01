@@ -10,6 +10,7 @@ import type { WhiteboardContent } from './WhiteboardPage'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { canvasBackground } from '@/components/Editor/drawing/drawingModel'
 import { useTwoWayArrowTool } from './twoWayArrow'
+import { useMovableShapePanel } from './movablePanel'
 
 interface Props {
   theme: Theme
@@ -23,9 +24,11 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
   const lastFiles = useRef(0)
   const library = useLibraryIntegration(theme)
   const twoWay = useTwoWayArrowTool(library.api)
+  const hostRef = useRef<HTMLDivElement>(null)
+  useMovableShapePanel(hostRef)
 
   return (
-    <div className={`relative h-full w-full${twoWay.active ? ' two-way-arrow-host' : ''}`}>
+    <div ref={hostRef} className={`relative h-full w-full${twoWay.active ? ' two-way-arrow-host' : ''}`}>
     <Excalidraw
       excalidrawAPI={library.setApi}
       {...library.excalidrawProps}
