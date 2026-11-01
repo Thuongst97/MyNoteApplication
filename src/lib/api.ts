@@ -1,4 +1,5 @@
 import type { ElectronAPI, Page, PageMeta, SearchResult, Task, TaskSettings } from '@/types'
+import { emptyLibraries, installLibrary, isAllowedLibraryUrl, libraryNameFrom, normalizeLibraries, parseLibraryFile, type LibraryData } from './libraries'
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, notificationText } from './reminders'
 import { docToText, makeSnippet } from './docText'
 import { extractLinks } from './links'
@@ -80,6 +81,7 @@ function createBrowserApi(): ElectronAPI {
       return tick(out)
     },
     tasks: createBrowserTasksApi(),
+    libraries: createBrowserLibrariesApi(),
     // In a plain browser, images are embedded as data URLs.
     saveAsset: async (data, mime) => {
       let bin = ''
@@ -94,6 +96,48 @@ function createBrowserApi(): ElectronAPI {
       onMaximizedChange: () => () => {},
     },
     onFlushRequest: () => () => {},
+  }
+}
+
+/** localStorage-backed libraries (browser dev mode only). */
+function createBrowserLibrariesApi(): ElectronAPI['libraries'] {
+  const KEY = 'notion-clone:libraries'
+  const read = (): LibraryData => {
+    try {
+      return normalizeLibraries(JSON.parse(localStorage.getItem(KEY) ?? 'null'))
+    } catch {
+      return emptyLibraries()
+    }
+  }
+  const write = (d: LibraryData) => (localStorage.setItem(KEY, JSON.stringify(d)), d)
+  return {
+    get: async () => read(),
+    save: async (d) => write(normalizeLibraries(d)),
+    installUrl: async (url) => {
+      if (!isAllowedLibraryUrl(url)) throw new Error('Only https:// library links can be installed.')
+      const items = parseLibraryFile(await (await fetch(url)).text())
+      const r = installLibrary(read(), url, items)
+      return { data: write(r.data), categoryId: r.categoryId }
+    },
+    importFile: () =>
+      new Promise((resolve, reject) => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.excalidrawlib,.json'
+        input.onchange = async () => {
+          const f = input.files?.[0]
+          if (!f) return resolve(null)
+          try {
+            const r = installLibrary(read(), 'file', parseLibraryFile(await f.text()), libraryNameFrom(f.name))
+            resolve({ data: write(r.data), categoryId: r.categoryId })
+          } catch (err) {
+            reject(err)
+          }
+        }
+        input.click()
+      }),
+    browse: async () => void window.open('https://libraries.excalidraw.com/', '_blank'),
+    onInstalled: () => () => {},
   }
 }
 

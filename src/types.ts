@@ -63,6 +63,14 @@ export interface PageLinkEdge {
   target: string
 }
 
+export type { LibraryData, LibraryCategory, LibraryItem } from './lib/libraries'
+import type { LibraryData } from './lib/libraries'
+
+export interface LibraryInstallResult {
+  data: LibraryData
+  categoryId: string
+}
+
 export interface SearchResult {
   id: string
   /** Short excerpt of matching body text, if the match was in the content. */
@@ -84,6 +92,17 @@ export interface ElectronAPI {
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */
   saveAsset: (data: Uint8Array, mime: string) => Promise<string>
+  libraries: {
+    get: () => Promise<LibraryData>
+    save: (data: LibraryData) => Promise<LibraryData>
+    installUrl: (url: string) => Promise<LibraryInstallResult>
+    /** Opens a file picker; null when cancelled. */
+    importFile: () => Promise<LibraryInstallResult | null>
+    /** Opens the libraries website; "Add to Excalidraw" there installs into the app. */
+    browse: () => Promise<void>
+    /** Fired when a library was installed from the browse window. */
+    onInstalled: (cb: (r: LibraryInstallResult & { name: string }) => void) => () => void
+  }
   tasks: {
     list: () => Promise<Task[]>
     save: (update: TaskUpdate) => Promise<Task>

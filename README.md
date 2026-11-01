@@ -25,7 +25,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Mind map editor](docs/screenshots/32-mindmap-editor-light.png) | ![Mind map (light)](docs/screenshots/33-mindmap-in-note-light.png) |
 | ![Mind map colors](docs/screenshots/35-mindmap-colors-editor-light.png) | ![Colored mind map](docs/screenshots/36-mindmap-colors-dark.png) |
 | ![Dragging the page edge](docs/screenshots/37-page-width-drag-light.png) | ![Page width menu](docs/screenshots/38-page-width-menu-light.png) |
-| ![Full-width page](docs/screenshots/39-page-full-width-light.png) | |
+| ![Full-width page](docs/screenshots/39-page-full-width-light.png) | ![Libraries panel](docs/screenshots/40-libraries-panel-light.png) |
+| ![Collapsed libraries](docs/screenshots/41-libraries-collapsed-light.png) | ![Libraries in a drawing](docs/screenshots/42-libraries-drawing-light.png) |
 
 ## Features
 
@@ -59,6 +60,11 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Page links & block references**: type `[[` (anywhere) or `@` (after a space) to link to any page, or create one on the spot. To link to a specific block, open the block's **⋮⋮ → Copy link to block** and paste it into any page. It shows as *Page › start of block*, and clicking it opens the page, scrolls to the block and highlights it. Each page lists **Linked from** (backlinks) at the bottom. **Copy link to page** is in the sidebar page menu.
 - **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.
 - **Infinite canvas / whiteboard pages**: **New whiteboard** in the sidebar (or *Add whiteboard inside* on a page) creates a page that is one endless canvas with shapes, arrows, text, pen, images, colors and layers. Changes save automatically. Shapes can link to pages (paste a copied page link into a shape's link), and clicking the link opens the page. Whiteboard text is searchable, and whiteboards appear in the sidebar, search and graph.
+- **Drawing libraries (saved permanently)**: in any whiteboard or drawing, the **Library** button opens a panel where every library is its own **collapsible category**, with **Expand all / Collapse all**, search (by library name, item name or text inside items), and per-library **Rename / Update from source / Delete**. Items can be deleted one by one.
+  - **Install:** **Browse libraries** opens the Excalidraw libraries website in an app window. Clicking *Add to Excalidraw* there downloads the library and saves it. You can also **Install from link** or **Import file (.excalidrawlib)**.
+  - **Use:** click an item to place it in the middle of the view, or drag it onto the canvas.
+  - **Personal library:** keeps your own shapes (*Add selected shapes*, or the canvas menu's *Add to library*).
+  - **Storage:** everything is saved in `libraries.json` and shared by all whiteboards and drawings.
 - **Move blocks freely**: hover any block (text, heading, list item, image, diagram) to show a **⋮⋮** handle. Drag it to move the block; a blue line shows where it will land. Click the handle for *Move up/down, Duplicate, Delete* and, for images and diagrams, *Align left/center/right*. **+** adds a block below. You can also press `Ctrl/⌘+Shift+↑/↓` to move the current block. Typing while an image or diagram is selected starts a new line instead of replacing it.
 - **Adjustable page width** (per page): drag the left or right edge of a page to make it wider or narrower (a live label shows the width; drag to the window edge for full width, double-click the edge to reset), or use **••• → Page width** in the top bar for *Narrow / Default / Wide / Full* and a slider.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
@@ -158,6 +164,7 @@ electron/
   storage.ts       # JSON-file page storage (atomic writes, per-page write queue)
   assets.ts        # Image files + notion-asset:// protocol + unused-image cleanup
   tasks.ts         # Task + settings storage and the reminder check
+  libraries.ts     # Drawing libraries: storage, downloads, file import
 src/
   types.ts         # Page / PageMeta / ElectronAPI contracts shared by both processes
   stores/useAppStore.ts   # Zustand: pages, activePageId, expanded nodes, sidebar, theme, search
@@ -171,6 +178,7 @@ src/
     TitleBar/      # Top bar (breadcrumbs, save status) + Windows/Linux window controls
     Search/        # Ctrl+K search palette
     Tasks/         # Eisenhower Matrix, task cards, task dialog, reminder settings
+    Library/       # Categorized drawing-library panel (insert, drag, rename, delete, install)
     Editor/mermaid/  # Mermaid diagram block (node, view, lazy renderer)
     Editor/mindmap/  # Mind map block: model (edits, layout, list conversion), SVG renderer, editor
 resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
@@ -190,6 +198,8 @@ names it generated. At startup, images that no page uses anymore are deleted.
 
 Links between pages are stored inside the page content and use the internal URL format
 `notionclone://page/<pageId>#<blockId>`. The main process keeps a link index for backlinks and the graph.
+
+Drawing libraries are stored in `<userData>/libraries.json`. Downloads are https-only, limited to 20 MB, and checked to be valid `.excalidrawlib` files before saving.
 
 Tasks are stored in `<userData>/tasks.json` and reminder settings in `<userData>/task-settings.json`.
 

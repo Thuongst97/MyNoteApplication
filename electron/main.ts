@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, net, Notification, protocol, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, shell, Tray } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
 import { ASSET_SCHEME, AssetStorage } from './assets'
 import type { PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
 import { TaskStore } from './tasks'
+import { LibraryStore } from './libraries'
+import { addLibraryUrlFrom, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -43,6 +45,8 @@ let win: BrowserWindow | null = null
 let storage: PageStorage
 let assets: AssetStorage
 let tasks: TaskStore
+let libraries: LibraryStore
+let browseWin: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let toldAboutBackground = false
@@ -128,6 +132,63 @@ function notify(title: string, body: string, onClick?: () => void) {
   n.on('failed', drop)
   n.show()
   return true
+}
+
+/**
+ * Opens libraries.excalidraw.com in a sandboxed window. Its "Add to Excalidraw" button
+ * navigates to …#addLibrary=<url>; we intercept that, download the library and save it.
+ */
+function openLibraryBrowser() {
+  if (browseWin && !browseWin.isDestroyed()) {
+    browseWin.focus()
+    return
+  }
+  const site =
+    process.env.NOTION_CLONE_LIBRARIES_URL ||
+    'https://libraries.excalidraw.com/?theme=light&sort=default&target=_self&useHash=true&referrer=' +
+      encodeURIComponent('https://excalidraw.com/')
+  browseWin = new BrowserWindow({
+    width: 1180,
+    height: 820,
+    title: 'Browse libraries',
+    parent: win ?? undefined,
+    autoHideMenuBar: true,
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  })
+  const siteHost = new URL(site).host
+  const handle = (url: string) => {
+    const lib = addLibraryUrlFrom(url)
+    if (!lib) return false
+    void libraries
+      .installFromUrl(lib)
+      .then((r) => {
+        const name = r.data.categories.find((c) => c.id === r.categoryId)?.name ?? libraryNameFrom(lib)
+        for (const w of BrowserWindow.getAllWindows()) if (w !== browseWin) w.webContents.send('libraries:installed', { ...r, name })
+        notify('Library installed', `“${name}” was added to your libraries.`)
+      })
+      .catch((err: Error) => {
+        void dialog.showMessageBox(browseWin ?? win!, { type: 'error', message: 'Could not install the library', detail: err.message })
+      })
+    return true
+  }
+  const contents = browseWin.webContents
+  contents.on('will-navigate', (e, url) => {
+    if (handle(url)) return e.preventDefault()
+    // Stay on the libraries site; anything else opens in the normal browser.
+    if (new URL(url).host !== siteHost) {
+      e.preventDefault()
+      if (/^https?:/.test(url)) void shell.openExternal(url)
+    }
+  })
+  contents.on('will-redirect', (e, url) => {
+    if (handle(url)) e.preventDefault()
+  })
+  contents.setWindowOpenHandler(({ url }) => {
+    if (!handle(url) && /^https?:/.test(url)) void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  browseWin.on('closed', () => (browseWin = null))
+  void browseWin.loadURL(site)
 }
 
 async function checkReminders() {
@@ -235,6 +296,22 @@ function registerIpc() {
   ipcMain.handle('delete-page', (_e, id: string) => storage.delete(id))
   ipcMain.handle('get-links', () => storage.getLinks())
   ipcMain.handle('search-pages', (_e, query: string) => storage.search(query))
+  // ---- Drawing libraries ------------------------------------------------
+  ipcMain.handle('libraries:get', () => libraries.get())
+  ipcMain.handle('libraries:save', (_e, data: unknown) => libraries.save(data))
+  ipcMain.handle('libraries:install-url', (_e, url: string) => libraries.installFromUrl(String(url)))
+  ipcMain.handle('libraries:import-file', async (e) => {
+    const parent = BrowserWindow.fromWebContents(e.sender) ?? undefined
+    const r = await dialog.showOpenDialog(parent!, {
+      title: 'Import library',
+      filters: [{ name: 'Excalidraw library', extensions: ['excalidrawlib', 'json'] }],
+      properties: ['openFile'],
+    })
+    if (r.canceled || !r.filePaths[0]) return null
+    return libraries.importFile(r.filePaths[0])
+  })
+  ipcMain.handle('libraries:browse', () => openLibraryBrowser())
+
   // ---- Tasks & reminders ------------------------------------------------
   ipcMain.handle('tasks:list', () => tasks.list())
   ipcMain.handle('tasks:save', async (_e, update: TaskUpdate) => {
@@ -305,6 +382,7 @@ void app.whenReady().then(() => {
     .catch((err) => console.error('[assets] cleanup failed:', err))
 
   tasks = new TaskStore(app.getPath('userData'))
+  libraries = new LibraryStore(app.getPath('userData'))
 
   registerIpc()
   createWindow()

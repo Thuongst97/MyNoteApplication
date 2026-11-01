@@ -7,6 +7,7 @@ import { Check, Loader2, X } from 'lucide-react'
 import type { Theme } from '@/stores/useAppStore'
 import { isMacLike } from '@/lib/utils'
 import type { DrawingData } from './drawingModel'
+import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 
 interface Props {
   initial: DrawingData
@@ -20,6 +21,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null)
   const [saving, setSaving] = useState(false)
   const dirty = useRef(false)
+  const library = useLibraryIntegration(theme)
 
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -104,9 +106,13 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
         </button>
       </div>
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         <Excalidraw
-          excalidrawAPI={(api) => (apiRef.current = api)}
+          excalidrawAPI={(api) => {
+            apiRef.current = api
+            library.setApi(api)
+          }}
+          {...library.excalidrawProps}
           autoFocus
           theme={theme}
           initialData={{
@@ -137,6 +143,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
             <MainMenu.DefaultItems.Help />
           </MainMenu>
         </Excalidraw>
+        {library.panel}
       </div>
     </div>
   )

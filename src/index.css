@@ -409,3 +409,13 @@ body.block-dragging .prosemirror-dropcursor-inline {
     background: transparent;
   }
 }
+
+/* ---------- Drawing libraries ---------- */
+/* Our categorized Libraries panel replaces Excalidraw's built-in library sidebar button. */
+.excalidraw .default-sidebar-trigger {
+  display: none !important;
+}
+.library-thumb svg {
+  width: 100%;
+  height: 100%;
+}

@@ -12,6 +12,18 @@ const api: ElectronAPI = {
   searchPages: (query: string) => ipcRenderer.invoke('search-pages', query),
   saveAsset: (data: Uint8Array, mime: string) => ipcRenderer.invoke('save-asset', data, mime),
 
+  libraries: {
+    get: () => ipcRenderer.invoke('libraries:get'),
+    save: (data) => ipcRenderer.invoke('libraries:save', data),
+    installUrl: (url: string) => ipcRenderer.invoke('libraries:install-url', url),
+    importFile: () => ipcRenderer.invoke('libraries:import-file'),
+    browse: () => ipcRenderer.invoke('libraries:browse'),
+    onInstalled: (cb) => {
+      const listener = (_e: IpcRendererEvent, r: Parameters<typeof cb>[0]) => cb(r)
+      ipcRenderer.on('libraries:installed', listener)
+      return () => ipcRenderer.removeListener('libraries:installed', listener)
+    },
+  },
   tasks: {
     list: () => ipcRenderer.invoke('tasks:list'),
     save: (update: TaskUpdate) => ipcRenderer.invoke('tasks:save', update),

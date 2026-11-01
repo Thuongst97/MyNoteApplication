@@ -7,6 +7,7 @@ import type { Theme } from '@/stores/useAppStore'
 import { useAppStore } from '@/stores/useAppStore'
 import { parsePageUrl } from '@/lib/links'
 import type { WhiteboardContent } from './WhiteboardPage'
+import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 
 interface Props {
   theme: Theme
@@ -18,9 +19,13 @@ interface Props {
 export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
   const lastHash = useRef<number | null>(null)
   const lastFiles = useRef(0)
+  const library = useLibraryIntegration(theme)
 
   return (
+    <div className="relative h-full w-full">
     <Excalidraw
+      excalidrawAPI={library.setApi}
+      {...library.excalidrawProps}
       theme={theme}
       autoFocus
       initialData={{
@@ -73,5 +78,7 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
         <MainMenu.DefaultItems.Help />
       </MainMenu>
     </Excalidraw>
+    {library.panel}
+    </div>
   )
 }
