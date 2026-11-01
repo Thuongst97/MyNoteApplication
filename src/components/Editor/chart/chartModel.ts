@@ -14,7 +14,7 @@ export interface ChartSpec {
   series: ChartSeries[]
   /** Pie only: draw as a donut (ring). */
   donut?: boolean
-  /** Draw a frame around the chart in the page. */
+  /** Draw a frame around the chart in the page (on unless turned off). */
   border?: boolean
   /** Custom color per series (null = automatic). Used by columns, bars, line and area. */
   seriesColors?: Array<string | null>
@@ -131,7 +131,8 @@ export function normalizeSpec(raw: unknown): ChartSpec {
   const colors = (list: unknown, n: number) => Array.from({ length: n }, (_, i) => (Array.isArray(list) && isHexColor(list[i]) ? (list[i] as string) : null))
   const out: ChartSpec = { type, title: String(r.title ?? ''), labels, series }
   if (r.donut === true) out.donut = true
-  if (r.border === true) out.border = true
+  // On by default (also for charts made before the option existed); only an explicit false turns it off.
+  out.border = r.border !== false
   const sc = colors(r.seriesColors, series.length)
   const lc = colors(r.labelColors, labels.length)
   if (sc.some(Boolean)) out.seriesColors = sc

@@ -58,3 +58,29 @@ export function pickAndInsertImages(editor: Editor) {
   }
   input.click()
 }
+
+/**
+ * Lets the user pick one image from the computer and stores it like pasted images
+ * (a file in the app's data folder; a data URL in a browser). Resolves to its URL,
+ * or null when nothing was picked. Throws a readable error for bad files.
+ */
+export function pickAndStoreImage(): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = IMAGE_MIME_TYPES.filter((t) => t !== 'image/svg+xml').join(',')
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (!file) return resolve(null)
+      storeImageFile(file).then(resolve, reject)
+    }
+    input.click()
+  })
+}
+
+/** Stores one image file and returns its URL. */
+export async function storeImageFile(file: File): Promise<string> {
+  if (!IMAGE_MIME_TYPES.includes(file.type) || file.type === 'image/svg+xml') throw new Error('Please choose a PNG, JPEG, GIF, WebP, AVIF or BMP image.')
+  if (file.size > MAX_BYTES) throw new Error('The image is larger than 25 MB.')
+  return api.saveAsset(new Uint8Array(await file.arrayBuffer()), file.type)
+}

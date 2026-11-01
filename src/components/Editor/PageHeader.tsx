@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { ImageIcon, Smile, Shuffle, Trash2 } from 'lucide-react'
+import { ImageIcon, Loader2, Smile, Shuffle, Trash2, Upload } from 'lucide-react'
+import { imageFilesFrom, pickAndStoreImage, storeImageFile } from '@/lib/images'
+import { useAppStore } from '@/stores/useAppStore'
 import type { PageMeta } from '@/types'
 import { Popover } from '@/components/ui/Popover'
 import { COVERS, EMOJIS, coverToCss } from './pickerData'
@@ -20,6 +22,24 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
   const [iconOpen, setIconOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
   const [coverUrl, setCoverUrl] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [dropping, setDropping] = useState(false)
+
+  /** Uploads a cover image (picked or dropped) and uses it. */
+  const uploadCover = async (get: () => Promise<string | null>) => {
+    setUploading(true)
+    try {
+      const url = await get()
+      if (url) {
+        onChange({ cover: url })
+        setCoverOpen(false)
+      }
+    } catch (err) {
+      useAppStore.getState().showToast(`Couldn't use this image: ${(err as Error)?.message ?? err}`)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // Auto-grow the title textarea.
   useLayoutEffect(() => {
@@ -40,11 +60,39 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
     <div className="group/header">
       {/* Cover */}
       {page.cover && coverToCss(page.cover) ? (
-        <div className="group/cover relative h-[30vh] max-h-72 min-h-36 w-full" style={{ background: coverToCss(page.cover) }}>
+        <div
+          className={cn('group/cover relative h-[30vh] max-h-72 min-h-36 w-full', dropping && 'ring-4 ring-inset ring-blue-400/70')}
+          style={{ background: coverToCss(page.cover) }}
+          // Drop an image file onto the cover to use it.
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return
+            e.preventDefault()
+            setDropping(true)
+          }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(e) => {
+            setDropping(false)
+            const file = imageFilesFrom(e.dataTransfer)[0]
+            if (!file) return
+            e.preventDefault()
+            e.stopPropagation()
+            void uploadCover(() => storeImageFile(file))
+          }}
+        >
           <div className="absolute bottom-3 right-4 flex gap-1 opacity-0 transition-opacity group-hover/cover:opacity-100">
             <div className="relative">
               <CoverButton onClick={() => setCoverOpen((o) => !o)}>Change cover</CoverButton>
               <Popover open={coverOpen} onClose={() => setCoverOpen(false)} className="right-0 top-9 w-80 p-3">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => void uploadCover(pickAndStoreImage)}
+                  className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-black/15 px-3 py-2.5 text-sm hover:border-blue-400 hover:bg-blue-500/5 disabled:opacity-60 dark:border-white/20"
+                >
+                  {uploading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} className="opacity-70" />}
+                  {uploading ? 'Uploading…' : 'Upload from computer'}
+                </button>
+                <p className="-mt-2 mb-3 text-center text-[11px] opacity-45">or drop an image file onto the cover</p>
                 <div className="mb-2 text-xs font-medium opacity-60">Gallery</div>
                 <div className="grid grid-cols-4 gap-2">
                   {COVERS.map((c) => (

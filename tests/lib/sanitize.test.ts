@@ -56,6 +56,14 @@ describe('covers', () => {
     expect(coverToCss('data:image/png;base64,iVBORw0KGgo=')).toContain('url("data:image/png')
   })
 
+  it('accepts images stored by the app (cover uploaded from the computer)', () => {
+    const url = 'notion-asset://local/0f8fad5b-d9cb-469f-a165-70867728950e.jpg'
+    expect(coverToCss(url)).toBe(`center / cover no-repeat url("${url}")`)
+    expect(cleanCover(url)).toBe(url)
+    for (const bad of ['notion-asset://local/../secret.jpg', 'notion-asset://evil/0f8fad5b-d9cb-469f-a165-70867728950e.jpg', 'notion-asset://local/x.jpg")', 'notion-asset://local/0f8fad5b-d9cb-469f-a165-70867728950e.html'])
+      expect(coverToCss(bad)).toBeUndefined()
+  })
+
   it('rejects anything that could break out of the CSS value or load odd URLs', () => {
     for (const bad of [
       'https://x.example/a.jpg"); background: url(https://evil.example/t',

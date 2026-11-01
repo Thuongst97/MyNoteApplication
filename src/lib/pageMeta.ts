@@ -11,8 +11,14 @@ const SAFE_COLOR = /^#[0-9a-f]{3,8}$/i
  * (escaped), a gradient or a color. Anything else is ignored.
  */
 export function coverToCss(cover: string | null | undefined): string | undefined {
-  if (!cover || typeof cover !== 'string' || cover.length > 100_000) return undefined
-  if (/^https:\/\/[^\s"'()\\]+$/i.test(cover) || /^data:image\/(?:png|jpe?g|gif|webp);base64,[a-z0-9+/=]+$/i.test(cover)) {
+  // data: covers (browser dev mode) can be a few MB; everything else is short.
+  if (!cover || typeof cover !== 'string' || cover.length > 8_000_000) return undefined
+  if (
+    /^https:\/\/[^\s"'()\\]+$/i.test(cover) ||
+    // Images stored by the app (cover uploaded from the computer).
+    /^notion-asset:\/\/local\/[0-9a-f-]{36}\.(?:png|jpg|gif|webp|avif|bmp|svg)$/.test(cover) ||
+    /^data:image\/(?:png|jpe?g|gif|webp|avif|bmp);base64,[a-z0-9+/=]+$/i.test(cover)
+  ) {
     return `center / cover no-repeat url("${cover}")`
   }
   if (SAFE_GRADIENT.test(cover) && !/url\s*\(/i.test(cover)) return cover

@@ -40,9 +40,9 @@ describe('chart model', () => {
 
   it('normalises stored specs (aligns values to labels, fixes bad types)', () => {
     const spec = normalizeSpec({ type: 'nope', title: 5, labels: ['a', 'b'], series: [{ name: 'S', values: [1] }] })
-    expect(spec).toEqual({ type: 'bar', title: '5', labels: ['a', 'b'], series: [{ name: 'S', values: [1, null] }] })
+    expect(spec).toEqual({ type: 'bar', title: '5', labels: ['a', 'b'], series: [{ name: 'S', values: [1, null] }], border: true })
     // Missing spec → default data (and an empty title)
-    expect(normalizeSpec(null)).toEqual({ ...DEFAULT_CHART, title: '' })
+    expect(normalizeSpec(null)).toEqual({ ...DEFAULT_CHART, title: '', border: true })
   })
 
   it('folds small parts into "Other" for parts-of-a-whole', () => {
@@ -121,9 +121,10 @@ describe('pie charts and custom colors', () => {
 })
 
 describe('chart border', () => {
-  it('is off by default and kept when turned on', () => {
-    expect(normalizeSpec(DEFAULT_CHART).border).toBeUndefined()
-    expect(normalizeSpec({ ...DEFAULT_CHART, border: true }).border).toBe(true)
-    expect(normalizeSpec({ ...DEFAULT_CHART, border: 'yes' }).border).toBeUndefined()
+  it('is on by default (new and older charts) and only off when turned off', () => {
+    expect(normalizeSpec(DEFAULT_CHART).border).toBe(true)
+    expect(normalizeSpec({ ...DEFAULT_CHART, border: undefined }).border).toBe(true)
+    expect(normalizeSpec({ ...DEFAULT_CHART, border: 'yes' }).border).toBe(true)
+    expect(normalizeSpec({ ...DEFAULT_CHART, border: false }).border).toBe(false)
   })
 })
