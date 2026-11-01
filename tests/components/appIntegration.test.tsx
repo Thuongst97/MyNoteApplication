@@ -165,7 +165,9 @@ describe('App (integration)', () => {
     await waitFor(() => expect(screen.getByDisplayValue('Target')).toBeInTheDocument())
     await waitFor(() => expect(document.querySelector('.block-flash')?.textContent).toBe('Referenced line'))
     await act(async () => s().setActivePage(s().pages.find((p) => p.title === 'Source')!.id))
-    await userEvent.click(await screen.findByRole('link', { name: /Target/ }))
+    // Exact name: the block reference ("Target › Referenced line") is a link too.
+    await waitFor(() => expect(screen.getAllByRole('link', { name: /Target/ })).toHaveLength(2))
+    await userEvent.click(await screen.findByRole('link', { name: /^\s*Target\s*$/ }))
     await waitFor(() => expect(screen.getByDisplayValue('Target')).toBeInTheDocument())
   })
 })
