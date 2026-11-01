@@ -20,7 +20,7 @@ export interface PageBundle {
   version: number
   exportedAt: string
   /** First page is the exported page; the rest are its descendants (parents before children). */
-  pages: Array<Pick<Page, 'id' | 'kind' | 'title' | 'icon' | 'cover' | 'width' | 'content'> & { parentId: string | null; order: number }>
+  pages: Array<Pick<Page, 'id' | 'kind' | 'title' | 'icon' | 'cover' | 'width' | 'font' | 'content'> & { parentId: string | null; order: number }>
   /** Embedded images, keyed by the URL used inside the pages. */
   assets: Record<string, { mime: string; data: string }>
 }
@@ -58,6 +58,7 @@ export async function exportPages(storage: Storage, assets: Assets, rootId: stri
       icon: page.icon,
       cover: page.cover,
       width: page.width ?? null,
+      font: page.font ?? null,
       content: page.content,
       parentId: id === rootId ? null : page.parentId,
       order: page.order,
@@ -145,6 +146,7 @@ export async function importPages(storage: Storage, assets: Assets, bundle: Page
       icon: typeof p.icon === 'string' ? p.icon : null,
       cover: typeof p.cover === 'string' ? (remap(p.cover) as string) : null,
       width: p.width ?? null,
+      font: p.font ?? null,
       parentId: mappedParent,
       order: isRoot ? now : Number.isFinite(p.order) ? p.order : now + count,
       content: (remap(p.content) as Page['content']) ?? null,

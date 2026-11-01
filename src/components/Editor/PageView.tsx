@@ -9,6 +9,7 @@ import { PageHeader } from './PageHeader'
 import { Backlinks } from './links/Backlinks'
 import { WidthHandles } from './WidthHandles'
 import { widthStyle, type PageWidth } from '@/lib/pageWidth'
+import { fontStyle } from '@/lib/pageFont'
 
 /**
  * Loads a page's content and renders header + editor.
@@ -101,7 +102,7 @@ export function PageView({ pageId }: { pageId: string }) {
 
   if (!meta) return null
   // While dragging a width handle, preview the new width before saving it.
-  const columnStyle = widthStyle(previewWidth !== undefined ? previewWidth : meta.width)
+  const columnStyle = { ...widthStyle(previewWidth !== undefined ? previewWidth : meta.width), ...fontStyle(meta.font) }
 
   return (
     <div className="animate-fade-in">

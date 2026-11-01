@@ -61,7 +61,7 @@ interface AppState extends Prefs {
   showToast: (message: string) => void
   /** Bumped whenever page links may have changed (backlinks, graph). */
   linksVersion: number
-  updatePageMeta: (id: string, patch: Partial<Pick<PageMeta, 'title' | 'icon' | 'cover' | 'width'>>) => void
+  updatePageMeta: (id: string, patch: Partial<Pick<PageMeta, 'title' | 'icon' | 'cover' | 'width' | 'font'>>) => void
   deletePage: (id: string) => Promise<void>
   toggleExpanded: (id: string, value?: boolean) => void
   toggleSidebar: () => void

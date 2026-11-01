@@ -15,6 +15,8 @@ export interface PageMeta {
   parentId: string | null
   /** Content width: px, 'full', or null/undefined for the default. */
   width?: number | 'full' | null
+  /** Page font id (see src/lib/pageFont.ts), or null/undefined for the default. */
+  font?: string | null
   /** Sort order among siblings (ascending). */
   order: number
   createdAt: number

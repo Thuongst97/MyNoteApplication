@@ -1,5 +1,6 @@
 import type { PageMeta } from '@/types'
 import { normalizeWidth } from './pageWidth'
+import { normalizeFont } from './pageFont'
 
 /** Validation shared by the main process (saving/loading) and the renderer (display). */
 
@@ -54,6 +55,7 @@ export function cleanPageMeta(raw: Partial<PageMeta> & { id: string }): PageMeta
     cover: cleanCover(raw.cover),
     parentId: typeof raw.parentId === 'string' ? raw.parentId : null,
     ...(raw.width !== undefined && raw.width !== null ? { width: normalizeWidth(raw.width) } : {}),
+    ...(normalizeFont(raw.font) ? { font: normalizeFont(raw.font) } : {}),
     order: Number.isFinite(raw.order) ? Number(raw.order) : 0,
     createdAt: Number.isFinite(raw.createdAt) ? Number(raw.createdAt) : 0,
     updatedAt: Number.isFinite(raw.updatedAt) ? Number(raw.updatedAt) : 0,

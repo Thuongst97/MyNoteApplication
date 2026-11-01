@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { FileUp, MoreHorizontal, MoveHorizontal } from 'lucide-react'
+import { FileUp, MoreHorizontal, MoveHorizontal, Type } from 'lucide-react'
+import { PAGE_FONTS, pageFont } from '@/lib/pageFont'
 import { exportPageToFile } from '@/components/Editor/pageFiles'
 import { Popover } from '@/components/ui/Popover'
 import { useAppStore } from '@/stores/useAppStore'
@@ -64,6 +65,39 @@ export function PageOptions({ pageId }: { pageId: string }) {
           className="mt-3 w-full accent-blue-500"
         />
         <p className="mt-1.5 text-[11px] opacity-50">Tip: you can also drag the left or right edge of the page. Double-click the edge to reset.</p>
+        {page.kind !== 'whiteboard' && (
+          <>
+            <div className="-mx-3 my-3 h-px bg-black/5 dark:bg-white/10" />
+            <div className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+              <Type size={15} className="opacity-60" /> Font
+              <span className="ml-auto text-xs font-normal opacity-50">{pageFont(page.font).label}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1" role="radiogroup" aria-label="Page font">
+              {PAGE_FONTS.map((f) => {
+                const active = (page.font ?? null) === f.id
+                return (
+                  <button
+                    key={f.label}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    title={f.label}
+                    onClick={() => updatePageMeta(pageId, { font: f.id })}
+                    className={cn(
+                      'flex flex-col items-center rounded-md border px-1 pb-1 pt-1.5',
+                      active ? 'border-blue-400 bg-blue-500/10' : 'border-transparent hover:bg-black/5 dark:hover:bg-white/10',
+                    )}
+                  >
+                    <span className="text-xl leading-tight" style={{ fontFamily: f.stack, fontSize: f.scale ? `${1.25 * f.scale}rem` : undefined }}>
+                      Ag
+                    </span>
+                    <span className="truncate text-[11px] opacity-60">{f.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
         <div className="-mx-3 my-3 h-px bg-black/5 dark:bg-white/10" />
         <button
           type="button"

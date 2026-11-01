@@ -3,6 +3,7 @@ import path from 'node:path'
 import { docToText, makeSnippet } from '../src/lib/docText'
 import { extractLinks } from '../src/lib/links'
 import { normalizeWidth } from '../src/lib/pageWidth'
+import { normalizeFont } from '../src/lib/pageFont'
 import { cleanCover, cleanIcon, cleanPageMeta, cleanTitle } from '../src/lib/pageMeta'
 import type { Page, PageLinkEdge, PageMeta, PageUpdate, SearchResult } from '../src/types'
 
@@ -268,6 +269,7 @@ export class PageStorage {
         ...(update.parentId !== undefined && { parentId: update.parentId }),
         ...(update.order !== undefined && Number.isFinite(Number(update.order)) && { order: Number(update.order) }),
         ...(update.width !== undefined && { width: normalizeWidth(update.width) }),
+        ...(update.font !== undefined && { font: normalizeFont(update.font) }),
         ...(update.content !== undefined && { content: update.content && typeof update.content === 'object' ? update.content : null }),
         id: update.id,
         updatedAt: now,
