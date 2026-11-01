@@ -5,6 +5,7 @@ import { autoSaver, type SaveStatus } from '@/lib/autoSave'
 import { isElectron, platform } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { WindowControls } from './WindowControls'
+import { PageOptions } from './PageOptions'
 
 /** Top bar of the main canvas: drag region, breadcrumbs, save status and window controls. */
 export function TopBar() {
@@ -74,6 +75,7 @@ export function TopBar() {
       </nav>
 
       <SaveIndicator />
+      {view === 'page' && activePageId && byId.get(activePageId)?.kind !== 'whiteboard' && <PageOptions pageId={activePageId} />}
       {showWindowControls && <WindowControls />}
     </header>
   )

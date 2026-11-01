@@ -25,6 +25,20 @@ describe('PageStorage', () => {
     expect(file.icon).toBe('🚀')
   })
 
+  it('stores a per-page width (normalised)', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', width: 1234 })
+    expect((await s.read('a'))!.width).toBe(1230)
+    await s.save({ id: 'a', width: 'full' })
+    expect((await s.getTree())[0].width).toBe('full')
+    await s.save({ id: 'a', width: 'huge' as never })
+    expect((await s.read('a'))!.width).toBeNull()
+    await s.save({ id: 'a', title: 'renamed' }) // other updates keep the width
+    await s.save({ id: 'a', width: 700 })
+    await s.save({ id: 'a', title: 'again' })
+    expect((await new PageStorage(root).read('a'))!.width).toBe(700)
+  })
+
   it('writes atomically (no temp files left behind)', async () => {
     const s = new PageStorage(root)
     await Promise.all(Array.from({ length: 20 }, (_, i) => s.save({ id: 'a', title: `v${i}` })))

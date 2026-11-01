@@ -13,6 +13,8 @@ export interface PageMeta {
   /** A CSS background value (gradient/color) or an image URL, or null. */
   cover: string | null
   parentId: string | null
+  /** Content width: px, 'full', or null/undefined for the default. */
+  width?: number | 'full' | null
   /** Sort order among siblings (ascending). */
   order: number
   createdAt: number

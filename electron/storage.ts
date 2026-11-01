@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { docToText, makeSnippet } from '../src/lib/docText'
 import { extractLinks } from '../src/lib/links'
+import { normalizeWidth } from '../src/lib/pageWidth'
 import type { Page, PageLinkEdge, PageMeta, PageUpdate, SearchResult } from '../src/types'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
@@ -150,6 +151,7 @@ export class PageStorage {
         ...(update.cover !== undefined && { cover: update.cover }),
         ...(update.parentId !== undefined && { parentId: update.parentId }),
         ...(update.order !== undefined && { order: Number(update.order) }),
+        ...(update.width !== undefined && { width: normalizeWidth(update.width) }),
         ...(update.content !== undefined && { content: update.content }),
         id: update.id,
         updatedAt: now,

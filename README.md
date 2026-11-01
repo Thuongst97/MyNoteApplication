@@ -24,6 +24,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Graph view](docs/screenshots/31-graph-view-dark.png) | ![Mind map in a page](docs/screenshots/34-mindmap-in-note-dark.png) |
 | ![Mind map editor](docs/screenshots/32-mindmap-editor-light.png) | ![Mind map (light)](docs/screenshots/33-mindmap-in-note-light.png) |
 | ![Mind map colors](docs/screenshots/35-mindmap-colors-editor-light.png) | ![Colored mind map](docs/screenshots/36-mindmap-colors-dark.png) |
+| ![Dragging the page edge](docs/screenshots/37-page-width-drag-light.png) | ![Page width menu](docs/screenshots/38-page-width-menu-light.png) |
+| ![Full-width page](docs/screenshots/39-page-full-width-light.png) | |
 
 ## Features
 
@@ -58,6 +60,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.
 - **Infinite canvas / whiteboard pages**: **New whiteboard** in the sidebar (or *Add whiteboard inside* on a page) creates a page that is one endless canvas with shapes, arrows, text, pen, images, colors and layers. Changes save automatically. Shapes can link to pages (paste a copied page link into a shape's link), and clicking the link opens the page. Whiteboard text is searchable, and whiteboards appear in the sidebar, search and graph.
 - **Move blocks freely**: hover any block (text, heading, list item, image, diagram) to show a **⋮⋮** handle. Drag it to move the block; a blue line shows where it will land. Click the handle for *Move up/down, Duplicate, Delete* and, for images and diagrams, *Align left/center/right*. **+** adds a block below. You can also press `Ctrl/⌘+Shift+↑/↓` to move the current block. Typing while an image or diagram is selected starts a new line instead of replacing it.
+- **Adjustable page width** (per page): drag the left or right edge of a page to make it wider or narrower (a live label shows the width; drag to the window edge for full width, double-click the edge to reset), or use **••• → Page width** in the top bar for *Narrow / Default / Wide / Full* and a slider.
 - **Page header**: editable title, emoji icon picker, cover picker (gradient gallery or image URL).
 - **Global search** (`Ctrl/⌘+K`) over titles **and** page content, with snippets.
 - **Dark / light theme** using the Notion palette (`#191919`/`#202020`/`#D4D4D4` and `#FFFFFF`/`#F7F7F5`/`#37352F`).

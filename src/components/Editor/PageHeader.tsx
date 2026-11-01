@@ -9,12 +9,14 @@ interface PageHeaderProps {
   page: PageMeta
   autoFocusTitle: boolean
   onChange: (patch: Partial<Pick<PageMeta, 'title' | 'icon' | 'cover'>>) => void
+  /** max-width style of the content column */
+  columnStyle: React.CSSProperties
   /** Move focus to the start of the editor (Enter / ArrowDown in the title). */
   onEnterBody: () => void
   titleRef: React.RefObject<HTMLTextAreaElement>
 }
 
-export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleRef }: PageHeaderProps) {
+export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleRef, columnStyle }: PageHeaderProps) {
   const [iconOpen, setIconOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
   const [coverUrl, setCoverUrl] = useState('')
@@ -93,7 +95,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
         <div className="h-16" />
       )}
 
-      <div className="mx-auto w-full max-w-[900px] px-12 md:px-24">
+      <div className="mx-auto w-full px-12 md:px-24" style={columnStyle}>
         {/* Icon */}
         {page.icon && (
           <div className={cn('relative', page.cover ? '-mt-10' : 'mt-4')}>

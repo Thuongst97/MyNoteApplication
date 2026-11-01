@@ -55,7 +55,7 @@ export default function App() {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <div className="min-h-0 flex-1 overflow-y-auto" id="canvas-scroll">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden" id="canvas-scroll">
           {!isLoaded ? (
             <div className="flex h-full items-center justify-center opacity-50">
               <Loader2 className="animate-spin" />
