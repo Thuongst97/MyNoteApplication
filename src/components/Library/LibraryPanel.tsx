@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import type { Theme } from '@/stores/useAppStore'
 import { useLibraryStore } from '@/stores/useLibraryStore'
-import { filterLibraries, itemText, PERSONAL_ID, type LibraryCategory, type LibraryItem } from '@/lib/libraries'
+import { filterLibraries, isBuiltIn, itemText, PERSONAL_ID, type LibraryCategory, type LibraryItem } from '@/lib/libraries'
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { cn } from '@/lib/utils'
 import { cloneItemElements } from './libraryInsert'
@@ -217,6 +217,7 @@ function CategorySection({
   const [draft, setDraft] = useState(c.name)
   const open = forceOpen || !c.collapsed
   const isPersonal = c.id === PERSONAL_ID
+  const builtIn = isBuiltIn(c)
   const isUrl = /^https?:/.test(c.source)
 
   return (
@@ -249,7 +250,9 @@ function CategorySection({
             <span className={cn('truncate text-sm font-semibold', isPersonal && 'text-blue-600 dark:text-blue-400')}>{c.name}</span>
           )}
           <span className="ml-1 shrink-0 text-xs opacity-40">{c.items.length}</span>
+          {builtIn && <span className="ml-1 shrink-0 rounded bg-blue-500/10 px-1.5 py-px text-[10px] font-medium text-blue-600 dark:text-blue-400">Built-in</span>}
         </button>
+        {!builtIn && (
         <div className="relative">
           <button
             ref={menuButton}
@@ -282,6 +285,7 @@ function CategorySection({
             </MenuItem>
           </Popover>
         </div>
+        )}
       </div>
 
       {open && (
@@ -300,7 +304,7 @@ function CategorySection({
           ) : (
             <div className="grid grid-cols-4 gap-1.5">
               {c.items.map((item) => (
-                <ItemTile key={item.id} item={item} theme={theme} onInsert={() => onInsert(item)} onDelete={() => void store.deleteItem(c.id, item.id)} />
+                <ItemTile key={item.id} item={item} theme={theme} onInsert={() => onInsert(item)} onDelete={builtIn ? undefined : () => void store.deleteItem(c.id, item.id)} />
               ))}
             </div>
           )}
@@ -312,7 +316,7 @@ function CategorySection({
 
 const svgCache = new Map<string, string>()
 
-function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; theme: Theme; onInsert: () => void; onDelete: () => void }) {
+function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; theme: Theme; onInsert: () => void; onDelete?: () => void }) {
   const key = `${item.id}:${theme}`
   const [svg, setSvg] = useState(() => svgCache.get(key) ?? '')
   const ref = useRef<HTMLDivElement>(null)
@@ -360,7 +364,7 @@ function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; them
       ref={ref}
       role="button"
       tabIndex={0}
-      title={`${itemText(item) ? itemText(item) + ' — ' : ''}Click to add · drag onto the canvas`}
+      title={`${item.name || itemText(item) ? (item.name || itemText(item)) + ' — ' : ''}Click to add · drag onto the canvas`}
       aria-label={item.name ?? (itemText(item) || 'Library item')}
       draggable
       onDragStart={(e) => {
@@ -376,6 +380,7 @@ function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; them
       ) : (
         <Loader2 size={12} className="animate-spin opacity-30" />
       )}
+      {onDelete && (
       <button
         type="button"
         aria-label={`Delete ${item.name ?? 'item'}`}
@@ -388,6 +393,7 @@ function ItemTile({ item, theme, onInsert, onDelete }: { item: LibraryItem; them
       >
         <X size={11} />
       </button>
+      )}
     </div>
   )
 }

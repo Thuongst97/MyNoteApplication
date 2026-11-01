@@ -1,6 +1,25 @@
 import { create } from 'zustand'
 import { api } from '@/lib/api'
-import { PERSONAL_ID, type LibraryCategory, type LibraryData, type LibraryItem } from '@/lib/libraries'
+import { isBuiltIn, PERSONAL_ID, type LibraryCategory, type LibraryData, type LibraryItem } from '@/lib/libraries'
+import { automotiveLibrary } from '@/lib/automotiveLibrary'
+
+/** Built-in libraries, defined in code (so app updates can improve them). */
+const builtIns = (): LibraryCategory[] => [automotiveLibrary()]
+
+/**
+ * Adds the built-in libraries (after the personal one). Only their collapsed state is stored
+ * with the user's libraries; the items always come from the app.
+ */
+export function withBuiltIns(d: LibraryData): LibraryData {
+  const cats = d.categories.filter((c) => !builtIns().some((b) => b.id === c.id))
+  const stored = new Map(d.categories.map((c) => [c.id, c]))
+  const extra = builtIns().map((b) => ({ ...b, collapsed: stored.get(b.id)?.collapsed ?? false }))
+  const personal = cats.findIndex((c) => c.id === PERSONAL_ID)
+  return { ...d, categories: [...cats.slice(0, personal + 1), ...extra, ...cats.slice(personal + 1)] }
+}
+
+/** What's saved: built-in libraries without their items. */
+const forSaving = (d: LibraryData): LibraryData => ({ ...d, categories: d.categories.map((c) => (isBuiltIn(c) ? { ...c, items: [] } : c)) })
 import { useAppStore } from './useAppStore'
 
 interface LibraryState {
@@ -38,14 +57,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     busy: null,
 
     load: async () => {
-      set({ data: await api.libraries.get() })
+      set({ data: withBuiltIns(await api.libraries.get()) })
     },
 
     update: async (fn) => {
-      const cur = get().data ?? (await api.libraries.get())
-      const next = fn(cur)
+      const cur = get().data ?? withBuiltIns(await api.libraries.get())
+      const next = withBuiltIns(fn(cur))
       set({ data: next })
-      saving = saving.catch(() => undefined).then(() => api.libraries.save(next))
+      saving = saving.catch(() => undefined).then(() => api.libraries.save(forSaving(next)))
       await saving
     },
 
@@ -54,7 +73,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     renameCategory: (id, name) => get().update((d) => mapCat(d, id, (c) => ({ ...c, name: name.trim() || c.name }))),
     deleteCategory: (id) =>
       get().update((d) =>
-        id === PERSONAL_ID
+        d.categories.some((c) => c.id === id && isBuiltIn(c))
+          ? d // built-in libraries can't be deleted
+          : id === PERSONAL_ID
           ? mapCat(d, id, (c) => ({ ...c, items: [] })) // the personal library can only be emptied
           : { ...d, categories: d.categories.filter((c) => c.id !== id) },
       ),
@@ -66,7 +87,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       set({ busy: 'Installing…' })
       try {
         const r = await api.libraries.installUrl(url.trim())
-        set({ data: r.data })
+        set({ data: withBuiltIns(r.data) })
         const name = r.data.categories.find((c) => c.id === r.categoryId)?.name
         useAppStore.getState().showToast(`Installed “${name}”`)
         return r.categoryId
@@ -82,7 +103,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       try {
         const r = await api.libraries.importFile()
         if (!r) return null
-        set({ data: r.data })
+        set({ data: withBuiltIns(r.data) })
         useAppStore.getState().showToast(`Imported “${r.data.categories.find((c) => c.id === r.categoryId)?.name}”`)
         return r.categoryId
       } catch (err) {
@@ -97,6 +118,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
 
 // Libraries installed from the browse window.
 api.libraries.onInstalled((r) => {
-  useLibraryStore.setState({ data: r.data })
+  useLibraryStore.setState({ data: withBuiltIns(r.data) })
   useAppStore.getState().showToast(`Installed “${r.name}”`)
 })

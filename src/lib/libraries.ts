@@ -27,6 +27,9 @@ export interface LibraryData {
 }
 
 export const PERSONAL_ID = 'personal'
+
+/** Libraries that ship with the app (shown after the personal library, read-only). */
+export const isBuiltIn = (c: Pick<LibraryCategory, 'source'>) => c.source === 'builtin'
 export const MAX_LIBRARY_BYTES = 20 * 1024 * 1024
 export const MAX_ITEMS_PER_LIBRARY = 2000
 
