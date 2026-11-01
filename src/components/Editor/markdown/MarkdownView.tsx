@@ -20,6 +20,31 @@ Some **bold**, *italic* and \`code\` text with a [link](https://example.com).
 
 /** Markdown block: rendered document; double-click (or Edit) to change the source. */
 export function MarkdownView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
+  // While this block is selected as a whole (e.g. it's the first block when the page opens),
+  // the browser can't select text inside it. Pressing the mouse on the text moves the
+  // editor's selection next to the block, so dragging selects words (to copy them).
+  const renderedRef = useRef<HTMLDivElement>(null)
+  const releaseRef = useRef<(e: MouseEvent) => void>(() => {})
+  releaseRef.current = (e: MouseEvent) => {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return
+    const pos = getPos()
+    const sel = editor.state.selection
+    // Whole-block selection of this block? (checked by shape: works across module copies)
+    if (typeof pos !== 'number' || sel.from !== pos || sel.to !== pos + node.nodeSize || !('node' in sel)) return
+    const target = nearestTextPosition(editor.state.doc, sel.from, sel.to)
+    if (target !== null) editor.commands.setTextSelection(target)
+    // Nothing to put the cursor in (the block is the page's only block): add the empty line
+    // the editor keeps at the end of a page anyway.
+    else editor.chain().insertContentAt(sel.to, { type: 'paragraph' }).setTextSelection(sel.to + 1).run()
+  }
+  useEffect(() => {
+    const el = renderedRef.current
+    if (!el) return
+    // Native (capture) listener: the editor handles mousedown before React would see it.
+    const onDown = (e: MouseEvent) => releaseRef.current(e)
+    el.addEventListener('mousedown', onDown, true)
+    return () => el.removeEventListener('mousedown', onDown, true)
+  })
   const source: string = node.attrs.source ?? ''
   const [editing, setEditing] = useState(source.trim() === '')
   const [draft, setDraft] = useState(source)
@@ -157,7 +182,7 @@ export function MarkdownView({ node, updateAttributes, deleteNode, selected, edi
           </div>
         </div>
       ) : (
-        <div contentEditable={false} className="relative px-1 py-1">
+        <div ref={renderedRef} contentEditable={false} className="relative px-1 py-1">
           {/* Selectable, copyable text: double-click selects a word; use Edit to change the source. */}
           <MarkdownRender source={source} className="markdown-body selectable-text" />
           {editor.isEditable && (
@@ -194,4 +219,24 @@ function ToolbarButton({ children, label, onClick }: { children: React.ReactNode
       {children}
     </button>
   )
+}
+
+/** A cursor position in the nearest text block after `to` (or before `from`), or null. */
+function nearestTextPosition(doc: NodeViewProps['node'], from: number, to: number): number | null {
+  let after: number | null = null
+  doc.nodesBetween(to, doc.content.size, (n, p) => {
+    if (after !== null) return false
+    if (n.isTextblock && p >= to) {
+      after = p + 1
+      return false
+    }
+    return true
+  })
+  if (after !== null) return after
+  let before: number | null = null
+  doc.nodesBetween(0, from, (n, p) => {
+    if (n.isTextblock && p + n.nodeSize <= from) before = p + n.nodeSize - 1
+    return true
+  })
+  return before
 }

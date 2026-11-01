@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
@@ -13,6 +13,7 @@ import { defaultRestoreBounds, fillsWorkArea } from './windowState'
 import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT, parseBundle } from './pageTransfer'
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { contextMenuTemplate } from './contextMenu'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -380,6 +381,21 @@ function createWindow() {
       relaunchDisplayName: 'PremiumNote',
     })
   }
+  // Right-click menu (Cut/Copy/Paste, link & image actions, spelling) — Electron has none by default.
+  const contents = win.webContents
+  contents.on('context-menu', (_e, params) => {
+    const template = contextMenuTemplate(params, {
+      replaceMisspelling: (w) => contents.replaceMisspelling(w),
+      addToDictionary: (w) => contents.session.addWordToSpellCheckerDictionary(w),
+      pasteAsPlainText: () => contents.pasteAndMatchStyle(),
+      copyImage: () => contents.copyImageAt(params.x, params.y),
+      copyText: (t) => clipboard.writeText(t),
+      openExternal: (url) => {
+        if (isSafeExternalUrl(url)) void shell.openExternal(url)
+      },
+    })
+    if (template.length) Menu.buildFromTemplate(template).popup({ window: win ?? undefined })
+  })
   win.once('ready-to-show', () => win?.show())
 
   // Keep the title-bar button in sync, including OS snapping that fires no maximize events.
