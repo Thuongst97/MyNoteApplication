@@ -1,7 +1,10 @@
 import DOMPurify from 'dompurify'
 
-/** Link targets allowed inside SVG: embedded pictures (data: images) and in-document references. */
-const SAFE_SVG_LINK = /^(?:data:image\/(?:png|jpe?g|gif|webp|svg\+xml);|#)/i
+/**
+ * Link targets allowed inside SVG: embedded pictures (data: images), the app's own
+ * stored images (notion-asset://local/<uuid>.<ext>) and in-document references.
+ */
+const SAFE_SVG_LINK = /^(?:data:image\/(?:png|jpe?g|gif|webp|svg\+xml);|notion-asset:\/\/local\/[0-9a-f-]{36}\.[a-z]+$|#)/i
 const LINK_ATTRS = new Set(['href', 'xlink:href', 'src'])
 /** CSS url(...) that points anywhere but a data: URL or an in-document #reference. */
 const REMOTE_CSS_URL = /url\(\s*(['"]?)\s*(?!data:|#)/i
@@ -12,6 +15,8 @@ svgPurifier?.addHook('uponSanitizeAttribute', (_node, data) => {
   const name = data.attrName.toLowerCase()
   const value = String(data.attrValue ?? '').trim()
   if (LINK_ATTRS.has(name) && !SAFE_SVG_LINK.test(value)) data.keepAttr = false
+  // DOMPurify's own URL check doesn't know the app's image scheme.
+  else if (LINK_ATTRS.has(name) && value.startsWith('notion-asset:')) data.forceKeepAttr = true
   if (name === 'style' && REMOTE_CSS_URL.test(value)) data.keepAttr = false
 })
 svgPurifier?.addHook('uponSanitizeElement', (node, data) => {

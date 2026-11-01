@@ -53,6 +53,13 @@ describe('assetResponseHeaders', () => {
     expect(h['content-security-policy']).toMatch(/default-src 'none'/)
     expect(h['content-security-policy']).toMatch(/sandbox/)
   })
+
+  it('lets only the app page (file://) read images with fetch()', () => {
+    expect(assetResponseHeaders('image/png', 'null')['access-control-allow-origin']).toBe('null')
+    expect(assetResponseHeaders('image/png', 'file://')['access-control-allow-origin']).toBe('file://')
+    expect(assetResponseHeaders('image/png', 'https://evil.example')['access-control-allow-origin']).toBeUndefined()
+    expect(assetResponseHeaders('image/png')['access-control-allow-origin']).toBeUndefined()
+  })
 })
 
 describe('bundled font protocol', () => {

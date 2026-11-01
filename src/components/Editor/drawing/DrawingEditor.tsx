@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Excalidraw, exportToSvg, FONT_FAMILY, MainMenu } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
-import type { ExcalidrawImperativeAPI, BinaryFiles } from '@excalidraw/excalidraw/types'
+import type { ExcalidrawImperativeAPI, BinaryFiles, ExcalidrawInitialDataState } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { Check, Loader2, X } from 'lucide-react'
 import type { Theme } from '@/stores/useAppStore'
 import { isMacLike } from '@/lib/utils'
 import { canvasBackground, type DrawingData } from './drawingModel'
+import { externalizeFiles, inlineFiles, replaceInSvg } from '@/lib/sceneFiles'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { useTwoWayArrowTool } from '@/components/Whiteboard/twoWayArrow'
 
@@ -26,6 +27,22 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
   const twoWay = useTwoWayArrowTool(library.api)
 
   const rootRef = useRef<HTMLDivElement>(null)
+  // Stored images are asset files; load them back inline for Excalidraw (once).
+  const [initialData] = useState(() =>
+    inlineFiles(initial.scene.files).then((files): ExcalidrawInitialDataState => ({
+      elements: initial.scene.elements as ExcalidrawElement[],
+      files: files as BinaryFiles,
+      appState: {
+        viewBackgroundColor: canvasBackground(initial.scene.background),
+        // PowerPoint-like defaults: clean lines, sharp corners, regular font.
+        currentItemRoughness: 0,
+        currentItemFontFamily: FONT_FAMILY.Nunito,
+        currentItemRoundness: 'sharp',
+        currentItemStrokeWidth: 2,
+      },
+      scrollToContent: true,
+    })),
+  )
 
   useEffect(() => {
     document.body.classList.add('drawing-open')
@@ -60,7 +77,13 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
         return svg.outerHTML
       }
       const [svgLight, svgDark] = await Promise.all([render(false), render(true)])
-      onClose({ scene: { elements: elements as unknown[], files, background }, svgLight, svgDark })
+      // Store images as asset files (not base64 in the page, three times over).
+      const stored = await externalizeFiles(files as never)
+      onClose({
+        scene: { elements: elements as unknown[], files: stored.files, background },
+        svgLight: replaceInSvg(svgLight, stored.replaced),
+        svgDark: replaceInSvg(svgDark, stored.replaced),
+      })
     } catch (err) {
       console.error('[drawing] save failed', err)
       window.alert(`Couldn't save the drawing: ${(err as Error)?.message ?? err}`)
@@ -117,19 +140,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           {...library.excalidrawProps}
           autoFocus
           theme={theme}
-          initialData={{
-            elements: initial.scene.elements as ExcalidrawElement[],
-            files: initial.scene.files as BinaryFiles,
-            appState: {
-              viewBackgroundColor: canvasBackground(initial.scene.background),
-              // PowerPoint-like defaults: clean lines, sharp corners, regular font.
-              currentItemRoughness: 0,
-              currentItemFontFamily: FONT_FAMILY.Nunito,
-              currentItemRoundness: 'sharp',
-              currentItemStrokeWidth: 2,
-            },
-            scrollToContent: true,
-          }}
+          initialData={initialData}
           onChange={(_elements, state, _files) => {
             twoWay.onAppStateChange(state)
             if (apiRef.current) dirty.current = true

@@ -22,14 +22,49 @@ function toMeta(page: Page): PageMeta {
 /** Largest page file we'll write (protects the disk from runaway content). */
 export const MAX_PAGE_BYTES = 100 * 1024 * 1024
 
+/** Searchable text kept in memory per page (enough for any real note; caps runaway pages). */
+export const MAX_SEARCH_TEXT = 200_000
+
+/** Name of the startup index cache, stored next to the pages folder. */
+export const INDEX_FILE = 'pages-index.json'
+const INDEX_VERSION = 1
+/** Files read/parsed at once during startup. */
+const LOAD_CONCURRENCY = 16
+
+interface IndexEntry {
+  mtimeMs: number
+  size: number
+  meta: PageMeta
+  links: string[]
+  text: string
+}
+
+function searchText(content: unknown): string {
+  return docToText(content as never).slice(0, MAX_SEARCH_TEXT)
+}
+
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++])
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
 /**
  * File-based page storage. Every page lives in `<root>/pages/<id>.json`.
  * Page metadata is cached in memory so the tree can be served without
  * re-reading every file. Writes for the same page are serialized and atomic
  * (write to a temp file, then rename), so a crash never leaves a half-written page.
+ *
+ * Memory/IO: page *content* is never kept in memory — it's read on demand when a
+ * page is opened. Only metadata, outgoing links and the page's plain text (for
+ * search) stay resident. A small index cache (`pages-index.json`, validated by
+ * each file's mtime/size) lets startup skip parsing pages that haven't changed.
  */
 export class PageStorage {
   private readonly dir: string
+  private readonly indexFile: string
   private index = new Map<string, PageMeta>()
   /** Outgoing page links per page (kept up to date on save). */
   private links = new Map<string, string[]>()
@@ -37,9 +72,16 @@ export class PageStorage {
   private queues = new Map<string, Promise<unknown>>()
   /** Ids deleted during this session; late auto-saves must not resurrect them. */
   private tombstones = new Set<string>()
+  /** Plain text per page, for search without reading files. */
+  private texts = new Map<string, string>()
+  /** mtime/size of each page file as last seen (validates the index cache). */
+  private stats = new Map<string, { mtimeMs: number; size: number }>()
+  private indexTimer: ReturnType<typeof setTimeout> | null = null
+  private indexWrite: Promise<void> = Promise.resolve()
 
-  constructor(root: string) {
+  constructor(root: string, private readonly indexDelay = 1500) {
     this.dir = path.join(root, 'pages')
+    this.indexFile = path.join(root, INDEX_FILE)
   }
 
   private file(id: string) {
@@ -51,26 +93,87 @@ export class PageStorage {
     return this.loaded
   }
 
+  private async readIndexCache(): Promise<Map<string, IndexEntry>> {
+    try {
+      const raw = JSON.parse(await fs.readFile(this.indexFile, 'utf8'))
+      if (raw?.version !== INDEX_VERSION || !raw.entries || typeof raw.entries !== 'object') return new Map()
+      return new Map(Object.entries(raw.entries as Record<string, IndexEntry>))
+    } catch {
+      return new Map()
+    }
+  }
+
+  private remember(id: string, meta: PageMeta, links: string[], text: string, stat: { mtimeMs: number; size: number }) {
+    this.index.set(id, meta)
+    this.links.set(id, links)
+    this.texts.set(id, text)
+    this.stats.set(id, stat)
+  }
+
   private async load() {
     await fs.mkdir(this.dir, { recursive: true })
-    const entries = await fs.readdir(this.dir)
-    for (const name of entries) {
-      if (!name.endsWith('.json')) continue
-      try {
-        const raw = await fs.readFile(path.join(this.dir, name), 'utf8')
-        const page = JSON.parse(raw) as Page
-        if (page && typeof page.id === 'string') {
-          this.index.set(page.id, toMeta(page))
-          this.links.set(page.id, extractLinks(page.content))
+    const [entries, cache] = await Promise.all([fs.readdir(this.dir), this.readIndexCache()])
+    let changed = false
+    await mapLimit(
+      entries.filter((n) => n.endsWith('.json')),
+      LOAD_CONCURRENCY,
+      async (name) => {
+        const file = path.join(this.dir, name)
+        try {
+          const st = await fs.stat(file)
+          const stat = { mtimeMs: st.mtimeMs, size: st.size }
+          const hit = cache.get(name)
+          if (hit && hit.mtimeMs === stat.mtimeMs && hit.size === stat.size && hit.meta?.id) {
+            this.remember(hit.meta.id, cleanPageMeta(hit.meta), Array.isArray(hit.links) ? hit.links : [], typeof hit.text === 'string' ? hit.text : '', stat)
+            return
+          }
+          changed = true
+          const page = JSON.parse(await fs.readFile(file, 'utf8')) as Page
+          if (page && typeof page.id === 'string') {
+            this.remember(page.id, toMeta(page), extractLinks(page.content), searchText(page.content), stat)
+          }
+        } catch (err) {
+          console.error(`[storage] Skipping unreadable page file ${name}:`, err)
         }
-      } catch (err) {
-        console.error(`[storage] Skipping unreadable page file ${name}:`, err)
-      }
-    }
+      },
+    )
+    if (changed || cache.size !== this.index.size) this.scheduleIndexWrite()
     // Re-parent orphans (parent deleted outside the app) to the root.
     for (const meta of this.index.values()) {
       if (meta.parentId && !this.index.has(meta.parentId)) meta.parentId = null
     }
+  }
+
+  private scheduleIndexWrite() {
+    if (this.indexTimer) clearTimeout(this.indexTimer)
+    this.indexTimer = setTimeout(() => void this.flushIndex(), this.indexDelay)
+    this.indexTimer.unref?.()
+  }
+
+  /** Writes the startup index cache now (also called on quit). */
+  flushIndex(): Promise<void> {
+    if (this.indexTimer) {
+      clearTimeout(this.indexTimer)
+      this.indexTimer = null
+    }
+    this.indexWrite = this.indexWrite.then(async () => {
+      const entries: Record<string, IndexEntry> = {}
+      for (const [id, meta] of this.index) {
+        const stat = this.stats.get(id)
+        if (!stat) continue
+        entries[`${id}.json`] = { ...stat, meta, links: this.links.get(id) ?? [], text: this.texts.get(id) ?? '' }
+      }
+      const tmp = `${this.indexFile}.${process.pid}.tmp`
+      try {
+        await fs.writeFile(tmp, JSON.stringify({ version: INDEX_VERSION, entries }), 'utf8')
+        await fs.rename(tmp, this.indexFile)
+      } catch (err) {
+        await fs.rm(tmp, { force: true }).catch(() => undefined)
+        // The data folder may be gone (e.g. removed while closing); the cache is optional.
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') console.error('[storage] Could not write the page index cache:', err)
+      }
+    })
+    return this.indexWrite
   }
 
   /** Run `task` after any pending operation on the same page id. */
@@ -100,6 +203,8 @@ export class PageStorage {
     if (json.length > MAX_PAGE_BYTES) throw new Error('This page is too large to save (over 100 MB).')
     await fs.writeFile(tmp, json, 'utf8')
     await fs.rename(tmp, target)
+    const st = await fs.stat(target)
+    return { mtimeMs: st.mtimeMs, size: st.size }
   }
 
   /** Paths of every page file (used for asset garbage collection). */
@@ -137,7 +242,12 @@ export class PageStorage {
       if (this.tombstones.has(update.id)) return null
       if (update.parentId && this.tombstones.has(update.parentId)) return null
       const now = Date.now()
-      const existing = await this.readFromDisk(update.id)
+      // Content updates (every auto-save) build on the in-memory metadata, so the
+      // page file isn't read and parsed again on each save. Metadata-only updates
+      // need the stored content and read it from disk.
+      const known = this.index.get(update.id)
+      const existing: Page | null =
+        update.content !== undefined && known ? { ...known, content: null } : await this.readFromDisk(update.id)
       const base: Page = existing ?? {
         id: update.id,
         kind: update.kind === 'whiteboard' ? 'whiteboard' : 'doc',
@@ -162,10 +272,15 @@ export class PageStorage {
         id: update.id,
         updatedAt: now,
       }
-      await this.writeToDisk(page)
+      const stat = await this.writeToDisk(page)
       const meta = toMeta(page)
       this.index.set(page.id, meta)
-      if (update.content !== undefined) this.links.set(page.id, extractLinks(page.content))
+      this.stats.set(page.id, stat)
+      if (update.content !== undefined || !this.links.has(page.id)) {
+        this.links.set(page.id, extractLinks(page.content))
+        this.texts.set(page.id, searchText(page.content))
+      }
+      this.scheduleIndexWrite()
       return meta
     })
   }
@@ -189,9 +304,12 @@ export class PageStorage {
           await fs.rm(this.file(pid), { force: true })
           this.index.delete(pid)
           this.links.delete(pid)
+          this.texts.delete(pid)
+          this.stats.delete(pid)
         }),
       ),
     )
+    this.scheduleIndexWrite()
     return ids
   }
 
@@ -200,15 +318,11 @@ export class PageStorage {
     const q = String(query ?? '').trim().toLowerCase()
     if (!q) return []
     const results: SearchResult[] = []
+    // In-memory: no page files are read, so search stays fast however many pages exist.
     for (const meta of this.index.values()) {
       const titleHit = meta.title.toLowerCase().includes(q)
-      let snippet: string | null = null
-      try {
-        const page = await this.enqueue(meta.id, () => this.readFromDisk(meta.id))
-        snippet = makeSnippet(docToText(page?.content), q)
-      } catch {
-        // ignore unreadable pages
-      }
+      const text = this.texts.get(meta.id) ?? ''
+      const snippet = text.toLowerCase().includes(q) ? makeSnippet(text, q) : null
       if (titleHit || snippet) results.push({ id: meta.id, snippet })
     }
     return results

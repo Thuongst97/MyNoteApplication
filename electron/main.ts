@@ -92,7 +92,7 @@ else {
 
 // Must happen before the app is ready.
 protocol.registerSchemesAsPrivileged([
-  { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
   // Excalidraw fetch()es its fonts, which doesn't work for file:// URLs; the bundled fonts are
   // served read-only from here instead (otherwise it falls back to a CDN the CSP blocks).
   { scheme: FONT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
@@ -556,6 +556,8 @@ function registerIpc() {
 
 app.on('before-quit', () => {
   isQuitting = true
+  // Best effort: a missing/stale cache only means changed pages are re-read next start.
+  void storage?.flushIndex()
 })
 
 app.on('window-all-closed', () => {
@@ -622,7 +624,7 @@ void app.whenReady().then(() => {
     if (!hit) return new Response('Not found', { status: 404 })
     try {
       const res = await net.fetch(pathToFileURL(hit.file).toString())
-      return new Response(res.body, { status: res.status, headers: assetResponseHeaders(hit.mime) })
+      return new Response(res.body, { status: res.status, headers: assetResponseHeaders(hit.mime, request.headers.get('origin')) })
     } catch {
       return new Response('Not found', { status: 404 })
     }

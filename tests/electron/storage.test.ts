@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { PageStorage } from '../../electron/storage'
+import { INDEX_FILE, PageStorage } from '../../electron/storage'
 
 let root: string
 beforeEach(async () => (root = await fs.mkdtemp(path.join(os.tmpdir(), 'nc-pages-'))))
@@ -135,5 +135,70 @@ describe('PageStorage', () => {
     const s = new PageStorage(root)
     await s.save({ id: 'a' })
     expect(await s.pageFiles()).toEqual([path.join(root, 'pages', 'a.json')])
+  })
+
+  it('auto-saves content without re-reading the page file, keeping its metadata', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', title: 'Alpha', icon: '🚀', width: 900, content: doc(para('one')) })
+    const created = (await s.getTree())[0].createdAt
+    // If save() still parsed the file first, this corrupt file would make it fail.
+    await fs.writeFile(path.join(root, 'pages', 'a.json'), '{ not json')
+    await s.save({ id: 'a', content: doc(para('two')) })
+    expect(await s.read('a')).toMatchObject({ title: 'Alpha', icon: '🚀', width: 900, createdAt: created, content: doc(para('two')) })
+  })
+
+  it('searches from memory and stays in sync with saves and deletes', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', title: 'Alpha', content: doc(para('the quick brown fox')) })
+    await s.save({ id: 'b', title: 'Beta', content: doc(para('lazy dog')) })
+    await fs.rm(path.join(root, 'pages', 'a.json')) // not read during search
+    expect((await s.search('brown')).map((r) => r.id)).toEqual(['a'])
+    await s.save({ id: 'b', content: doc(para('a brown dog')) })
+    expect((await s.search('brown')).map((r) => r.id).sort()).toEqual(['a', 'b'])
+    await s.save({ id: 'b', title: 'Renamed' }) // metadata-only update keeps the text
+    expect((await s.search('brown dog'))[0]).toMatchObject({ id: 'b', snippet: 'a brown dog' })
+    await s.delete('a')
+    expect((await s.search('brown')).map((r) => r.id)).toEqual(['b'])
+  })
+
+  it('starts from the index cache for unchanged pages and re-reads changed ones', async () => {
+    const s = new PageStorage(root, 10)
+    await s.save({ id: 'a', title: 'Alpha', content: doc(para('alpha text')) })
+    await s.save({ id: 'b', title: 'Beta', content: doc(para('beta text')) })
+    await s.save({ id: 'gone', title: 'Gone' })
+    await s.flushIndex()
+    const cache = JSON.parse(await fs.readFile(path.join(root, INDEX_FILE), 'utf8'))
+    expect(Object.keys(cache.entries).sort()).toEqual(['a.json', 'b.json', 'gone.json'])
+
+    // Mark the cached title so we can tell which source was used.
+    cache.entries['a.json'].meta.title = 'From cache'
+    await fs.writeFile(path.join(root, INDEX_FILE), JSON.stringify(cache))
+    // b changes outside the app (different size), 'gone' is removed.
+    await fs.writeFile(path.join(root, 'pages', 'b.json'), JSON.stringify({ id: 'b', title: 'Beta edited elsewhere', content: doc(para('new words')) }))
+    await fs.rm(path.join(root, 'pages', 'gone.json'))
+
+    const fresh = new PageStorage(root, 10)
+    const tree = await fresh.getTree()
+    expect(tree.map((p) => p.title).sort()).toEqual(['Beta edited elsewhere', 'From cache'])
+    expect((await fresh.search('new words'))[0]?.id).toBe('b')
+    expect((await fresh.search('alpha text'))[0]?.id).toBe('a')
+    // A broken cache is ignored.
+    await fs.writeFile(path.join(root, INDEX_FILE), '{oops')
+    expect((await new PageStorage(root).getTree()).map((p) => p.title).sort()).toEqual(['Alpha', 'Beta edited elsewhere'])
+  })
+
+  it('loads many pages quickly and searches them without touching the disk', async () => {
+    const s = new PageStorage(root)
+    const body = doc(...Array.from({ length: 40 }, (_, i) => para(`paragraph ${i} lorem ipsum dolor sit amet`)))
+    await Promise.all(Array.from({ length: 300 }, (_, i) => s.save({ id: `p${i}`, title: `Page ${i}`, content: i === 123 ? doc(para('needle here')) : body })))
+    await s.flushIndex()
+    const t0 = performance.now()
+    const fresh = new PageStorage(root)
+    expect(await fresh.getTree()).toHaveLength(300)
+    const t1 = performance.now()
+    expect((await fresh.search('needle')).map((r) => r.id)).toEqual(['p123'])
+    const t2 = performance.now()
+    expect(t1 - t0).toBeLessThan(2000)
+    expect(t2 - t1).toBeLessThan(100)
   })
 })

@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Shapes } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
 import { normalizeDrawing } from '@/components/Editor/drawing/drawingModel'
+import { externalizeFiles, externalizeFilesSync, inlineFiles } from '@/lib/sceneFiles'
 
 const WhiteboardCanvas = lazy(() => import('./WhiteboardCanvas'))
 
@@ -19,17 +20,40 @@ export function WhiteboardPage({ pageId }: { pageId: string }) {
   const updatePageMeta = useAppStore((s) => s.updatePageMeta)
   const [content, setContent] = useState<WhiteboardContent | null>(null)
 
+  // Saves keep images as asset files, not base64 inside the page. New images are
+  // uploaded first; saves stay in order.
+  const queue = useRef<Promise<void> | null>(null)
+  const save = useCallback(
+    (scene: WhiteboardContent['scene']) => {
+      const write = (files: WhiteboardContent['scene']['files']) =>
+        autoSaver.schedule({ id: pageId, content: { type: 'whiteboard', scene: { ...scene, files } } as never })
+      const ready = queue.current ? null : externalizeFilesSync(scene.files)
+      if (ready) return write(ready)
+      const run: Promise<void> = (queue.current ?? Promise.resolve())
+        .then(() => externalizeFiles(scene.files))
+        .then(({ files }) => write(files))
+        .finally(() => {
+          if (queue.current === run) queue.current = null
+        })
+      queue.current = run
+    },
+    [pageId],
+  )
+
   useEffect(() => {
     let cancelled = false
     void autoSaver
       .flush(pageId)
       .then(() => api.readPage(pageId))
-      .then((page) => {
+      .then(async (page) => {
         if (cancelled) return
         // Damaged or unexpected content opens as an empty board instead of crashing.
         const c = page?.content as WhiteboardContent | null
         const scene = normalizeDrawing({ scene: c?.type === 'whiteboard' ? c.scene : null }).scene
-        setContent({ type: 'whiteboard', scene: { ...scene, background: typeof c?.scene?.background === 'string' ? scene.background : undefined } })
+        // Images are stored as asset files; Excalidraw needs them inline while open.
+        const files = await inlineFiles(scene.files)
+        if (cancelled) return
+        setContent({ type: 'whiteboard', scene: { ...scene, files, background: typeof c?.scene?.background === 'string' ? scene.background : undefined } })
       })
     return () => {
       cancelled = true
@@ -63,7 +87,7 @@ export function WhiteboardPage({ pageId }: { pageId: string }) {
               key={pageId}
               theme={theme}
               initial={content}
-              onChange={(scene) => autoSaver.schedule({ id: pageId, content: { type: 'whiteboard', scene } as never })}
+              onChange={save}
             />
           </Suspense>
         ) : (

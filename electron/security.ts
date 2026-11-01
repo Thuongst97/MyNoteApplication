@@ -53,8 +53,11 @@ export function isPermissionAllowed(permission: string, requestingUrl: string, i
 }
 
 /** Response headers for stored images served via notion-asset:// */
-export function assetResponseHeaders(mime: string): Record<string, string> {
+export function assetResponseHeaders(mime: string, origin?: string | null): Record<string, string> {
   return {
+    // Only the app's own page (file://, reported as "null" or file://) may read images
+    // with fetch() — used to load whiteboard images into the canvas.
+    ...(origin === 'null' || origin?.startsWith('file://') ? { 'access-control-allow-origin': origin } : {}),
     'content-type': mime,
     'x-content-type-options': 'nosniff',
     // If an image (e.g. an SVG) were ever opened as a document, nothing in it may run or load.
