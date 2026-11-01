@@ -199,10 +199,74 @@ function C() {
   </body></html>`
 }
 
+
+/* ---------------- B (light) · Onyx Daylight ---------------- */
+function BL() {
+  const accent = { do: '#D45A5A', schedule: '#4F7FC9', delegate: '#B8913F', eliminate: '#8E939C' }
+  const card = (q) => `
+  <section class="card">
+    <div class="glow" style="background:radial-gradient(620px 170px at 0% 0%, ${accent[q.id]}14, transparent 62%)"></div>
+    <header>
+      <span class="dot" style="background:${accent[q.id]};box-shadow:0 0 0 4px ${accent[q.id]}1f"></span>
+      <h2>${q.title}</h2>
+      <span class="hint">${q.hint}</span>
+      <span class="count">${q.tasks.filter((t) => !t.done).length}</span>
+    </header>
+    <ul>
+      ${q.tasks.map((t) => `
+      <li class="${t.done ? 'done' : ''}">
+        <span class="check" style="${t.done ? `background:${accent[q.id]};border-color:${accent[q.id]}` : ''}">${t.done ? '<svg viewBox="0 0 16 16"><path d="M4 8.5l2.5 2.5L12 5.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</span>
+        <div class="tx"><div class="tt">${esc(t.t)}</div>${t.note ? `<div class="note">${esc(t.note)}</div>` : ''}</div>
+        ${t.meta ? `<span class="meta ${t.state || ''}">${esc(t.meta)}</span>` : ''}
+      </li>`).join('')}
+      ${q.tasks.length === 0 ? '<li class="empty">Clear. Keep it that way.</li>' : ''}
+    </ul>
+    <button class="add">+ Add task</button>
+  </section>`
+  return `<!doctype html><html><head><style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1280px;height:880px;font-family:Inter,sans-serif;color:#1C1B19;padding:44px 56px;
+    background:radial-gradient(900px 500px at 85% -10%, rgba(201,165,99,.13), transparent 60%), radial-gradient(800px 600px at -10% 110%, rgba(79,127,201,.07), transparent 60%), #FAF9F7}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:30px}
+  .eyebrow{font-size:11px;letter-spacing:.32em;color:#A8843F;font-weight:600;margin-bottom:12px}
+  h1{font-family:'Inter Display',Inter;font-weight:600;font-size:44px;letter-spacing:-.025em;line-height:1;
+     background:linear-gradient(180deg,#1C1B19,#4A453D);-webkit-background-clip:text;color:transparent}
+  .sub{margin-top:12px;font-size:14px;color:#8A857D}
+  .sub b{color:#1C1B19;font-weight:500}.sub .od{color:#C24848}
+  .actions{display:flex;gap:10px}
+  .pill{font-size:13px;color:#57524A;padding:9px 16px;border-radius:12px;border:1px solid #E8E4DC;background:#FFFFFF;box-shadow:0 1px 2px rgba(28,27,25,.04)}
+  .pill.gold{background:linear-gradient(180deg,#E3C68C,#C29A55);color:#2A2114;border:none;font-weight:600;box-shadow:0 6px 16px -6px rgba(178,138,70,.55), inset 0 1px 0 rgba(255,255,255,.45)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{position:relative;overflow:hidden;background:linear-gradient(180deg,#FFFFFF,#FDFCFA);border:1px solid #ECE8E1;border-radius:20px;padding:20px 22px 16px;min-height:322px;display:flex;flex-direction:column;box-shadow:0 24px 48px -30px rgba(60,48,30,.28), 0 1px 2px rgba(28,27,25,.04), inset 0 1px 0 #fff}
+  .glow{position:absolute;inset:0;pointer-events:none}
+  header{position:relative;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  h2{font-size:17px;font-weight:600;letter-spacing:-.01em;color:#1C1B19}
+  .hint{font-size:12.5px;color:#9A958C;flex:1}
+  .count{font-size:12px;color:#6E695F;background:#F5F3EF;border:1px solid #ECE8E1;border-radius:8px;padding:2px 8px}
+  ul{position:relative;list-style:none;flex:1;display:flex;flex-direction:column;gap:8px}
+  li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:#F8F7F4;border:1px solid #EFECE6}
+  .check{width:18px;height:18px;border-radius:6px;border:1.5px solid #CFC9BE;background:#fff;flex:none;display:flex;align-items:center;justify-content:center}
+  li.done{background:transparent;border-color:transparent}
+  li.done .tt{color:#B3AEA5;text-decoration:line-through}
+  .tx{flex:1}.tt{font-size:14.5px;color:#1C1B19}.note{font-size:12.5px;color:#9A958C;margin-top:2px}
+  .meta{font-size:12px;color:#8A857D;white-space:nowrap}
+  .meta.soon{color:#A8843F;font-weight:500}.meta.overdue{color:#C24848;font-weight:500}
+  .empty{background:none;border:1px dashed #E3DED5;color:#B3AEA5;justify-content:center;padding:28px;font-size:13.5px}
+  .add{position:relative;border:none;background:none;text-align:left;font:inherit;font-size:13px;color:#9A958C;padding:12px 4px 0}
+  </style></head><body>
+  <div class="top">
+    <div><div class="eyebrow">FOCUS</div><h1>Tasks</h1><div class="sub"><b>${open} open</b> · <span class="od">1 overdue</span> · Eisenhower matrix</div></div>
+    <div class="actions"><span class="pill">Hide completed</span><span class="pill">Reminders</span><span class="pill gold">+ New task</span></div>
+  </div>
+  <div class="grid">${quadrants.map(card).join('')}</div>
+  </body></html>`
+}
+
 ;(async () => {
   const b = await chromium.launch()
   const p = await b.newPage({ viewport: { width: 1280, height: 880 }, deviceScaleFactor: 2 })
-  for (const [name, fn] of [['A-ivory-champagne', A], ['B-midnight-onyx', B], ['C-gallery-minimal', C]]) {
+  for (const [name, fn] of [['A-ivory-champagne', A], ['B-midnight-onyx', B], ['B-midnight-onyx-light', BL], ['C-gallery-minimal', C]]) {
     await p.setContent(fn(), { waitUntil: 'load' })
     await p.evaluate(() => document.fonts.ready)
     await p.screenshot({ path: `${name}.png` })
