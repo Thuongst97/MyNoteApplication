@@ -58,7 +58,7 @@ describe('assetResponseHeaders', () => {
 describe('bundled font protocol', () => {
   it('serves only .woff2 files under fonts/ of the bundled assets', async () => {
     const { resolveBundledFont } = await import('../../electron/security')
-    const root = path.join(path.sep, 'app', 'dist', 'excalidraw-assets')
+    const root = path.resolve(path.sep, 'app', 'dist', 'excalidraw-assets') // absolute on every OS (adds the drive on Windows)
     expect(resolveBundledFont('app-font://bundle/fonts/Excalifont/Excalifont-Regular-a88b.woff2', root)).toBe(path.join(root, 'fonts', 'Excalifont', 'Excalifont-Regular-a88b.woff2'))
     for (const bad of [
       'app-font://bundle/fonts/../../../etc/passwd',
