@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { create } from 'zustand'
 import type { JSONContent } from '@tiptap/react'
 import type { PageKind, PageMeta } from '@/types'
@@ -204,7 +205,8 @@ autoSaver.onSaved((meta) => {
   }))
 })
 
-// Persist UI preferences.
+// Persist UI preferences (only when one of them changed, not on every store update).
+let savedPrefs = ''
 useAppStore.subscribe((s) => {
   const p: Prefs = {
     view: s.view,
@@ -214,14 +216,60 @@ useAppStore.subscribe((s) => {
     expanded: s.expanded,
     activePageId: s.activePageId,
   }
-  localStorage.setItem(PREFS_KEY, JSON.stringify(p))
+  const json = JSON.stringify(p)
+  if (json === savedPrefs) return
+  savedPrefs = json
+  localStorage.setItem(PREFS_KEY, json)
 })
 
 /** Children of `parentId`, sorted. */
 export function selectChildren(pages: PageMeta[], parentId: string | null) {
-  return pages
-    .filter((p) => p.parentId === parentId)
-    .sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
+  return childIndex(pages).get(parentId) ?? NO_PAGES
+}
+
+const NO_PAGES: PageMeta[] = []
+const indexCache = new WeakMap<PageMeta[], Map<string | null, PageMeta[]>>()
+
+/** Parent id → sorted children, computed once per version of the page list (O(n)). */
+function childIndex(pages: PageMeta[]) {
+  let index = indexCache.get(pages)
+  if (!index) {
+    index = new Map()
+    for (const p of pages) {
+      const list = index.get(p.parentId)
+      if (list) list.push(p)
+      else index.set(p.parentId, [p])
+    }
+    for (const list of index.values()) list.sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
+    indexCache.set(pages, index)
+  }
+  return index
+}
+
+/** Whether two child lists look the same in the sidebar (ignores e.g. updatedAt). */
+function sameRows(a: PageMeta[], b: PageMeta[]) {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]
+    const y = b[i]
+    if (x.id !== y.id || x.title !== y.title || x.icon !== y.icon || x.kind !== y.kind) return false
+  }
+  return true
+}
+
+/**
+ * Children of a page for the sidebar. Re-renders only when what the rows show changes
+ * (not on every auto-save, which updates updatedAt), so the tree stays fast while typing.
+ */
+export function useChildPages(parentId: string | null): PageMeta[] {
+  const last = useRef<PageMeta[]>(NO_PAGES)
+  return useAppStore((s) => {
+    const next = selectChildren(s.pages, parentId)
+    if (sameRows(last.current, next)) return last.current
+    last.current = next
+    return next
+  })
 }
 
 export const WELCOME_DOC: JSONContent = {

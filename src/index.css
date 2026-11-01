@@ -741,3 +741,9 @@ body.block-dragging .prosemirror-dropcursor-inline {
 .notion-editor .selectable-text a {
   cursor: pointer;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tree-in {
+    animation: none;
+  }
+}

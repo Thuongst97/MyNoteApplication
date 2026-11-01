@@ -1,14 +1,13 @@
 import { useCallback, useRef } from 'react'
 import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
-import { selectChildren, useAppStore } from '@/stores/useAppStore'
+import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
 import { PageTreeItem } from './PageTreeItem'
 import { importPageFile } from '@/components/Editor/pageFiles'
 
 export function Sidebar() {
-  const pages = useAppStore((s) => s.pages)
   const isOpen = useAppStore((s) => s.isSidebarOpen)
   const width = useAppStore((s) => s.sidebarWidth)
   const theme = useAppStore((s) => s.theme)
@@ -20,7 +19,7 @@ export function Sidebar() {
     end.setHours(23, 59, 59, 999)
     return s.tasks.filter((t) => !t.completed && t.dueAt !== null && t.dueAt <= end.getTime()).length
   })
-  const roots = selectChildren(pages, null)
+  const roots = useChildPages(null)
   const isMac = platform === 'darwin'
   const asideRef = useRef<HTMLElement>(null)
 

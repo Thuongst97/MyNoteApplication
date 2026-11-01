@@ -23,6 +23,7 @@ export default {
       },
       keyframes: {
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'tree-in': { from: { opacity: '0', transform: 'translateY(-3px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         'pop-in': {
           from: { opacity: '0', transform: 'scale(0.97) translateY(-4px)' },
           to: { opacity: '1', transform: 'scale(1) translateY(0)' },
@@ -30,6 +31,7 @@ export default {
       },
       animation: {
         'fade-in': 'fade-in 120ms ease-out',
+        'tree-in': 'tree-in 110ms ease-out',
         'pop-in': 'pop-in 140ms ease-out',
       },
     },

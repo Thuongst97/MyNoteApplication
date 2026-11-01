@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronRight, FileDown, FileText, FileUp, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus } from 'lucide-react'
 import { exportPageToFile, importPageFile } from '@/components/Editor/pageFiles'
 import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
-import { selectChildren, useAppStore } from '@/stores/useAppStore'
+import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { cn } from '@/lib/utils'
 
@@ -12,9 +12,11 @@ interface PageTreeItemProps {
   depth: number
 }
 
-/** One row of the page tree; renders its children recursively. */
-export function PageTreeItem({ page, depth }: PageTreeItemProps) {
-  const pages = useAppStore((s) => s.pages)
+/**
+ * One row of the page tree; renders its children recursively. Memoized: a row only
+ * re-renders when its own page, expanded/active state or children change.
+ */
+export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTreeItemProps) {
   const isActive = useAppStore((s) => s.view === 'page' && s.activePageId === page.id)
   const isExpanded = useAppStore((s) => !!s.expanded[page.id])
   const { setActivePage, toggleExpanded, createPage, deletePage, updatePageMeta } = useAppStore.getState()
@@ -26,7 +28,7 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
   const [draft, setDraft] = useState(page.title)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const children = selectChildren(pages, page.id)
+  const children = useChildPages(page.id)
   const hasChildren = children.length > 0
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
 
   const confirmDelete = () => {
     setMenuOpen(false)
-    const count = countDescendants(pages, page.id)
+    const count = countDescendants(useAppStore.getState().pages, page.id)
     const name = page.title || 'Untitled'
     const msg = count
       ? `Delete "${name}" and its ${count} sub-page${count > 1 ? 's' : ''}? This cannot be undone.`
@@ -207,27 +209,21 @@ export function PageTreeItem({ page, depth }: PageTreeItemProps) {
         </div>
       </div>
 
-      {/* Fold/unfold animation via grid-rows 0fr → 1fr */}
-      <div
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-out',
-          isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden" role="group">
-          {isExpanded &&
-            (hasChildren ? (
-              children.map((child) => <PageTreeItem key={child.id} page={child} depth={depth + 1} />)
-            ) : (
-              <div style={{ paddingLeft: 8 + (depth + 1) * 14 + 24 }} className="py-1 text-xs opacity-40">
-                No pages inside
-              </div>
-            ))}
+      {/* Children appear with a short fade (no layout animation, which made unfolding feel laggy). */}
+      {isExpanded && (
+        <div role="group" className="animate-tree-in">
+          {hasChildren ? (
+            children.map((child) => <PageTreeItem key={child.id} page={child} depth={depth + 1} />)
+          ) : (
+            <div style={{ paddingLeft: 8 + (depth + 1) * 14 + 24 }} className="py-1 text-xs opacity-40">
+              No pages inside
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
-}
+})
 
 function IconButton({
   children,
