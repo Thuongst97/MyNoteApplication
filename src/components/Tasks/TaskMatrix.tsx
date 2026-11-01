@@ -141,6 +141,9 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
   const q = QUADRANTS.find((x) => x.id === id)!
   const accent = useQuadrantAccent(id)
   const custom = useTaskStore((s) => s.settings.quadrantColors?.[id])
+  const theme = useAppStore((s) => s.theme)
+  // Light mode: every quadrant has a border in its color. Dark mode: only when recolored.
+  const coloredBorder = !!custom || theme === 'light'
   const setQuadrantColor = (color: string | null) => {
     const { settings, setSettings } = useTaskStore.getState()
     const next = { ...settings.quadrantColors }
@@ -212,7 +215,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
       )}
       style={{
         ...(dropAt !== null && { boxShadow: `0 0 0 2px ${withAlpha(accent, 0.55)}` }),
-        ...(custom && { borderColor: withAlpha(accent, 0.35) }),
+        ...(coloredBorder && { borderColor: withAlpha(accent, 0.35) }),
       }}
     >
 

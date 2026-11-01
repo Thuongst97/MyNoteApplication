@@ -77,7 +77,7 @@ export const QUADRANT_DEFAULT_HEX: Record<Quadrant, string> = { do: '#f87171', s
 
 /** Midnight Onyx accents per quadrant (dot, corner glow, done checkbox), light and dark. */
 export const ONYX_ACCENT: Record<'light' | 'dark', Record<Quadrant, string>> = {
-  light: { do: '#D45A5A', schedule: '#4F7FC9', delegate: '#B8913F', eliminate: '#8E939C' },
+  light: { do: '#993A1A', schedule: '#1C8256', delegate: '#861D65', eliminate: '#233557' },
   dark: { do: '#E07A7A', schedule: '#7FA6E0', delegate: '#D9B97A', eliminate: '#8E939C' },
 }
 
