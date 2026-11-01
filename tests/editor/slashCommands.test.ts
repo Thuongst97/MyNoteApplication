@@ -27,6 +27,7 @@ describe('slash menu filtering', () => {
     expect(filterSlashCommands('draw')[0].title).toBe('Drawing')
     expect(filterSlashCommands('mind')[0].title).toBe('Mind map')
     expect(filterSlashCommands('brainstorm')[0].title).toBe('Mind map')
+    expect(filterSlashCommands('mermaid doc')[0].title).toBe('Mermaid doc')
     expect(filterSlashCommands('zzzz')).toEqual([])
   })
 })
@@ -49,6 +50,16 @@ describe('slash commands', () => {
     editor = makeEditor(doc(p()))
     run(title)
     expect(outline(editor)[0]).toBe(expected)
+    expect(editor.getText()).not.toContain('/x')
+  })
+
+  it('"Mermaid doc" inserts a mermaid code block with a starter diagram', () => {
+    editor = makeEditor(doc(p()))
+    run('Mermaid doc')
+    const block = editor.getJSON().content![0]
+    expect(block.type).toBe('codeBlock')
+    expect(block.attrs!.language).toBe('mermaid')
+    expect(editor.state.doc.firstChild!.textContent).toMatch(/^flowchart/)
     expect(editor.getText()).not.toContain('/x')
   })
 

@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver } from '@/lib/autoSave'
 import { newId } from '@/lib/utils'
 import { newMindMap } from './mindmap/mindmapModel'
+import { MERMAID_TEMPLATE } from './mermaid/renderMermaid'
 import {
   CheckSquare,
   Code2,
@@ -16,6 +17,7 @@ import {
   Shapes,
   BarChart3,
   Workflow,
+  FileCode,
   ImageIcon,
   List,
   ListOrdered,
@@ -136,6 +138,19 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: Workflow,
     keywords: ['mermaid', 'diagram', 'chart', 'flowchart', 'graph', 'sequence', 'uml'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertMermaid().run(),
+  },
+  {
+    title: 'Mermaid doc',
+    description: 'Mermaid code with highlighting and a live diagram below.',
+    icon: FileCode,
+    keywords: ['mermaid', 'doc', 'source', 'code', 'diagram', 'markdown'],
+    run: (e, r) =>
+      e
+        .chain()
+        .focus()
+        .deleteRange(r)
+        .insertContent({ type: 'codeBlock', attrs: { language: 'mermaid' }, content: [{ type: 'text', text: MERMAID_TEMPLATE }] })
+        .run(),
   },
   {
     title: 'Chart',

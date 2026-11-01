@@ -14,6 +14,7 @@ import { BlockIds } from '@/components/Editor/links/BlockIds'
 import { BlockFlash } from '@/components/Editor/links/BlockFlash'
 import { ImageSelection } from '@/components/Editor/ImageSelection'
 import { MoveBlockShortcuts } from '@/components/Editor/blockMove'
+import { CodeBlockNode } from '@/components/Editor/code/CodeBlockNode'
 
 /** Same nodes as the app, without React node views (plain DOM rendering). */
 const noView = <T extends AnyExtension>(ext: T) => (ext as unknown as { extend: (c: object) => T }).extend({ addNodeView: () => null })
@@ -25,7 +26,8 @@ export function makeEditor(content: JSONContent | string = '') {
     element,
     content,
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
+      noView(CodeBlockNode),
       TaskList,
       TaskItem.configure({ nested: true }),
       Image.extend({

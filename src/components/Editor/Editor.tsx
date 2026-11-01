@@ -10,6 +10,7 @@ import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-t
 import { FormattingToolbar } from './FormattingToolbar'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
+import { CodeBlockNode } from './code/CodeBlockNode'
 import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
 import { ChartNode } from './chart/ChartNode'
@@ -51,6 +52,8 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Replaced by the syntax-highlighted CodeBlockNode below.
+        codeBlock: false,
         // Blue line showing where a dragged block will land.
         dropcursor: { color: '#2383e2', width: 3 },
         link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
@@ -63,6 +66,7 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
           return "Write something, or press '/' for commands…"
         },
       }),
+      CodeBlockNode,
       TextStyle,
       Color,
       BackgroundColor,
