@@ -32,6 +32,15 @@ jobs:
           # (identity "-" in electron-builder.json). Add CSC_LINK / CSC_KEY_PASSWORD
           # (and Apple notarization secrets) here to sign properly.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Verify macOS signatures
+        if: runner.os == 'macOS'
+        run: |
+          for app in dist_electron/mac*/NotionClone.app; do
+            echo "== $app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            codesign -dv "$app" 2>&1 | grep -E "Signature|Identifier|Format"
+            lipo -archs "$app/Contents/MacOS/NotionClone"
+          done
       - uses: actions/upload-artifact@v5
         with:
           name: NotionClone-${{ matrix.os }}
