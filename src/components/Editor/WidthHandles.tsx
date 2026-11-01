@@ -17,23 +17,26 @@ interface Props {
  */
 export function WidthHandles({ columnRef, onPreview, onCommit }: Props) {
   const [dragging, setDragging] = useState<PageWidth | undefined>(undefined)
-  const state = useRef<{ center: number; available: number; last: PageWidth } | null>(null)
+  /** `moved` stays false for a plain click, which must not change the width. */
+  const state = useRef<{ center: number; available: number; startX: number; moved: boolean; last: PageWidth } | null>(null)
 
   const onPointerDown = (e: React.PointerEvent) => {
     const col = columnRef.current
     const scroller = col?.parentElement?.closest('#canvas-scroll') as HTMLElement | null
-    if (!col) return
+    if (!col || e.button !== 0) return
     e.preventDefault()
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
     const r = col.getBoundingClientRect()
     const available = scroller?.clientWidth ?? window.innerWidth
-    state.current = { center: r.left + r.width / 2, available, last: null }
-    setDragging(widthFromDrag(state.current.center, e.clientX, available))
+    state.current = { center: r.left + r.width / 2, available, startX: e.clientX, moved: false, last: null }
     document.body.style.cursor = 'ew-resize'
   }
   const onPointerMove = (e: React.PointerEvent) => {
     const s = state.current
     if (!s) return
+    // Ignore jitter: only a real drag (a few px) resizes the page.
+    if (!s.moved && Math.abs(e.clientX - s.startX) < 3) return
+    s.moved = true
     const w = widthFromDrag(s.center, e.clientX, s.available)
     s.last = w
     setDragging(w)
@@ -44,7 +47,8 @@ export function WidthHandles({ columnRef, onPreview, onCommit }: Props) {
     state.current = null
     document.body.style.cursor = ''
     setDragging(undefined)
-    if (s) onCommit(s.last)
+    // A click without dragging keeps the current width (it used to reset it to Default).
+    if (s?.moved) onCommit(s.last)
     onPreview(undefined)
   }
 
@@ -57,6 +61,7 @@ export function WidthHandles({ columnRef, onPreview, onCommit }: Props) {
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
       onDoubleClick={() => onCommit(null)}
       className={cn(
         'group/wh absolute bottom-0 top-0 z-10 flex w-4 cursor-ew-resize justify-center',

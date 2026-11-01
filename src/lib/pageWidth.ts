@@ -4,14 +4,14 @@
  */
 export type PageWidth = number | 'full' | null
 
-export const DEFAULT_PAGE_WIDTH = 900
+export const DEFAULT_PAGE_WIDTH = 1200
 export const MIN_PAGE_WIDTH = 600
 export const MAX_PAGE_WIDTH = 2400
 
 export const WIDTH_PRESETS: Array<{ label: string; value: PageWidth }> = [
-  { label: 'Narrow', value: 720 },
+  { label: 'Narrow', value: 900 },
   { label: 'Default', value: null },
-  { label: 'Wide', value: 1200 },
+  { label: 'Wide', value: 1500 },
   { label: 'Full width', value: 'full' },
 ]
 
