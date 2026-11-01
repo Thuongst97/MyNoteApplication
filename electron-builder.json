@@ -68,5 +68,6 @@
     "onlyLoadAppFromAsar": true,
     "resetAdHocDarwinSignature": true
   },
-  "asar": true
+  "asar": true,
+  "publish": null
 }
