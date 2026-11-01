@@ -14,6 +14,8 @@ export interface ChartSpec {
   series: ChartSeries[]
   /** Pie only: draw as a donut (ring). */
   donut?: boolean
+  /** Draw a frame around the chart in the page. */
+  border?: boolean
   /** Custom color per series (null = automatic). Used by columns, bars, line and area. */
   seriesColors?: Array<string | null>
   /** Custom color per row/label (null = automatic). Used by pie and parts of a whole. */
@@ -129,6 +131,7 @@ export function normalizeSpec(raw: unknown): ChartSpec {
   const colors = (list: unknown, n: number) => Array.from({ length: n }, (_, i) => (Array.isArray(list) && isHexColor(list[i]) ? (list[i] as string) : null))
   const out: ChartSpec = { type, title: String(r.title ?? ''), labels, series }
   if (r.donut === true) out.donut = true
+  if (r.border === true) out.border = true
   const sc = colors(r.seriesColors, series.length)
   const lc = colors(r.labelColors, labels.length)
   if (sc.some(Boolean)) out.seriesColors = sc

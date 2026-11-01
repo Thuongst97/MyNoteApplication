@@ -11,12 +11,39 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view'
  */
 export const ImageSelection = Extension.create({
   name: 'imageSelection',
+  // Before HardBreak's Mod-Enter / Shift-Enter.
+  priority: 1000,
+
+  addKeyboardShortcuts() {
+    // Mod-Enter / Shift-Enter insert a line break, which would *replace* a selected
+    // diagram, chart, drawing… Start a new line after the block instead.
+    const newLineAfterBlock = () => {
+      const { state, view } = this.editor
+      const sel = state.selection
+      if (!(sel instanceof NodeSelection) || !sel.node.isAtom || !sel.node.isBlock) return false
+      const tr = state.tr.insert(sel.to, state.schema.nodes.paragraph.create())
+      tr.setSelection(TextSelection.create(tr.doc, sel.to + 1)).scrollIntoView()
+      view.dispatch(tr)
+      return true
+    }
+    return { 'Mod-Enter': newLineAfterBlock, 'Shift-Enter': newLineAfterBlock }
+  },
 
   addProseMirrorPlugins() {
     return [
       new Plugin({
         key: new PluginKey('imageSelection'),
         props: {
+          handleDOMEvents: {
+            // Clicks inside a block's own editing panel (chart editor, Mermaid/Markdown source,
+            // toolbars) belong to that panel. Without this, clicking the icon or label inside a
+            // button selects the whole block and moves focus to the page, so the panel's
+            // shortcuts (Ctrl+Enter to save) would act on the page instead.
+            mousedown(view, event) {
+              const t = event.target as HTMLElement | null
+              return !!t?.closest?.('.no-drag') && view.dom.contains(t)
+            },
+          },
           handleClickOn(view, _pos, node, nodePos, event, direct) {
             if (!direct || node.type.name !== 'image') return false
             // Clicks on the resize handles are handled by the resize logic.

@@ -12,6 +12,7 @@ import {
   Loader2,
   Plus,
   Rows3,
+  Square,
   Table2,
   Trash2,
   X,
@@ -81,7 +82,11 @@ export function ChartView({ node, updateAttributes, deleteNode, selected, editor
       data-drag-handle
       className={cn(
         'chart-block group/chart relative my-3 rounded-lg border transition-colors',
-        editing || selected ? 'border-blue-400/70' : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
+        editing || selected
+          ? 'border-blue-400/70'
+          : spec.border
+            ? 'border-black/15 dark:border-white/15'
+            : 'border-transparent hover:border-black/10 dark:hover:border-white/10',
       )}
     >
       {editing ? (
@@ -102,6 +107,13 @@ export function ChartView({ node, updateAttributes, deleteNode, selected, editor
             <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/chart:opacity-100">
               <ToolbarButton label={showTable ? 'Hide data table' : 'Show data table'} active={showTable} onClick={() => setShowTable((v) => !v)}>
                 <Table2 size={14} /> Table
+              </ToolbarButton>
+              <ToolbarButton
+                label={spec.border ? 'Hide border' : 'Show border'}
+                active={!!spec.border}
+                onClick={() => updateAttributes({ spec: normalizeSpec({ ...spec, border: !spec.border }) })}
+              >
+                <Square size={14} /> Border
               </ToolbarButton>
               <ToolbarButton label="Edit chart" onClick={() => setEditing(true)}>
                 <Code2 size={14} /> Edit
@@ -251,6 +263,10 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
             )
           })}
         </div>
+        <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-black/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#191919]">
+          <input type="checkbox" checked={!!draft.border} onChange={(e) => update((d) => ({ ...d, border: e.target.checked }))} />
+          Border
+        </label>
         {draft.type === 'pie' && (
           <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-black/10 bg-white px-2 py-1 text-xs dark:border-white/10 dark:bg-[#191919]">
             <input type="checkbox" checked={!!draft.donut} onChange={(e) => update((d) => ({ ...d, donut: e.target.checked }))} />

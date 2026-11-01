@@ -119,3 +119,11 @@ describe('pie charts and custom colors', () => {
     expect(textOn('nope')).toBe('#ffffff')
   })
 })
+
+describe('chart border', () => {
+  it('is off by default and kept when turned on', () => {
+    expect(normalizeSpec(DEFAULT_CHART).border).toBeUndefined()
+    expect(normalizeSpec({ ...DEFAULT_CHART, border: true }).border).toBe(true)
+    expect(normalizeSpec({ ...DEFAULT_CHART, border: 'yes' }).border).toBeUndefined()
+  })
+})
