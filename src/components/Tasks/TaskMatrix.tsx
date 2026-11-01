@@ -64,7 +64,7 @@ export function TaskMatrix() {
   const openTask = tasks.find((t) => t.id === openId) ?? null
 
   return (
-    <div className={cn('min-h-full bg-[#F9FAFB] dark:bg-[#17181B]', MATRIX_TEXT)}>
+    <div className={cn('min-h-full', MATRIX_TEXT)}>
       <div className="mx-auto flex min-h-full w-full max-w-[1200px] flex-col px-8 pb-10 pt-6">
         {/* Header */}
         <div className="mb-5 flex flex-wrap items-end gap-3">
