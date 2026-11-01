@@ -6,6 +6,8 @@ import { atHour, fromLocalInput, nextWeek, toLocalInput } from '@/lib/dates'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { cn, isMacLike } from '@/lib/utils'
 import { QUADRANT_STYLE } from './quadrantStyle'
+import { quadrantPalette } from '@/lib/quadrantColors'
+import { useAppStore } from '@/stores/useAppStore'
 
 interface TaskDialogProps {
   task: Task
@@ -15,6 +17,8 @@ interface TaskDialogProps {
 /** Edit a task: title, quadrant, due date, reminders and notes. */
 export function TaskDialog({ task, onClose }: TaskDialogProps) {
   const { update, remove, settings } = useTaskStore.getState()
+  const quadrantColors = useTaskStore((s) => s.settings.quadrantColors)
+  const theme = useAppStore((s) => s.theme)
   const [title, setTitle] = useState(task.title)
   const [notes, setNotes] = useState(task.notes)
   const [important, setImportant] = useState(task.important)
@@ -33,8 +37,7 @@ export function TaskDialog({ task, onClose }: TaskDialogProps) {
     onClose()
   }
 
-  const toggleReminder = (m: number) =>
-    setReminders((r) => (r.includes(m) ? r.filter((x) => x !== m) : [...r, m].sort((a, b) => a - b)))
+  const toggleReminder = (m: number) => setReminders((r) => (r.includes(m) ? r.filter((x) => x !== m) : [...r, m].sort((a, b) => a - b)))
 
   const now = Date.now()
   const mod = isMacLike() ? '⌘' : 'Ctrl'
@@ -62,7 +65,12 @@ export function TaskDialog({ task, onClose }: TaskDialogProps) {
             placeholder="Task name"
             className="min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:opacity-40"
           />
-          <button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1 opacity-50 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10">
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="rounded-md p-1 opacity-50 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+          >
             <X size={16} />
           </button>
         </div>
@@ -76,6 +84,8 @@ export function TaskDialog({ task, onClose }: TaskDialogProps) {
                 const style = QUADRANT_STYLE[q.id]
                 const active = quadrantOf({ important, urgent }) === q.id
                 const Icon = style.icon
+                const customHex = quadrantColors?.[q.id]
+                const custom = customHex ? quadrantPalette(customHex, theme) : null
                 return (
                   <button
                     key={q.id}
@@ -87,11 +97,12 @@ export function TaskDialog({ task, onClose }: TaskDialogProps) {
                     className={cn(
                       'flex items-center gap-2 rounded-md border px-2.5 py-2 text-left text-sm transition',
                       active
-                        ? cn('border-transparent ring-2', style.ring, style.tint)
+                        ? cn('border-transparent ring-2', !custom && style.ring, !custom && style.tint)
                         : 'border-black/10 hover:bg-black/[0.03] dark:border-white/10 dark:hover:bg-white/[0.04]',
                     )}
+                    style={active && custom ? { backgroundColor: custom.background, boxShadow: `0 0 0 2px ${custom.ring}` } : undefined}
                   >
-                    <Icon size={15} className={style.accent} />
+                    <Icon size={15} className={cn(!custom && style.accent)} style={custom ? { color: custom.accent } : undefined} />
                     <span className="min-w-0">
                       <span className="block font-medium">{q.title}</span>
                       <span className="block truncate text-[11px] opacity-50">
@@ -202,9 +213,7 @@ export function Chip({ children, onClick, active }: { children: React.ReactNode;
       onClick={onClick}
       className={cn(
         'rounded-full border px-2.5 py-0.5 text-xs transition',
-        active
-          ? 'border-blue-500 bg-blue-500 text-white'
-          : 'border-black/10 hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/10',
+        active ? 'border-blue-500 bg-blue-500 text-white' : 'border-black/10 hover:bg-black/5 dark:border-white/15 dark:hover:bg-white/10',
       )}
     >
       {children}

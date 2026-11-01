@@ -34,6 +34,16 @@ describe('TaskStore', () => {
     expect(await new TaskStore(root).getSettings()).toEqual(next)
   })
 
+  it('stores custom quadrant colors (valid hex only) and removes them on reset', async () => {
+    const s = new TaskStore(root)
+    const next = await s.setSettings({ quadrantColors: { do: '#8FBF9F', schedule: 'red', delegate: '#d7b57e', bogus: '#000000' } as never })
+    expect(next.quadrantColors).toEqual({ do: '#8fbf9f', delegate: '#d7b57e' })
+    expect((await new TaskStore(root).getSettings()).quadrantColors).toEqual({ do: '#8fbf9f', delegate: '#d7b57e' })
+    const reset = await s.setSettings({ quadrantColors: {} })
+    expect(reset).not.toHaveProperty('quadrantColors')
+    expect(reset.defaultReminders).toEqual([0, 15])
+  })
+
   it('hands out due reminders once and remembers them across restarts', async () => {
     const s = new TaskStore(root)
     const now = Date.now()

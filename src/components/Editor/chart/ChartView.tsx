@@ -34,7 +34,7 @@ import {
   type ChartSpec,
   type ChartType,
 } from './chartModel'
-import { ColorPicker } from './ColorPicker'
+import { ColorPicker } from '@/components/ui/ColorPicker'
 
 const ChartRender = lazy(() => import('./ChartRender'))
 

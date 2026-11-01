@@ -33,8 +33,9 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
       tabIndex={0}
       role="button"
       className={cn(
-        'group flex cursor-pointer items-start gap-2.5 rounded-md border border-black/[0.07] bg-white px-2.5 py-2 text-sm shadow-[0_1px_2px_rgba(0,0,0,0.04)] outline-none transition',
-        'hover:border-black/15 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-white/[0.07] dark:bg-[#252525] dark:hover:border-white/15',
+        'group flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#EEF0F3] bg-white px-3 py-2.5 text-sm text-[#1F2937] outline-none transition',
+        'shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:-translate-y-px hover:border-[#E2E5EA] hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)]',
+        'focus-visible:ring-2 focus-visible:ring-[#93B4DD] dark:border-white/[0.06] dark:bg-[#202227] dark:text-[#E5E7EB] dark:shadow-[0_4px_20px_rgba(0,0,0,0.25)] dark:hover:border-white/[0.12]',
         highlighted && 'animate-pulse ring-2 ring-blue-500',
       )}
     >
@@ -49,15 +50,13 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
         }}
         className={cn(
           'mt-[1px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-colors',
-          task.completed
-            ? 'border-blue-500 bg-blue-500 text-white'
-            : 'border-black/25 hover:border-blue-500 hover:bg-blue-500/10 dark:border-white/30',
+          task.completed ? 'border-[#5B83B7] bg-[#5B83B7] text-white' : 'border-[#CBD0D8] hover:border-[#5B83B7] hover:bg-[#5B83B7]/10 dark:border-white/25',
         )}
       >
         {task.completed && <Check size={12} strokeWidth={3} />}
       </button>
       <div className="min-w-0 flex-1">
-        <div className={cn('break-words leading-snug', task.completed && 'text-ink-light/45 line-through dark:text-ink-dark/40', !task.title && 'opacity-50')}>
+        <div className={cn('break-words leading-snug', task.completed && 'text-[#9CA3AF] line-through dark:text-[#6B7280]', !task.title && 'opacity-50')}>
           {task.title || 'Untitled task'}
         </div>
         {(task.dueAt !== null || task.notes) && (
@@ -66,9 +65,9 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
               <span
                 className={cn(
                   'flex items-center gap-1',
-                  state === 'overdue' && 'font-medium text-red-600 dark:text-red-400',
-                  state === 'soon' && 'text-amber-600 dark:text-amber-400',
-                  (state === 'later' || state === null) && 'opacity-55',
+                  state === 'overdue' && 'font-medium text-[#D25C5C] dark:text-[#F19A9A]',
+                  state === 'soon' && 'text-[#B48A4C] dark:text-[#D7B57E]',
+                  (state === 'later' || state === null) && 'text-[#6B7280] dark:text-[#9CA3AF]',
                 )}
               >
                 <Calendar size={12} />
@@ -77,12 +76,12 @@ export function TaskCard({ task, now, highlighted, onToggle, onOpen }: TaskCardP
               </span>
             )}
             {task.dueAt !== null && task.reminders.length > 0 && !task.completed && (
-              <span className="flex items-center gap-0.5 opacity-45" title={`${task.reminders.length} reminder(s)`}>
+              <span className="flex items-center gap-0.5 text-[#9CA3AF]" title={`${task.reminders.length} reminder(s)`}>
                 <Bell size={11} />
                 {task.reminders.length}
               </span>
             )}
-            {task.notes && <span className="truncate opacity-45">{task.notes.split('\n')[0]}</span>}
+            {task.notes && <span className="truncate text-[#6B7280] dark:text-[#9CA3AF]">{task.notes.split('\n')[0]}</span>}
           </div>
         )}
       </div>

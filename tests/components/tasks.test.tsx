@@ -6,6 +6,7 @@ import { TaskMatrix } from '@/components/Tasks/TaskMatrix'
 import { TaskDialog } from '@/components/Tasks/TaskDialog'
 import { newTask } from '@/lib/reminders'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { useAppStore } from '@/stores/useAppStore'
 
 const NOW = new Date(2026, 9, 31, 12).getTime()
 const settings = { defaultReminders: [0, 15], runInBackground: true }
@@ -38,6 +39,24 @@ describe('TaskCard', () => {
 })
 
 describe('TaskMatrix', () => {
+  it('recolors a quadrant from its palette button and resets it to default', async () => {
+    const setSettings = vi.fn(async (patch) => useTaskStore.setState((st) => ({ settings: { ...st.settings, ...patch } })))
+    useTaskStore.setState({ setSettings } as never)
+    useAppStore.setState({ theme: 'light' })
+    render(<TaskMatrix />)
+    const doFirst = screen.getByRole('region', { name: 'Do first' })
+    await userEvent.click(within(doFirst).getByRole('button', { name: 'Color of Do first' }))
+    await userEvent.click(within(doFirst).getByRole('button', { name: 'Use #8fbf9f' }))
+    expect(setSettings).toHaveBeenLastCalledWith({ quadrantColors: { do: '#8fbf9f' } })
+    // The quadrant is painted with the custom color (inline), others keep the default.
+    expect(doFirst.style.borderColor).toBe('rgba(143, 191, 159, 0.45)')
+    expect(screen.getByRole('region', { name: 'Schedule' }).style.borderColor).toBe('')
+    await userEvent.click(within(doFirst).getByRole('button', { name: 'Color of Do first' }))
+    await userEvent.click(within(doFirst).getByRole('button', { name: 'Default' }))
+    expect(setSettings).toHaveBeenLastCalledWith({ quadrantColors: {} })
+    expect(doFirst.style.borderColor).toBe('')
+  })
+
   it('shows the four quadrants with axis labels', () => {
     render(<TaskMatrix />)
     for (const q of ['Do first', 'Schedule', 'Delegate', 'Eliminate']) expect(screen.getByRole('region', { name: q })).toBeInTheDocument()

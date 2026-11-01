@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check } from 'lucide-react'
+import { Check, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { COLOR_CHOICES, isHexColor } from './chartModel'
+import { COLOR_CHOICES, isHexColor } from '@/components/Editor/chart/chartModel'
 
 interface Props {
   /** The color currently shown (custom or automatic). */
@@ -10,10 +10,29 @@ interface Props {
   custom: string | null | undefined
   onChange: (color: string | null) => void
   label: string
+  /** Preset colors (default: the chart palette). */
+  choices?: string[]
+  /** Text of the button that clears the custom color. */
+  autoLabel?: string
+  /** 'swatch' (default): a small color square; 'icon': a palette icon button. */
+  trigger?: 'swatch' | 'icon'
+  /** Which side the palette opens towards. */
+  align?: 'left' | 'right'
+  className?: string
 }
 
 /** Swatch button that opens a small palette: preset colors, a custom color and "Auto". */
-export function ColorPicker({ color, custom, onChange, label }: Props) {
+export function ColorPicker({
+  color,
+  custom,
+  onChange,
+  label,
+  choices = COLOR_CHOICES,
+  autoLabel = 'Auto',
+  trigger = 'swatch',
+  align = 'left',
+  className,
+}: Props) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const swatch = useRef<HTMLButtonElement>(null)
@@ -38,18 +57,33 @@ export function ColorPicker({ color, custom, onChange, label }: Props) {
   }
 
   return (
-    <div ref={root} className="relative inline-flex">
-      <button
-        ref={swatch}
-        type="button"
-        title={`${label} — change color`}
-        aria-label={`Color of ${label}`}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="h-4 w-4 shrink-0 rounded-sm ring-1 ring-black/10 transition-transform hover:scale-110 dark:ring-white/20"
-        style={{ background: color }}
-      />
+    <div ref={root} className={cn('relative inline-flex', className)}>
+      {trigger === 'icon' ? (
+        <button
+          ref={swatch}
+          type="button"
+          title={`${label} — change color`}
+          aria-label={`Color of ${label}`}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-white/80 hover:text-[#1F2937] dark:text-[#9CA3AF] dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          <Palette size={15} />
+        </button>
+      ) : (
+        <button
+          ref={swatch}
+          type="button"
+          title={`${label} — change color`}
+          aria-label={`Color of ${label}`}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="h-4 w-4 shrink-0 rounded-sm ring-1 ring-black/10 transition-transform hover:scale-110 dark:ring-white/20"
+          style={{ background: color }}
+        />
+      )}
       {open && (
         <div
           role="dialog"
@@ -61,10 +95,15 @@ export function ColorPicker({ color, custom, onChange, label }: Props) {
               close()
             }
           }}
-          className="absolute left-0 top-6 z-50 w-[184px] rounded-lg border border-black/10 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#252525]"
+          className={cn(
+            'absolute z-50 w-[184px]',
+            trigger === 'icon' ? 'top-8' : 'top-6',
+            align === 'right' ? 'right-0' : 'left-0',
+            ' rounded-lg border border-black/10 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#252525]',
+          )}
         >
           <div className="grid grid-cols-6 gap-1.5">
-            {COLOR_CHOICES.map((c) => (
+            {choices.map((c) => (
               <button
                 key={c}
                 type="button"
@@ -97,7 +136,7 @@ export function ColorPicker({ color, custom, onChange, label }: Props) {
                 !custom && 'font-semibold text-blue-600 dark:text-blue-400',
               )}
             >
-              Auto
+              {autoLabel}
             </button>
           </div>
         </div>

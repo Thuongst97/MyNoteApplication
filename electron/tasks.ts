@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Task, TaskSettings, TaskUpdate } from '../src/types'
+import { cleanQuadrantColors } from '../src/lib/quadrantColors'
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, type DueNotification } from '../src/lib/reminders'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
@@ -41,6 +42,7 @@ export class TaskStore {
         const list = await readJson<Task[]>(this.tasksFile, [])
         for (const t of Array.isArray(list) ? list : []) if (t && typeof t.id === 'string') this.tasks.set(t.id, t)
         this.settings = { ...DEFAULT_TASK_SETTINGS, ...(await readJson<Partial<TaskSettings>>(this.settingsFile, {})) }
+        this.settings = withQuadrantColors(this.settings, this.settings.quadrantColors)
       })()
     }
     return this.loaded
@@ -83,9 +85,9 @@ export class TaskStore {
     if (Array.isArray(patch.defaultReminders))
       next.defaultReminders = [...new Set(patch.defaultReminders.map(Number).filter((m) => Number.isFinite(m) && m >= 0))].sort((a, b) => a - b)
     if (typeof patch.runInBackground === 'boolean') next.runInBackground = patch.runInBackground
-    this.settings = next
-    await writeJsonAtomic(this.settingsFile, next)
-    return next
+    this.settings = patch.quadrantColors !== undefined ? withQuadrantColors(next, patch.quadrantColors) : next
+    await writeJsonAtomic(this.settingsFile, this.settings)
+    return this.settings
   }
 
   /** Returns reminders that are due now and records them as sent. */
@@ -98,4 +100,11 @@ export class TaskStore {
     }
     return notifications
   }
+}
+
+/** Stores only valid custom quadrant colors, and no key at all when none are set. */
+function withQuadrantColors(settings: TaskSettings, raw: unknown): TaskSettings {
+  const { quadrantColors: _old, ...rest } = settings
+  const colors = cleanQuadrantColors(raw)
+  return Object.keys(colors).length ? { ...rest, quadrantColors: colors } : rest
 }

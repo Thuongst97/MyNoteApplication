@@ -7,7 +7,8 @@ import { useAppStore } from '@/stores/useAppStore'
 import { api, isElectron, platform } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { Popover } from '@/components/ui/Popover'
-import { QUADRANT_STYLE } from './quadrantStyle'
+import { MATRIX_TEXT, MATRIX_TEXT_SECONDARY, QUADRANT_DEFAULT_HEX, QUADRANT_PRESETS, QUADRANT_STYLE, SOFT_SHADOW, useQuadrantCustom } from './quadrantStyle'
+import { ColorPicker } from '@/components/ui/ColorPicker'
 import { TaskCard, dueState } from './TaskCard'
 import { Chip, TaskDialog } from './TaskDialog'
 
@@ -46,9 +47,7 @@ export function TaskMatrix() {
   useEffect(() => {
     if (!highlightTaskId || !isLoaded) return
     setFlashId(highlightTaskId)
-    requestAnimationFrame(() =>
-      document.querySelector(`[data-task-id="${highlightTaskId}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
-    )
+    requestAnimationFrame(() => document.querySelector(`[data-task-id="${highlightTaskId}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
     useAppStore.setState({ highlightTaskId: null })
     const t = setTimeout(() => setFlashId(null), 2500)
     return () => clearTimeout(t)
@@ -66,43 +65,45 @@ export function TaskMatrix() {
   const openTask = tasks.find((t) => t.id === openId) ?? null
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[1200px] flex-col px-8 pb-10 pt-6">
-      {/* Header */}
-      <div className="mb-5 flex flex-wrap items-end gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2.5 text-[32px] font-bold leading-tight tracking-tight">
-            <CheckSquare size={30} strokeWidth={2.2} className="text-blue-500" /> Tasks
-          </h1>
-          <p className="mt-1 text-sm opacity-55">
-            Eisenhower Matrix · {open.length} open
-            {overdue > 0 && <span className="text-red-600 dark:text-red-400"> · {overdue} overdue</span>}
-          </p>
+    <div className={cn('min-h-full bg-[#F9FAFB] dark:bg-[#17181B]', MATRIX_TEXT)}>
+      <div className="mx-auto flex min-h-full w-full max-w-[1200px] flex-col px-8 pb-10 pt-6">
+        {/* Header */}
+        <div className="mb-5 flex flex-wrap items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="flex items-center gap-2.5 text-[32px] font-bold leading-tight tracking-tight">
+              <CheckSquare size={30} strokeWidth={2.2} className="text-blue-500" /> Tasks
+            </h1>
+            <p className={cn('mt-1 text-sm', MATRIX_TEXT_SECONDARY)}>
+              Eisenhower Matrix · {open.length} open
+              {overdue > 0 && <span className="font-medium text-[#D25C5C] dark:text-[#F19A9A]"> · {overdue} overdue</span>}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCompleted(!showCompleted)}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+          >
+            {showCompleted ? <EyeOff size={15} /> : <Eye size={15} />}
+            {showCompleted ? 'Hide completed' : 'Show completed'}
+          </button>
+          <ReminderSettings />
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCompleted(!showCompleted)}
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
-        >
-          {showCompleted ? <EyeOff size={15} /> : <Eye size={15} />}
-          {showCompleted ? 'Hide completed' : 'Show completed'}
-        </button>
-        <ReminderSettings />
-      </div>
 
-      {/* Axis labels + 2×2 grid */}
-      <div className="grid flex-1 grid-cols-[28px_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-3">
-        <div />
-        <AxisLabel>Urgent</AxisLabel>
-        <AxisLabel>Not urgent</AxisLabel>
-        <AxisLabel vertical>Important</AxisLabel>
-        <QuadrantColumn id="do" tasks={byQuadrant.do} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
-        <QuadrantColumn id="schedule" tasks={byQuadrant.schedule} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
-        <AxisLabel vertical>Not important</AxisLabel>
-        <QuadrantColumn id="delegate" tasks={byQuadrant.delegate} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
-        <QuadrantColumn id="eliminate" tasks={byQuadrant.eliminate} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
-      </div>
+        {/* Axis labels + 2×2 grid */}
+        <div className="grid flex-1 grid-cols-[28px_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-3">
+          <div />
+          <AxisLabel>Urgent</AxisLabel>
+          <AxisLabel>Not urgent</AxisLabel>
+          <AxisLabel vertical>Important</AxisLabel>
+          <QuadrantColumn id="do" tasks={byQuadrant.do} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
+          <QuadrantColumn id="schedule" tasks={byQuadrant.schedule} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
+          <AxisLabel vertical>Not important</AxisLabel>
+          <QuadrantColumn id="delegate" tasks={byQuadrant.delegate} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
+          <QuadrantColumn id="eliminate" tasks={byQuadrant.eliminate} now={now} flashId={flashId} onOpen={setOpenId} onAdd={add} onUpdate={update} />
+        </div>
 
-      {openTask && <TaskDialog key={openTask.id} task={openTask} onClose={() => setOpenId(null)} />}
+        {openTask && <TaskDialog key={openTask.id} task={openTask} onClose={() => setOpenId(null)} />}
+      </div>
     </div>
   )
 }
@@ -111,7 +112,7 @@ function AxisLabel({ children, vertical }: { children: React.ReactNode; vertical
   return (
     <div
       className={cn(
-        'flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.12em] opacity-40',
+        'flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B7280] dark:text-[#8B929C]',
         vertical && '[writing-mode:vertical-rl] rotate-180',
       )}
     >
@@ -133,6 +134,14 @@ interface QuadrantColumnProps {
 function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: QuadrantColumnProps) {
   const q = QUADRANTS.find((x) => x.id === id)!
   const style = QUADRANT_STYLE[id]
+  const custom = useQuadrantCustom(id)
+  const setQuadrantColor = (color: string | null) => {
+    const { settings, setSettings } = useTaskStore.getState()
+    const next = { ...settings.quadrantColors }
+    if (color) next[id] = color
+    else delete next[id]
+    void setSettings({ quadrantColors: next })
+  }
   const Icon = style.icon
   const [draft, setDraft] = useState('')
   const [adding, setAdding] = useState(false)
@@ -164,22 +173,43 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         if (taskId) void onUpdate({ id: taskId, important: q.important, urgent: q.urgent })
       }}
       className={cn(
-        'flex min-h-[220px] flex-col rounded-xl border border-black/[0.06] p-3 transition dark:border-white/[0.06]',
-        style.tint,
-        dragOver && cn('ring-2', style.ring),
+        'group/quad flex min-h-[220px] flex-col rounded-2xl border p-3.5 transition',
+        !custom && style.tint,
+        !custom && style.border,
+        SOFT_SHADOW,
+        dragOver && !custom && cn('ring-2', style.ring),
       )}
+      style={
+        custom ? { backgroundColor: custom.background, borderColor: custom.border, ...(dragOver && { boxShadow: `0 0 0 2px ${custom.ring}` }) } : undefined
+      }
     >
       <header className="mb-2.5 flex items-start gap-2 px-0.5">
-        <Icon size={17} className={cn('mt-0.5 shrink-0', style.accent)} />
+        <Icon size={17} className={cn('mt-0.5 shrink-0', !custom && style.accent)} style={custom ? { color: custom.accent } : undefined} />
         <div className="min-w-0 flex-1">
-          <div className={cn('flex items-center gap-2 text-[15px] font-semibold', style.accent)}>
+          <div className={cn('flex items-center gap-2 text-[15px] font-semibold tracking-tight', MATRIX_TEXT)}>
             {q.title}
-            <span className="rounded-full bg-black/5 px-1.5 text-[11px] font-medium text-ink-light/60 dark:bg-white/10 dark:text-ink-dark/60">
+            <span
+              className={cn(
+                'rounded-full bg-white/80 px-1.5 text-[11px] font-medium ring-1 ring-black/[0.05] dark:bg-white/10 dark:ring-white/10',
+                MATRIX_TEXT_SECONDARY,
+              )}
+            >
               {openCount}
             </span>
           </div>
-          <div className="truncate text-xs opacity-50">{q.hint}</div>
+          <div className={cn('truncate text-xs', MATRIX_TEXT_SECONDARY)}>{q.hint}</div>
         </div>
+        <ColorPicker
+          trigger="icon"
+          align="right"
+          label={q.title}
+          color={custom?.hex ?? QUADRANT_DEFAULT_HEX[id]}
+          custom={custom?.hex}
+          choices={QUADRANT_PRESETS}
+          autoLabel="Default"
+          onChange={setQuadrantColor}
+          className="-mr-1 -mt-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100"
+        />
       </header>
 
       <div className="flex flex-1 flex-col gap-1.5">
@@ -193,7 +223,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
             onToggle={() => void onUpdate({ id: t.id, completed: !t.completed })}
           />
         ))}
-        {tasks.length === 0 && !adding && <div className="px-1 py-3 text-center text-xs opacity-35">Drop tasks here</div>}
+        {tasks.length === 0 && !adding && <div className="px-1 py-3 text-center text-xs text-[#9CA3AF] dark:text-[#6B7280]">Drop tasks here</div>}
 
         {adding ? (
           <input
@@ -212,13 +242,16 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
               }
             }}
             placeholder="Task name, then Enter"
-            className="rounded-md border border-blue-400 bg-white px-2.5 py-2 text-sm outline-none dark:bg-[#252525]"
+            className="rounded-lg border border-[#93B4DD] bg-white px-3 py-2 text-sm text-[#1F2937] shadow-[0_4px_20px_rgba(0,0,0,0.03)] outline-none dark:bg-[#202227] dark:text-[#E5E7EB]"
           />
         ) : (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm opacity-50 hover:bg-black/5 hover:opacity-90 dark:hover:bg-white/10"
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-white/70 dark:hover:bg-white/[0.06]',
+              MATRIX_TEXT_SECONDARY,
+            )}
           >
             <Plus size={15} /> New task
           </button>

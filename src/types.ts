@@ -56,6 +56,8 @@ export interface TaskSettings {
   defaultReminders: number[]
   /** Windows/Linux: keep running in the system tray after the window is closed, so reminders still arrive. */
   runInBackground: boolean
+  /** Custom quadrant colors (#rrggbb) for the Eisenhower Matrix; missing = default. */
+  quadrantColors?: Partial<Record<'do' | 'schedule' | 'delegate' | 'eliminate', string>>
 }
 
 export interface PageLinkEdge {
