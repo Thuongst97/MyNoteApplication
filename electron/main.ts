@@ -199,13 +199,22 @@ function openLibraryBrowser() {
   browseSession.setPermissionCheckHandler(() => false)
   // Files are never saved to disk from this window. The site's "Download" button fetches an
   // .excalidrawlib file: that is offered for installation instead (same checks as "Add to Excalidraw").
+  /**
+   * Dialogs for this window. On macOS a dialog with a parent is a *sheet*; when the app is in
+   * full screen the libraries window lands in a full-screen space where that sheet can stay
+   * invisible, so clicks seemed to do nothing. There, use app-modal dialogs (always visible).
+   */
+  const ask = (opts: Electron.MessageBoxOptions) => {
+    const parent = browseWin && !browseWin.isDestroyed() ? browseWin : win
+    return isMac || !parent ? dialog.showMessageBox(opts) : dialog.showMessageBox(parent, opts)
+  }
   browseSession.removeAllListeners('will-download')
   browseSession.on('will-download', (ev, item) => {
     ev.preventDefault()
     const url = item.getURL()
     if (libraryFileUrlFrom(url, { allowLocalHttp: isDev })) confirmAndInstall(url)
     else
-      void dialog.showMessageBox(browseWin ?? win!, {
+      void ask({
         type: 'info',
         message: 'Use “Add to Excalidraw” to install this library',
         detail: 'Downloads are turned off in this window. “Add to Excalidraw” saves the library straight into your libraries.',
@@ -214,8 +223,10 @@ function openLibraryBrowser() {
   browseWin = new BrowserWindow({
     width: 1180,
     height: 820,
-    title: 'Browse libraries',
-    parent: win ?? undefined,
+    title: 'Excalidraw Libraries',
+    // On macOS a child of a full-screen window is pushed into full screen too (and its dialogs
+    // misbehave), so there it's a normal standalone window that can't go full screen.
+    ...(isMac ? { fullscreenable: false, center: true } : { parent: win ?? undefined }),
     autoHideMenuBar: true,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, session: browseSession, devTools: isDev },
   })
@@ -234,8 +245,7 @@ function openLibraryBrowser() {
   }
   function confirmAndInstall(lib: string) {
     // The website asks to install; the user confirms (a page can't install things on its own).
-    void dialog
-      .showMessageBox(browseWin ?? win!, {
+    void ask({
         type: 'question',
         buttons: ['Install', 'Cancel'],
         defaultId: 0,
@@ -251,7 +261,7 @@ function openLibraryBrowser() {
         notify('Library installed', `“${name}” was added to your libraries.`)
       })
       .catch((err: Error) => {
-        void dialog.showMessageBox(browseWin ?? win!, { type: 'error', message: 'Could not install the library', detail: err.message })
+        void ask({ type: 'error', message: 'Could not install the library', detail: err.message })
       })
   }
   const contents = browseWin.webContents
