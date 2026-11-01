@@ -9,6 +9,7 @@ import { GraphView } from '@/components/Graph/GraphView'
 import ChartRender from '@/components/Editor/chart/ChartRender'
 import { useAppStore } from '@/stores/useAppStore'
 import { useTaskStore } from '@/stores/useTaskStore'
+import { resetTabs } from '@/stores/useTabsStore'
 import { api } from '@/lib/api'
 
 const initial = useAppStore.getState()
@@ -92,13 +93,15 @@ describe('SearchModal', () => {
 })
 
 describe('TopBar', () => {
-  it('shows breadcrumbs for nested pages', async () => {
+  it('shows the open page as the active tab, with page options, and no breadcrumb row', async () => {
     const { spec } = await seed()
+    useAppStore.setState({ isLoaded: true })
+    resetTabs()
     s().setActivePage(spec)
     render(<TopBar />)
-    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
-    expect(nav).toHaveTextContent('Project Alpha')
-    expect(nav).toHaveTextContent('Design Spec')
+    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('Design Spec')
+    expect(screen.getByRole('button', { name: 'Page options' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull()
   })
 })
 
