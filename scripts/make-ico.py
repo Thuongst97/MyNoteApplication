@@ -4,6 +4,11 @@ Windows-friendly layout: classic 32-bit BMP (DIB) frames for 16-128 px and a
 PNG frame only for 256 px. Icons whose small frames are PNG-compressed can
 make Explorer / the taskbar fall back to a default icon.
 
+The source artwork has macOS-style empty space around the tile (macOS expects it).
+Windows and tray icons are drawn edge to edge, so that space would make the icon look
+small in the taskbar: those images are cropped to the tile first (keeping a ~2% margin).
+Also writes the window icon (public/app-icon.png) and tray icons (public/tray*.png).
+
 Usage: python3 scripts/make-ico.py
 """
 import io
@@ -16,6 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "resources" / "icon.png"
 OUT = ROOT / "resources" / "icon.ico"
 SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]
+MARGIN = 0.02
+PNGS = {ROOT / "public" / "app-icon.png": 256, ROOT / "public" / "tray.png": 32, ROOT / "public" / "tray@2x.png": 64}
 
 
 def bmp_frame(im: Image.Image) -> bytes:
@@ -41,8 +48,17 @@ def png_frame(im: Image.Image) -> bytes:
     return buf.getvalue()
 
 
+def tight(src: Image.Image) -> Image.Image:
+    """The tile without the surrounding empty space, centred on a square with a small margin."""
+    tile = src.crop(src.getchannel("A").getbbox())
+    side = round(max(tile.size) * (1 + 2 * MARGIN))
+    out = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    out.paste(tile, ((side - tile.width) // 2, (side - tile.height) // 2))
+    return out
+
+
 def main() -> None:
-    src = Image.open(SRC).convert("RGBA")
+    src = tight(Image.open(SRC).convert("RGBA"))
     frames = []
     for s in SIZES:
         im = src.resize((s, s), Image.LANCZOS)
@@ -57,6 +73,9 @@ def main() -> None:
         out += data
     OUT.write_bytes(bytes(out))
     print(f"wrote {OUT} ({len(out)} bytes, sizes {SIZES})")
+    for path, size in PNGS.items():
+        src.resize((size, size), Image.LANCZOS).save(path, optimize=True)
+        print(f"wrote {path} ({size}px)")
 
 
 if __name__ == "__main__":
