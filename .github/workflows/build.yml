@@ -17,8 +17,8 @@ jobs:
             target: --mac
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -28,9 +28,11 @@ jobs:
       - run: npm run build
       - run: npx electron-builder ${{ matrix.target }} --publish never
         env:
-          # Unsigned builds; add signing secrets here when available.
+          # No signing certificates yet: Windows is unsigned, macOS is ad-hoc signed
+          # (identity "-" in electron-builder.json). Add CSC_LINK / CSC_KEY_PASSWORD
+          # (and Apple notarization secrets) here to sign properly.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: NotionClone-${{ matrix.os }}
           path: |
