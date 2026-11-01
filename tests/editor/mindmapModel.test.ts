@@ -149,10 +149,38 @@ describe('layout', () => {
     expect(l.byId.get(a)!.hiddenChildren).toBe(2)
   })
 
-  it('honours custom branch colors and wraps long text', () => {
-    const m = updateNode(sample(), byText(sample(), 'A'), {})
-    const custom = updateNode(m, byText(m, 'B'), { color: 6 })
-    expect(layoutMindMap(custom, measure).byId.get(byText(m, 'B'))!.color).toBe(6)
+  it('applies topic colors to sub-topics unless they have their own', () => {
+    let m = sample()
+    const a = byText(m, 'A')
+    m = addChild(m, a, 'A1').map
+    m = addChild(m, byText(m, 'A1'), 'A1x').map
+    m = addChild(m, a, 'A2').map
+    m = updateNode(m, a, { color: 6 })
+    m = updateNode(m, byText(m, 'A1'), { color: '#ff8800' })
+    const l = layoutMindMap(m, measure)
+    const col = (t: string) => l.byId.get(byText(m, t))!.color
+    expect(col('A')).toBe(6)
+    expect(col('A2')).toBe(6) // inherits from A
+    expect(col('A1')).toBe('#ff8800') // own custom color
+    expect(col('A1x')).toBe('#ff8800') // inherits from A1
+    expect(col('B')).toBe(1) // untouched branches keep palette order
+  })
+
+  it('colors the central topic and clears colors with undefined', () => {
+    const m = updateNode(sample(), sample().root.id, {})
+    const colored = updateNode(m, m.root.id, { color: '#123456' })
+    expect(layoutMindMap(colored, measure).byId.get(m.root.id)!.color).toBe('#123456')
+    expect(layoutMindMap(m, measure).byId.get(m.root.id)!.color).toBe(-1)
+    expect(findNode(updateNode(colored, m.root.id, { color: undefined }).root, m.root.id)!.color).toBeUndefined()
+  })
+
+  it('keeps only valid stored colors', () => {
+    const m = normalizeMindMap({ root: { text: 'R', color: '#ABCDEF', children: [{ text: 'a', color: 2 }, { text: 'b', color: 'red' }, { text: 'c', color: -1 }] } })
+    expect(m.root.color).toBe('#ABCDEF')
+    expect(m.root.children.map((c) => c.color)).toEqual([2, undefined, undefined])
+  })
+
+  it('wraps long text', () => {
     expect(wrapText('word '.repeat(20).trim(), '14px', measure).length).toBeGreaterThan(1)
   })
 

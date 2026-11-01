@@ -1,12 +1,21 @@
 import type { JSONContent } from '@tiptap/react'
 
+/**
+ * A topic color: an index into the 8-color palette (adapts to dark/light mode)
+ * or a custom hex color like "#ff8800".
+ */
+export type MindColor = number | string
+
+export const isHexColor = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c)
+const isMindColor = (c: unknown): c is MindColor => (typeof c === 'number' && Number.isInteger(c) && c >= 0) || isHexColor(c)
+
 export interface MindNode {
   id: string
   text: string
   /** Free-form notes for documenting the topic. */
   note?: string
-  /** Branch color override (index into the categorical palette). */
-  color?: number
+  /** Color for this topic and its sub-topics (unless they set their own). */
+  color?: MindColor
   collapsed?: boolean
   children: MindNode[]
 }
@@ -79,7 +88,7 @@ export function normalizeMindMap(raw: unknown): MindMap {
     id: typeof n?.id === 'string' && n.id ? n.id : nodeId(),
     text: String(n?.text ?? ''),
     ...(n?.note ? { note: String(n.note) } : {}),
-    ...(typeof n?.color === 'number' ? { color: n.color } : {}),
+    ...(isMindColor(n?.color) ? { color: n!.color } : {}),
     ...(n?.collapsed ? { collapsed: true } : {}),
     children: depth > 50 || !Array.isArray(n?.children) ? [] : n!.children.map((c) => fix(c, depth + 1)),
   })
@@ -198,8 +207,8 @@ export interface LaidOutNode {
   y: number
   w: number
   h: number
-  /** Index into the categorical palette for this branch (-1 for the root). */
-  color: number
+  /** Effective color: palette index, custom hex, or -1 for the default central-topic color. */
+  color: MindColor
   parentId: string | null
   hiddenChildren: number
 }
@@ -285,14 +294,15 @@ export function layoutMindMap(map: MindMap, measure: Measure = defaultMeasure): 
     return Math.max(own, sum)
   }
 
-  const place = (n: MindNode, depth: number, side: 1 | -1, anchorX: number, cy: number, color: number, parentId: string | null) => {
+  const place = (n: MindNode, depth: number, side: 1 | -1, anchorX: number, cy: number, inherited: MindColor, parentId: string | null) => {
     const s = size(n, depth)
+    const color = n.color ?? inherited
     const x = anchorX + (side * s.w) / 2
     nodes.push({ id: n.id, text: n.text, lines: s.lines, note: n.note, depth, side, x, y: cy, w: s.w, h: s.h, color, parentId, hiddenChildren: n.collapsed ? countNodes(n) - 1 : 0 })
     placeChildren(visibleChildren(n), depth + 1, side, x + (side * s.w) / 2 + side * H_GAP, cy, color, n.id)
   }
-  // Sub-topics inherit their branch's color.
-  const placeChildren = (kids: MindNode[], depth: number, side: 1 | -1, anchorX: number, cy: number, color: number, parentId: string) => {
+  // Sub-topics inherit their parent's color unless they set their own.
+  const placeChildren = (kids: MindNode[], depth: number, side: 1 | -1, anchorX: number, cy: number, color: MindColor, parentId: string) => {
     const heights = kids.map((k) => subtreeH(k, depth))
     const total = heights.reduce((a, b) => a + b, 0) + V_GAP * Math.max(0, kids.length - 1)
     let y = cy - total / 2
@@ -304,11 +314,12 @@ export function layoutMindMap(map: MindMap, measure: Measure = defaultMeasure): 
 
   const root = map.root
   const rs = size(root, 0)
-  nodes.push({ id: root.id, text: root.text, lines: rs.lines, note: root.note, depth: 0, side: 1, x: 0, y: 0, w: rs.w, h: rs.h, color: -1, parentId: null, hiddenChildren: root.collapsed ? countNodes(root) - 1 : 0 })
+  nodes.push({ id: root.id, text: root.text, lines: rs.lines, note: root.note, depth: 0, side: 1, x: 0, y: 0, w: rs.w, h: rs.h, color: root.color ?? -1, parentId: null, hiddenChildren: root.collapsed ? countNodes(root) - 1 : 0 })
 
   const kids = visibleChildren(root)
-  // Assign first-level colors by original index so colors stay put when sides change.
-  const colored = kids.map((k, i) => ({ k, color: (typeof k.color === 'number' ? k.color : i) % PALETTE_SIZE }))
+  // First-level branches default to palette colors in order (by original index, so colors stay put
+  // when sides change); place() applies a branch's own color if it has one.
+  const colored = kids.map((k, i) => ({ k, color: (i % PALETTE_SIZE) as MindColor }))
   let right = colored
   let left: typeof colored = []
   if (map.layout === 'balanced' && kids.length > 1) {

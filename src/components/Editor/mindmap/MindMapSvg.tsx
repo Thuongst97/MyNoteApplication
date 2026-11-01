@@ -1,6 +1,24 @@
 import type { Theme } from '@/stores/useAppStore'
 import { SERIES_COLORS } from '../chart/chartModel'
-import { levelStyle, type LaidOutNode, type MindLayoutResult } from './mindmapModel'
+import { levelStyle, type LaidOutNode, type MindColor, type MindLayoutResult } from './mindmapModel'
+
+/** Turns a stored topic color into a CSS color for the current theme. */
+export function resolveMindColor(color: MindColor, theme: Theme): string {
+  if (typeof color === 'string') return color
+  if (color < 0) return MIND_TOKENS[theme].rootFill
+  return SERIES_COLORS[theme][color % SERIES_COLORS[theme].length]
+}
+
+/** Black or white text, whichever reads better on `hex`. */
+export function textOn(hex: string): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
+  if (!m) return '#ffffff'
+  const [r, g, b] = m.slice(1).map((h) => {
+    const c = parseInt(h, 16) / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#191919' : '#ffffff'
+}
 
 export const MIND_TOKENS: Record<Theme, { rootFill: string; rootText: string; text: string; surface: string; muted: string; select: string }> = {
   light: { rootFill: '#37352f', rootText: '#ffffff', text: '#37352f', surface: '#ffffff', muted: '#8a8984', select: '#2383e2' },
@@ -22,8 +40,6 @@ interface Props {
 
 /** Draws a laid-out mind map (edges + topics). Coordinates are centered on the root. */
 export function MindMapSvg({ layout, theme, selectedId, dropTargetId, draggingId, editingId, onNodePointerDown, onNodeDoubleClick, onToggle }: Props) {
-  const t = MIND_TOKENS[theme]
-  const colors = SERIES_COLORS[theme]
   const byId = layout.byId
   const interactive = !!onNodePointerDown
 
@@ -41,7 +57,7 @@ export function MindMapSvg({ layout, theme, selectedId, dropTargetId, draggingId
             key={`e-${n.id}`}
             d={`M ${sx} ${p.y} C ${mx} ${p.y}, ${mx} ${n.y}, ${ex} ${n.y}`}
             fill="none"
-            stroke={colors[n.color]}
+            stroke={resolveMindColor(n.color, theme)}
             strokeWidth={n.depth === 1 ? 3 : 2}
             strokeLinecap="round"
             opacity={draggingId && (n.id === draggingId || isUnder(byId, n.id, draggingId)) ? 0.3 : 1}
@@ -54,7 +70,7 @@ export function MindMapSvg({ layout, theme, selectedId, dropTargetId, draggingId
           key={n.id}
           n={n}
           theme={theme}
-          color={n.color >= 0 ? colors[n.color] : t.rootFill}
+          color={resolveMindColor(n.color, theme)}
           selected={n.id === selectedId}
           dropTarget={n.id === dropTargetId}
           faded={!!draggingId && (n.id === draggingId || isUnder(byId, n.id, draggingId))}
@@ -109,9 +125,10 @@ function Topic({
   const t = MIND_TOKENS[theme]
   const st = levelStyle(n.depth)
   const isRoot = n.depth === 0
-  const fill = isRoot ? t.rootFill : n.depth === 1 ? `${color}2e` : `${color}14`
-  const stroke = isRoot ? t.rootFill : color
-  const textColor = isRoot ? t.rootText : t.text
+  const fill = isRoot ? color : n.depth === 1 ? `${color}2e` : `${color}14`
+  const stroke = color
+  // Central topic: default colors, or readable text on a custom fill.
+  const textColor = isRoot ? (n.color === -1 ? t.rootText : textOn(color)) : t.text
   const left = n.x - n.w / 2
   const top = n.y - n.h / 2
   const firstBaseline = top + st.padY + st.size - 2 + (st.lineH - st.size) / 2
@@ -139,7 +156,7 @@ function Topic({
           ))}
         </text>
       )}
-      {n.note && <circle cx={left + n.w - 6} cy={top + 6} r={3} fill={isRoot ? t.rootText : color} aria-label="Has notes" />}
+      {n.note && <circle cx={left + n.w - 6} cy={top + 6} r={3} fill={isRoot ? textColor : color} aria-label="Has notes" />}
       {/* fold / unfold */}
       {hasChildren && !isRoot && (n.hiddenChildren > 0 || (interactive && selected)) && (
         <g

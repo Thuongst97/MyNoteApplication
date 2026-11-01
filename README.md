@@ -23,6 +23,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Block reference jump](docs/screenshots/29-block-reference-jump-light.png) | ![Whiteboard](docs/screenshots/30-whiteboard-light.png) |
 | ![Graph view](docs/screenshots/31-graph-view-dark.png) | ![Mind map in a page](docs/screenshots/34-mindmap-in-note-dark.png) |
 | ![Mind map editor](docs/screenshots/32-mindmap-editor-light.png) | ![Mind map (light)](docs/screenshots/33-mindmap-in-note-light.png) |
+| ![Mind map colors](docs/screenshots/35-mindmap-colors-editor-light.png) | ![Colored mind map](docs/screenshots/36-mindmap-colors-dark.png) |
 
 ## Features
 
@@ -49,7 +50,9 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
   | **Home** | Jump to the central topic |
   | `Ctrl/⌘+Z` | Undo |
 
-  You can also drag a topic onto another to move it. Pick branch colors, choose a *both sides* or *right-only* layout, and pan or zoom the map. The **Notes** panel lets you document each topic; topics with notes show a dot, and hovering them in the page shows the notes. Maps appear in the page as sharp images that match the theme, can be turned back into an outline (**To outline**), and all their topics and notes are searchable.
+  You can also drag a topic onto another to move it, choose a *both sides* or *right-only* layout, and pan or zoom the map.
+
+  **Colors:** select any topic, including the central topic, and pick a color from the toolbar's color button or the side panel. Choose one of 8 palette colors (they adjust for dark mode) or **Custom…** for any color. Sub-topics take their parent's color unless they have their own, and **Auto** resets a topic to the inherited color. The **Notes** panel lets you document each topic; topics with notes show a dot, and hovering them in the page shows the notes. Maps appear in the page as sharp images that match the theme, can be turned back into an outline (**To outline**), and all their topics and notes are searchable.
 - **Sub-pages in documents**: `/page` creates a sub-page and opens it. The parent keeps a clickable link block. Sub-pages also appear nested in the sidebar.
 - **Page links & block references**: type `[[` (anywhere) or `@` (after a space) to link to any page, or create one on the spot. To link to a specific block, open the block's **⋮⋮ → Copy link to block** and paste it into any page. It shows as *Page › start of block*, and clicking it opens the page, scrolls to the block and highlights it. Each page lists **Linked from** (backlinks) at the bottom. **Copy link to page** is in the sidebar page menu.
 - **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.

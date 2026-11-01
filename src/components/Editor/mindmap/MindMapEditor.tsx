@@ -26,13 +26,14 @@ import {
   layoutMindMap,
   moveNode,
   navigate,
-  PALETTE_SIZE,
   removeNode,
   reorderNode,
   updateNode,
+  isHexColor,
+  type MindColor,
   type MindMap,
 } from './mindmapModel'
-import { MIND_TOKENS, MindMapSvg } from './MindMapSvg'
+import { MIND_TOKENS, MindMapSvg, resolveMindColor } from './MindMapSvg'
 
 interface Props {
   initial: MindMap
@@ -61,9 +62,9 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
   const dirty = past.length > 0
 
   const layout = useMemo(() => layoutMindMap(map), [map])
-  const colors = SERIES_COLORS[theme]
   const tokens = MIND_TOKENS[theme]
   const sel = findNode(map.root, selected) ?? map.root
+  const currentColor = resolveMindColor(layout.byId.get(sel.id)?.color ?? -1, theme)
   const mod = isMacLike() ? '⌘' : 'Ctrl'
 
   /** Applies an edit with undo history. */
@@ -169,6 +170,8 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
     commit(r.map)
     setSelected(r.select)
   }
+  /** Sets (or clears, with undefined) the color of the selected topic; sub-topics follow it. */
+  const setColor = (color: MindColor | undefined) => commit(updateNode(map, selected, { color }))
   const doToggle = (id = selected) => {
     const n = findNode(map.root, id)
     if (!n || !n.children.length || id === map.root.id) return
@@ -322,31 +325,21 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
             <ChevronsDownUp size={15} />
           </button>
           <div className="relative">
-            <button type="button" className={btn} onClick={() => setColorOpen((o) => !o)} disabled={selected === map.root.id} title="Branch color" aria-label="Branch color">
+            <button type="button" className={btn} onClick={() => setColorOpen((o) => !o)} title="Topic color" aria-label="Topic color" aria-expanded={colorOpen}>
+              <span className="h-3.5 w-3.5 rounded-full border border-black/10 dark:border-white/20" style={{ background: currentColor }} />
               <Palette size={15} />
             </button>
-            {colorOpen && selected !== map.root.id && (
-              <div className="absolute left-0 top-9 z-10 flex animate-pop-in gap-1 rounded-lg border border-black/10 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#252525]">
-                {Array.from({ length: PALETTE_SIZE }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Color ${i + 1}`}
-                    onClick={() => {
-                      // Color is set on the first-level branch the topic belongs to.
-                      let branch = sel
-                      let parent = findParent(map.root, branch.id)
-                      while (parent && parent.id !== map.root.id) {
-                        branch = parent
-                        parent = findParent(map.root, branch.id)
-                      }
-                      commit(updateNode(map, branch.id, { color: i }))
-                      setColorOpen(false)
-                    }}
-                    className="h-6 w-6 rounded-full ring-offset-1 hover:ring-2 hover:ring-black/20"
-                    style={{ background: colors[i] }}
-                  />
-                ))}
+            {colorOpen && (
+              <div className="absolute left-0 top-9 z-10 w-64 animate-pop-in rounded-lg border border-black/10 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#252525]">
+                <ColorPicker
+                  theme={theme}
+                  value={sel.color}
+                  isRoot={sel.id === map.root.id}
+                  onChange={(c) => {
+                    setColor(c)
+                    setColorOpen(false)
+                  }}
+                />
               </div>
             )}
           </div>
@@ -497,6 +490,8 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
               onChange={(e) => commit(updateNode(map, sel.id, { text: e.target.value }))}
               className="rounded-md border border-black/10 bg-white px-2 py-1.5 text-sm font-medium outline-none focus:border-blue-400 dark:border-white/10 dark:bg-[#191919]"
             />
+            <div className="mt-2 text-xs font-medium uppercase tracking-wide opacity-50">Color</div>
+            <ColorPicker theme={theme} value={sel.color} isRoot={sel.id === map.root.id} onChange={setColor} />
             <div className="mt-2 text-xs font-medium uppercase tracking-wide opacity-50">Notes</div>
             <textarea
               aria-label="Topic notes"
@@ -509,6 +504,65 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
           </aside>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Topic color choices: "Auto" (inherit / default), the 8 palette colors (adapt to dark mode)
+ * and any custom color.
+ */
+function ColorPicker({ theme, value, isRoot, onChange }: { theme: Theme; value: MindColor | undefined; isRoot: boolean; onChange: (c: MindColor | undefined) => void }) {
+  const palette = SERIES_COLORS[theme]
+  const custom = isHexColor(value) ? value : '#8a5cf6'
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="Auto color"
+          aria-pressed={value === undefined}
+          title={isRoot ? 'Default' : 'Auto (same as the parent topic)'}
+          onClick={() => onChange(undefined)}
+          className={cn(
+            'h-6 rounded-full border border-dashed border-black/30 px-2 text-[11px] dark:border-white/30',
+            value === undefined && 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-[#252525]',
+          )}
+        >
+          Auto
+        </button>
+        {palette.map((c, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Color ${i + 1}`}
+            aria-pressed={value === i}
+            onClick={() => onChange(i)}
+            className={cn('h-6 w-6 rounded-full', value === i && 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-[#252525]')}
+            style={{ background: c }}
+          />
+        ))}
+        <label
+          title="Custom color"
+          className={cn(
+            'relative flex h-6 cursor-pointer items-center gap-1 rounded-full border border-black/15 px-2 text-[11px] dark:border-white/20',
+            isHexColor(value) && 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-[#252525]',
+          )}
+        >
+          <span className="h-3 w-3 rounded-full" style={{ background: custom }} />
+          Custom…
+          <input
+            type="color"
+            aria-label="Custom color"
+            value={custom}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+      </div>
+      <p className="mt-1.5 text-[11px] opacity-45">
+        {isRoot ? 'Color of the central topic.' : 'Applies to this topic and its sub-topics (unless they have their own color).'}
+      </p>
     </div>
   )
 }
