@@ -28,6 +28,8 @@ describe('slash menu filtering', () => {
     expect(filterSlashCommands('mind')[0].title).toBe('Mind map')
     expect(filterSlashCommands('brainstorm')[0].title).toBe('Mind map')
     expect(filterSlashCommands('mermaid doc')[0].title).toBe('Mermaid doc')
+    expect(filterSlashCommands('markdown')[0].title).toBe('Markdown')
+    expect(filterSlashCommands('md')[0].title).toBe('Markdown')
     expect(filterSlashCommands('zzzz')).toEqual([])
   })
 })
@@ -42,6 +44,8 @@ describe('slash commands', () => {
     ['Quote', 'blockquote'],
     ['Code', 'codeBlock'],
     ['Mermaid diagram', 'mermaid'],
+    ['Markdown', 'markdown'],
+    ['Table', 'table'],
     ['Chart', 'chart'],
     ['Drawing', 'drawing'],
     ['Mind map', 'mindmap'],

@@ -8,9 +8,13 @@ import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
 import { BackgroundColor, Color, FontSize, TextStyle } from '@tiptap/extension-text-style'
 import { FormattingToolbar } from './FormattingToolbar'
+import { TableToolbar } from './TableToolbar'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { SlashCommand } from './SlashCommand'
 import { CodeBlockNode } from './code/CodeBlockNode'
+import { MarkdownNode } from './markdown/MarkdownNode'
+import { TableKit } from '@tiptap/extension-table'
+import { looksLikeMarkdown, markdownToHtml } from '@/lib/markdown'
 import { ImageSelection } from './ImageSelection'
 import { MermaidNode } from './mermaid/MermaidNode'
 import { ChartNode } from './chart/ChartNode'
@@ -67,6 +71,8 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
         },
       }),
       CodeBlockNode,
+      TableKit.configure({ table: { resizable: false } }),
+      MarkdownNode,
       TextStyle,
       Color,
       BackgroundColor,
@@ -134,6 +140,14 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
         if (code && editorRef.current) {
           event.preventDefault()
           editorRef.current.chain().focus().insertMermaid(code).run()
+          return true
+        }
+
+        // Pasted Markdown (plain text, e.g. a README or text copied from VS Code) becomes real blocks:
+        // headings, lists, task lists, tables, quotes, highlighted code and Mermaid docs.
+        if (editorRef.current && shouldConvertMarkdown(event.clipboardData, view)) {
+          event.preventDefault()
+          editorRef.current.chain().focus().insertContent(markdownToHtml(text)).run()
           return true
         }
 
@@ -218,6 +232,7 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
       </div>
       {editor && editor.isEditable && <BlockHandle editor={editor} containerRef={containerRef} pageId={pageId} />}
       {editor && editor.isEditable && <FormattingToolbar editor={editor} />}
+      {editor && editor.isEditable && <TableToolbar editor={editor} />}
     </div>
   )
 }
@@ -265,4 +280,20 @@ async function insertReference(editor: TiptapEditor, pageId: string, blockId: st
       { type: 'text', text: ' ' },
     ])
     .run()
+}
+
+/**
+ * Plain-text Markdown is converted on paste. Rich HTML from web pages and other apps is
+ * kept as is (it already has formatting), except VS Code's HTML, which is just colored text.
+ * Inside code blocks text is always pasted literally.
+ */
+function shouldConvertMarkdown(data: DataTransfer | null, view: EditorView) {
+  if (!data) return false
+  const { $from } = view.state.selection
+  if ($from.parent.type.spec.code) return false
+  const text = data.getData('text/plain')
+  if (!text || !looksLikeMarkdown(text)) return false
+  const fromVsCode = data.types.includes('vscode-editor-data')
+  const html = data.getData('text/html')
+  return !html || fromVsCode
 }

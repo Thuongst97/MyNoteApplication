@@ -18,6 +18,8 @@ import {
   BarChart3,
   Workflow,
   FileCode,
+  FileText,
+  Table2,
   ImageIcon,
   List,
   ListOrdered,
@@ -151,6 +153,20 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
         .deleteRange(r)
         .insertContent({ type: 'codeBlock', attrs: { language: 'mermaid' }, content: [{ type: 'text', text: MERMAID_TEMPLATE }] })
         .run(),
+  },
+  {
+    title: 'Markdown',
+    description: 'Paste or write Markdown and see it rendered.',
+    icon: FileText,
+    keywords: ['md', 'markdown', 'readme', 'doc', 'import', 'gfm'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertMarkdown().run(),
+  },
+  {
+    title: 'Table',
+    description: 'A simple table with a header row.',
+    icon: Table2,
+    keywords: ['table', 'grid', 'rows', 'columns', 'spreadsheet'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
   {
     title: 'Chart',

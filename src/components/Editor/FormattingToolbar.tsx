@@ -106,7 +106,7 @@ export function FormattingToolbar({ editor }: { editor: Editor }) {
       shouldShow={({ editor: e, state }) => {
         const { selection } = state
         if (!e.isEditable || selection.empty || selection instanceof NodeSelection) return false
-        if (e.isActive('codeBlock') || e.isActive('mermaid')) return false
+        if (e.isActive('codeBlock') || e.isActive('mermaid') || e.isActive('markdown')) return false
         return state.doc.textBetween(selection.from, selection.to, ' ').trim().length > 0
       }}
       className="no-drag z-50"

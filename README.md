@@ -14,6 +14,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Mermaid editing](docs/screenshots/09-mermaid-editing-dark.png) | ![Pasted images](docs/screenshots/08-pasted-image-light.png) |
 | ![Mermaid diagrams](docs/screenshots/10-mermaid-dark.png) | ![Mermaid diagrams light](docs/screenshots/11-mermaid-light.png) |
 | ![Code highlighting](docs/screenshots/31-code-highlight-light.png) | ![Mermaid doc](docs/screenshots/32-mermaid-doc-dark.png) |
+| ![Markdown block editing](docs/screenshots/47-markdown-editing-light.png) | ![Rendered Markdown](docs/screenshots/48-markdown-rendered-light.png) |
+| ![Pasted Markdown](docs/screenshots/49-markdown-pasted-light.png) | ![Table toolbar](docs/screenshots/50-table-toolbar-dark.png) |
 | ![Tasks matrix](docs/screenshots/12-tasks-matrix-dark.png) | ![Tasks matrix light](docs/screenshots/13-tasks-matrix-light.png) |
 | ![Task dialog](docs/screenshots/14-task-dialog-light.png) | ![Reminder settings](docs/screenshots/15-reminder-settings-light.png) |
 | ![Block handle menu](docs/screenshots/16-block-handle-menu-light.png) | ![Dragging a block](docs/screenshots/18-drag-drop-line-light.png) |
@@ -39,6 +41,8 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Mermaid diagrams**: `/mermaid` adds a diagram block → paste or type the code (live preview) → **Save** (`Ctrl/⌘+Enter`) renders it in the note. Double-click or **Edit** to change it. Pasting a ```` ```mermaid ```` fenced block creates a diagram directly. Diagrams follow the dark/light theme; invalid code shows the parse error.
 - **Code blocks with syntax highlighting**: `/code` adds a code block colored like a code editor (VS Code Light+/Dark+ palettes). The language is auto-detected (shown as "Auto · Kotlin") or picked from the dropdown (~35 languages incl. Kotlin, Java, TypeScript, Python, Go, Rust, Swift, C#, SQL, Bash, JSON, YAML). Tab/Shift+Tab indent, spellcheck is off, and **Copy** copies the code.
 - **Mermaid docs**: `/mermaid doc` adds a Mermaid *code* block — the source stays visible and highlighted, with the rendered diagram live underneath (updates as you type; **Hide diagram** to collapse). Any code block set to Mermaid (or a ```` ```mermaid ```` typed fence) works the same way.
+- **Markdown**: paste Markdown anywhere (a README, notes from VS Code, ChatGPT answers…) and it turns into real blocks: headings, bold/italic/code, links, bullet/numbered/to-do lists, quotes, dividers, **tables**, highlighted code and Mermaid docs. Or use `/markdown` for a Markdown block: paste or type the source with a live side-by-side preview, save to see it rendered, double-click to edit, **To blocks** to turn it into normal editable blocks, and **Copy** for the source. Content is sanitized (scripts, event handlers, iframes, styles and non-http(s) links are removed). Only https and embedded images load; images with relative paths show as 🖼 placeholders with their alt text.
+- **Tables**: `/table` adds a 3×3 table with a header row. `Tab`/`Shift+Tab` move between cells (Tab in the last cell adds a row). While the cursor is in a table, a toolbar under it adds rows above/below and columns left/right, deletes rows/columns, toggles the header row, merges/splits selected cells and deletes the table.
 - **Tasks – Eisenhower Matrix** (sidebar → **Tasks**, or `Ctrl/⌘+Shift+T`): four quadrants: *Do first* (important & urgent), *Schedule* (important), *Delegate* (urgent) and *Eliminate* (neither). Add tasks per quadrant, drag them between quadrants, tick them off, show or hide completed ones. The sidebar badge counts tasks due today or overdue.
 - **Due dates & reminders**: click a task to set a due date (with *Today 17:00 / Tomorrow 9:00 / Next week* shortcuts) and reminders: at the due time, 5 min, 15 min, 30 min, 1 h, 3 h, 1 day or 1 week before. **Reminders → Default reminders** sets which ones new tasks get. Reminders are native OS notifications, and clicking one opens the task.
 - **Text formatting**: select text to get a toolbar with *Turn into* (text, H1–H3, bulleted/numbered/to-do list, quote, code), **text size** (Small → Huge), bold/italic/underline/strike/code, links, and **text & background colors**. Colors adapt to dark/light mode.
@@ -218,6 +222,7 @@ src/
     Tasks/         # Eisenhower Matrix, task cards, task dialog, reminder settings
     Library/       # Categorized drawing-library panel (insert, drag, rename, delete, install)
     Editor/code/     # Highlighted code block (lowlight, language detection, Mermaid grammar + live preview)
+    Editor/markdown/ # Markdown block (source + sanitized rendered view, convert to blocks)
     Editor/mermaid/  # Mermaid diagram block (node, view, lazy renderer)
     Editor/mindmap/  # Mind map block: model (edits, layout, list conversion), SVG renderer, editor
 resources/         # App icons (icon.ico, icon.icns, icon.png, icon.svg)
