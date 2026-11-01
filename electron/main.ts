@@ -6,9 +6,9 @@ import { ASSET_SCHEME, AssetStorage } from './assets'
 import type { PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
 import { TaskStore } from './tasks'
 import { LibraryStore } from './libraries'
-import { addLibraryUrlFrom, libraryNameFrom } from '../src/lib/libraries'
+import { addLibraryUrlFrom, isAllowedLibraryUrl, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
-import { assetResponseHeaders, isAppUrl, isPermissionAllowed, isSafeExternalUrl } from './security'
+import { assetResponseHeaders, FONT_SCHEME, isAppUrl, isPermissionAllowed, isSafeExternalUrl, resolveBundledFont } from './security'
 import { defaultRestoreBounds, fillsWorkArea } from './windowState'
 import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT, parseBundle } from './pageTransfer'
 import fs from 'node:fs/promises'
@@ -77,6 +77,9 @@ if (process.env.NOTION_CLONE_DATA_DIR) app.setPath('userData', process.env.NOTIO
 // Must happen before the app is ready.
 protocol.registerSchemesAsPrivileged([
   { scheme: ASSET_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
+  // Excalidraw fetch()es its fonts, which doesn't work for file:// URLs; the bundled fonts are
+  // served read-only from here instead (otherwise it falls back to a CDN the CSP blocks).
+  { scheme: FONT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
 ])
 
 const APP_ID = 'com.thuong.notionclone'
@@ -194,7 +197,26 @@ function openLibraryBrowser() {
   const browseSession = session.fromPartition('libraries-browse')
   browseSession.setPermissionRequestHandler((_wc, _permission, cb) => cb(false))
   browseSession.setPermissionCheckHandler(() => false)
-  browseSession.on('will-download', (ev) => ev.preventDefault())
+  // Files are never saved to disk from this window. The site's "Download" button fetches an
+  // .excalidrawlib file: that is offered for installation instead (same checks as "Add to Excalidraw").
+  browseSession.removeAllListeners('will-download')
+  browseSession.on('will-download', (ev, item) => {
+    ev.preventDefault()
+    const url = item.getURL()
+    let isLibraryFile = false
+    try {
+      isLibraryFile = /\.excalidrawlib$/i.test(new URL(url).pathname) && isAllowedLibraryUrl(url, { allowLocalHttp: isDev })
+    } catch {
+      // not a URL
+    }
+    if (isLibraryFile) confirmAndInstall(url)
+    else
+      void dialog.showMessageBox(browseWin ?? win!, {
+        type: 'info',
+        message: 'Use “Add to Excalidraw” to install this library',
+        detail: 'Downloads are turned off in this window. “Add to Excalidraw” saves the library straight into your libraries.',
+      })
+  })
   browseWin = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -207,6 +229,10 @@ function openLibraryBrowser() {
   const handleAdd = (url: string) => {
     const lib = addLibraryUrlFrom(url, { allowLocalHttp: isDev })
     if (!lib) return false
+    confirmAndInstall(lib)
+    return true
+  }
+  function confirmAndInstall(lib: string) {
     // The website asks to install; the user confirms (a page can't install things on its own).
     void dialog
       .showMessageBox(browseWin ?? win!, {
@@ -227,7 +253,6 @@ function openLibraryBrowser() {
       .catch((err: Error) => {
         void dialog.showMessageBox(browseWin ?? win!, { type: 'error', message: 'Could not install the library', detail: err.message })
       })
-    return true
   }
   const contents = browseWin.webContents
   contents.on('will-navigate', (e, url) => {
@@ -545,6 +570,22 @@ void app.whenReady().then(() => {
   )
   storage = new PageStorage(app.getPath('userData'))
   assets = new AssetStorage(app.getPath('userData'))
+
+  // Serve Excalidraw's bundled fonts (only .woff2 files under excalidraw-assets/fonts/).
+  protocol.handle(FONT_SCHEME, async (request) => {
+    const file = resolveBundledFont(request.url, path.join(RENDERER_DIST, 'excalidraw-assets'))
+    if (!file) return new Response('Not found', { status: 404 })
+    try {
+      const res = await net.fetch(pathToFileURL(file).toString())
+      if (!res.ok) return new Response('Not found', { status: 404 })
+      return new Response(res.body, {
+        status: 200,
+        headers: { 'Content-Type': 'font/woff2', 'Access-Control-Allow-Origin': '*', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'max-age=31536000, immutable' },
+      })
+    } catch {
+      return new Response('Not found', { status: 404 })
+    }
+  })
 
   // Serve stored images. Only files inside the assets folder with names we generated are reachable.
   protocol.handle(ASSET_SCHEME, async (request) => {

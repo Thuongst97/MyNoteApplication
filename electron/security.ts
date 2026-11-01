@@ -62,3 +62,26 @@ export function assetResponseHeaders(mime: string): Record<string, string> {
     'cache-control': 'private, max-age=31536000, immutable',
   }
 }
+
+/** Scheme serving Excalidraw's bundled fonts: app-font://bundle/fonts/<Family>/<file>.woff2 */
+export const FONT_SCHEME = 'app-font'
+
+/** Maps an app-font:// URL to a font file inside `fontsRoot`, or null (anything else is refused). */
+export function resolveBundledFont(url: string, fontsRoot: string): string | null {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return null
+  }
+  if (u.protocol !== `${FONT_SCHEME}:` || u.hostname !== 'bundle') return null
+  let rel: string
+  try {
+    rel = decodeURIComponent(u.pathname).replace(/^\/+/, '')
+  } catch {
+    return null
+  }
+  if (!/^fonts\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\.woff2$/.test(rel) || rel.includes('..')) return null
+  const file = path.resolve(fontsRoot, rel)
+  return file.startsWith(path.resolve(fontsRoot) + path.sep) ? file : null
+}

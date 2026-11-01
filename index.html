@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' data: blob: https: notion-asset:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; manifest-src 'self'"
+      content="default-src 'self'; img-src 'self' data: blob: https: notion-asset:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; font-src 'self' data: app-font:; worker-src 'self' blob:; connect-src 'self' data: blob: app-font:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; manifest-src 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NotionClone</title>
   </head>
   <body>
     <div id="root"></div>
+    <script src="./excalidraw-asset-path.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -54,3 +54,21 @@ describe('assetResponseHeaders', () => {
     expect(h['content-security-policy']).toMatch(/sandbox/)
   })
 })
+
+describe('bundled font protocol', () => {
+  it('serves only .woff2 files under fonts/ of the bundled assets', async () => {
+    const { resolveBundledFont } = await import('../../electron/security')
+    const root = path.join(path.sep, 'app', 'dist', 'excalidraw-assets')
+    expect(resolveBundledFont('app-font://bundle/fonts/Excalifont/Excalifont-Regular-a88b.woff2', root)).toBe(path.join(root, 'fonts', 'Excalifont', 'Excalifont-Regular-a88b.woff2'))
+    for (const bad of [
+      'app-font://bundle/fonts/../../../etc/passwd',
+      'app-font://bundle/fonts/%2e%2e/%2e%2e/secret.woff2',
+      'app-font://bundle/fonts/X/a.js',
+      'app-font://bundle/index.html',
+      'app-font://other/fonts/X/a.woff2',
+      'file:///etc/passwd',
+      'not a url',
+    ])
+      expect(resolveBundledFont(bad, root)).toBeNull()
+  })
+})

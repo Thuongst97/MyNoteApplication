@@ -26,6 +26,23 @@ describe('sanitizeSvg', () => {
     expect(out).toContain('fill="#a5d8ff"')
   })
 
+  it('keeps shape geometry (regression: library tiles and drawing previews were blank)', () => {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 109.35 110.6"><g stroke-linecap="round" transform="translate(6 6) rotate(0 48.6 49.3)"><path d="M24.65 0 C39.97 0.38 L1 2" stroke="#000000" stroke-width="2" fill="none"/><ellipse cx="5" cy="5" rx="3" ry="2" opacity="0.5"/><polyline points="0,0 10,10"/></g><use href="#p1"/></svg>'
+    const out = sanitizeSvg(svg)
+    for (const keep of ['viewBox="0 0 109.35 110.6"', 'd="M24.65 0 C39.97 0.38 L1 2"', 'transform="translate(6 6) rotate(0 48.6 49.3)"', 'stroke-width="2"', 'stroke-linecap="round"', 'cx="5"', 'points="0,0 10,10"', 'href="#p1"'])
+      expect(out).toContain(keep)
+  })
+
+  it('blocks remote loads through CSS url() in style attributes and <style>', () => {
+    const out = sanitizeSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg"><style>@font-face{src:url(https://evil.example/f.woff2)} .a{fill:url(#g)}</style><rect style="fill:url(https://evil.example/t.png)" width="1" height="1"/><rect style="fill:url(#grad)" width="1" height="1"/></svg>',
+    )
+    expect(out).not.toContain('evil.example')
+    expect(out).toContain('url(#grad)')
+    expect(out).toContain('url(#g)')
+  })
+
   it('handles empty input', () => {
     expect(sanitizeSvg('')).toBe('')
   })
