@@ -13,6 +13,7 @@ import { CalloutNode } from './blocks/CalloutNode'
 import { ColumnNode, ColumnsNode } from './blocks/ColumnsNode'
 import { DetailsContent, DetailsSummary, ToggleNode } from './blocks/ToggleNode'
 import { EquationNode } from './equation/EquationNode'
+import { PlantUmlNode } from './plantuml/PlantUmlNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
@@ -61,6 +62,7 @@ export function createEditorExtensions(): AnyExtension[] {
     DetailsSummary,
     DetailsContent,
     EquationNode,
+    PlantUmlNode,
     TextStyle,
     Color,
     BackgroundColor,

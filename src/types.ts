@@ -96,6 +96,8 @@ export interface ElectronAPI {
   searchPages: (query: string) => Promise<SearchResult[]>
   /** Stores an image and returns the URL to put in the document. */
   saveAsset: (data: Uint8Array, mime: string) => Promise<string>
+  /** SVG of a PlantUML diagram from a PlantUML server (or an error message). */
+  renderPlantUml: (server: string, source: string) => Promise<{ svg: string } | { error: string }>
   /** Export a page (with sub-pages) to a .ncpage file, or import a .ncpage / Markdown file. */
   pageFiles: {
     export: (id: string, includeChildren: boolean) => Promise<{ ok: false } | { ok: true; path: string; pages: number; images: number }>

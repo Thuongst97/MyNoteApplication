@@ -82,6 +82,7 @@ function createBrowserApi(): ElectronAPI {
     },
     tasks: createBrowserTasksApi(),
     libraries: createBrowserLibrariesApi(),
+    renderPlantUml: async () => ({ error: 'PlantUML diagrams render in the desktop app.' }),
     // In a plain browser, images are embedded as data URLs.
     saveAsset: async (data, mime) => {
       let bin = ''

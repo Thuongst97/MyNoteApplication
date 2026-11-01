@@ -14,6 +14,7 @@ import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT,
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { contextMenuTemplate } from './contextMenu'
+import { renderPlantUml } from './plantuml'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -520,6 +521,7 @@ function registerIpc() {
   )
 
   handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
+  handle('plantuml:render', (_e, server: string, source: string) => renderPlantUml(server, source, (url, init) => net.fetch(String(url), init)))
 
   // ---- Page files (export / import) ---------------------------------------
   handle('pages:export', async (e, id: string, includeChildren: boolean) => {

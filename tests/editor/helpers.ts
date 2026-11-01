@@ -22,6 +22,7 @@ import { CalloutNode } from '@/components/Editor/blocks/CalloutNode'
 import { ColumnNode, ColumnsNode } from '@/components/Editor/blocks/ColumnsNode'
 import { DetailsContent, DetailsSummary, ToggleNode } from '@/components/Editor/blocks/ToggleNode'
 import { EquationNode } from '@/components/Editor/equation/EquationNode'
+import { PlantUmlNode } from '@/components/Editor/plantuml/PlantUmlNode'
 
 /** Same nodes as the app, without React node views (plain DOM rendering). */
 const noView = <T extends AnyExtension>(ext: T) => (ext as unknown as { extend: (c: object) => T }).extend({ addNodeView: () => null })
@@ -44,6 +45,7 @@ export function makeEditor(content: JSONContent | string = '') {
       DetailsSummary,
       DetailsContent,
       noView(EquationNode),
+      noView(PlantUmlNode),
       TableKit.configure({ table: { resizable: false } }),
       TaskList,
       TaskItem.configure({ nested: true }),

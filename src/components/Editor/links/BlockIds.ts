@@ -18,6 +18,7 @@ export const REFERENCEABLE = [
   'callout',
   'details',
   'equation',
+  'plantuml',
   'columns',
   'table',
   'chart',

@@ -17,6 +17,8 @@ export interface SourceKind {
   Render: (props: { source: string; className?: string }) => React.ReactElement
   /** HTML to replace the block with when turning it into editable blocks (none: no button). */
   toBlocksHtml?: (source: string) => string
+  /** Extra controls under the editor (e.g. the PlantUML server). */
+  EditorFooter?: () => React.ReactElement
 }
 
 /**
@@ -167,6 +169,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
               {preview.trim() ? <Render source={preview} className="markdown-body" /> : <div className="py-2 text-sm opacity-40">Preview</div>}
             </div>
           </div>
+          {kind.EditorFooter && <kind.EditorFooter />}
           <div className="mt-2 flex items-center gap-2">
             {!draft.trim() && (
               <button

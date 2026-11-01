@@ -11,6 +11,7 @@ const api: ElectronAPI = {
   getLinks: () => ipcRenderer.invoke('get-links'),
   searchPages: (query: string) => ipcRenderer.invoke('search-pages', query),
   saveAsset: (data: Uint8Array, mime: string) => ipcRenderer.invoke('save-asset', data, mime),
+  renderPlantUml: (server: string, source: string) => ipcRenderer.invoke('plantuml:render', server, source),
   pageFiles: {
     export: (id: string, includeChildren: boolean) => ipcRenderer.invoke('pages:export', id, includeChildren),
     import: (parentId: string | null) => ipcRenderer.invoke('pages:import', parentId),

@@ -14,6 +14,7 @@ import {
   Heading4,
   ListCollapse,
   Sigma,
+  Network,
   LayoutGrid,
   ListTree,
   FilePlus,
@@ -198,6 +199,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: Workflow,
     keywords: ['mermaid', 'diagram', 'chart', 'flowchart', 'graph', 'sequence', 'uml'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertMermaid().run(),
+  },
+  {
+    title: 'PlantUML',
+    description: 'UML diagram from PlantUML text (sequence, class, activity…).',
+    icon: Network,
+    keywords: ['puml', 'plantuml', 'uml', 'diagram', 'sequence', 'class', 'activity', 'state', 'component', 'gantt'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertPlantUml().run(),
   },
   {
     title: 'Mermaid doc',

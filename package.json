@@ -38,6 +38,7 @@
     "@tiptap/suggestion": "^3.32.2",
     "@types/d3-force": "^3.0.10",
     "@types/node": "^22.20.5",
+    "@types/plantuml-encoder": "^1.4.2",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
@@ -84,6 +85,7 @@
     "@fontsource/merriweather": "^5.3.0",
     "@fontsource/nunito": "^5.3.0",
     "@tiptap/extension-details": "^3.32.2",
-    "katex": "0.18.11"
+    "katex": "0.18.11",
+    "plantuml-encoder": "^1.4.0"
   }
 }
