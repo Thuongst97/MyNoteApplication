@@ -144,3 +144,37 @@ describe('language detection heuristics', () => {
     expect(detectLanguage(code)).toBe(lang)
   })
 })
+
+describe('code block title & AIDL', () => {
+  it('maps file names to languages', async () => {
+    const { languageFromFileName } = await import('@/components/Editor/code/codeHighlight')
+    expect(languageFromFileName('trip-api/src/main/aidl/com/example/ITripService.aidl')).toBe('aidl')
+    expect(languageFromFileName('Main.kt')).toBe('kotlin')
+    expect(languageFromFileName('C:\\code\\app.tsx')).toBe('typescript')
+    expect(languageFromFileName('Makefile')).toBe('makefile')
+    expect(languageFromFileName('README')).toBeNull()
+    expect(languageFromFileName('notes.unknownext')).toBeNull()
+    expect(languageFromFileName('')).toBeNull()
+  })
+
+  it('highlights AIDL (Java syntax + AIDL keywords)', async () => {
+    const { lowlight, CODE_LANGUAGES } = await import('@/components/Editor/code/codeHighlight')
+    expect(CODE_LANGUAGES.find((l) => l.id === 'aidl')?.label).toBe('AIDL')
+    const tree = lowlight.highlight('aidl', 'package a.b;\ninterface ITrip {\n  oneway void ping(in Bundle b);\n}') as unknown as { children: unknown[] }
+    const keywords: string[] = []
+    const walk = (n: { type?: string; properties?: { className?: string[] }; children?: unknown[]; value?: string }) => {
+      if (n.properties?.className?.includes('hljs-keyword')) keywords.push((n.children as { value?: string }[]).map((c) => c.value).join(''))
+      ;(n.children ?? []).forEach((c) => walk(c as never))
+    }
+    walk(tree as never)
+    expect(keywords).toEqual(expect.arrayContaining(['package', 'interface', 'oneway']))
+  })
+
+  it('keeps the title through copy & paste', async () => {
+    const { makeEditor } = await import('./helpers')
+    const e = makeEditor({ type: 'doc', content: [{ type: 'codeBlock', attrs: { language: 'aidl', title: 'api/ITripService.aidl' }, content: [{ type: 'text', text: 'interface X {}' }] }] })
+    e.commands.setContent(e.getHTML())
+    expect(e.getJSON().content![0].attrs).toMatchObject({ language: 'aidl', title: 'api/ITripService.aidl' })
+    e.destroy()
+  })
+})

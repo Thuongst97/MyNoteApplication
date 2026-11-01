@@ -4,17 +4,23 @@ import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, Maximize2 } from 'luc
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { useAppStore } from '@/stores/useAppStore'
 import { renderMermaid, type MermaidResult } from '../mermaid/renderMermaid'
-import { CODE_LANGUAGES, detectLanguage, languageLabel } from './codeHighlight'
+import { CODE_LANGUAGES, detectLanguage, languageFromFileName, languageLabel } from './codeHighlight'
 
-/** Code block: highlighted code with a language picker and a copy button. */
-export function CodeBlockView({ node, updateAttributes, editor }: NodeViewProps) {
+/**
+ * Code block styled like a code window: traffic-light dots, file name / title, language pill
+ * and Copy in the header; line numbers beside the highlighted code.
+ */
+export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeViewProps) {
   const language: string | null = node.attrs.language || null
+  const title: string = node.attrs.title ?? ''
   const code = node.textContent
   const [copied, setCopied] = useState(false)
   const detected = language ? null : detectLanguage(code)
   const effective = language ?? detected
   const isMermaid = effective === 'mermaid'
   const preview = node.attrs.preview !== false
+  const lines = Math.max(1, code.split('\n').length)
+  const editable = editor.isEditable
 
   useEffect(() => {
     if (!copied) return
@@ -29,49 +35,93 @@ export function CodeBlockView({ node, updateAttributes, editor }: NodeViewProps)
     )
   }
 
+  /** Puts the cursor at the start of the code (Enter / ↓ in the title). */
+  const focusCode = () => {
+    const pos = getPos()
+    if (typeof pos === 'number') editor.chain().focus().setTextSelection(pos + 1).run()
+  }
+
   const known = !language || CODE_LANGUAGES.some((l) => l.id === language)
+  const autoLabel = detected ? languageLabel(detected) : 'Plain text'
 
   return (
     <NodeViewWrapper className="code-block" data-language={effective ?? undefined}>
-      <div className="code-block-toolbar" contentEditable={false}>
-        <select
-          className="code-block-lang"
-          value={language ?? ''}
-          disabled={!editor.isEditable}
-          onChange={(e) => updateAttributes({ language: e.target.value || null })}
-          title="Language"
-          aria-label="Code language"
-        >
-          <option value="">{detected ? `Auto · ${languageLabel(detected)}` : 'Auto-detect'}</option>
-          {!known && <option value={language!}>{language}</option>}
-          {CODE_LANGUAGES.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-        <div className="code-block-actions">
-          {isMermaid && (
-            <button
-              type="button"
-              className="code-block-btn always"
-              onClick={() => updateAttributes({ preview: !preview })}
-              title={preview ? 'Hide diagram' : 'Show diagram'}
-              aria-pressed={preview}
-            >
-              {preview ? <EyeOff size={13} /> : <Eye size={13} />}
-              <span>{preview ? 'Hide diagram' : 'Show diagram'}</span>
-            </button>
-          )}
-          <button type="button" className="code-block-btn" onClick={copy} title="Copy code" aria-label="Copy code">
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-            <span>{copied ? 'Copied' : 'Copy'}</span>
+      <div className="code-block-header" contentEditable={false}>
+        <span className="code-block-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        {editable || title ? (
+          <input
+            className="code-block-title"
+            value={title}
+            readOnly={!editable}
+            placeholder="File name or title"
+            aria-label="Code block title"
+            spellCheck={false}
+            onChange={(e) => {
+              // A title with a file extension sets the language (unless the user picked another one).
+              const next = e.target.value
+              const fromNew = languageFromFileName(next)
+              const followsTitle = !language || language === languageFromFileName(title)
+              updateAttributes(followsTitle ? { title: next, language: fromNew } : { title: next })
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                e.preventDefault()
+                focusCode()
+              }
+            }}
+          />
+        ) : (
+          <span className="flex-1" />
+        )}
+        <label className="code-block-lang" title="Language">
+          <span>{language ? languageLabel(language) : autoLabel}</span>
+          <select
+            value={language ?? ''}
+            disabled={!editable}
+            onChange={(e) => updateAttributes({ language: e.target.value || null })}
+            aria-label="Code language"
+          >
+            <option value="">{`Auto · ${autoLabel}`}</option>
+            {!known && <option value={language!}>{language}</option>}
+            {CODE_LANGUAGES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isMermaid && (
+          <button
+            type="button"
+            className="code-block-btn"
+            onClick={() => updateAttributes({ preview: !preview })}
+            title={preview ? 'Hide diagram' : 'Show diagram'}
+            aria-pressed={preview}
+          >
+            {preview ? <EyeOff size={13} /> : <Eye size={13} />}
+            <span>{preview ? 'Hide diagram' : 'Show diagram'}</span>
           </button>
-        </div>
+        )}
+        <button type="button" className="code-block-btn" onClick={copy} title="Copy code" aria-label="Copy code">
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
       </div>
-      <pre spellCheck={false}>
-        <NodeViewContent<'code'> as="code" className={effective ? `hljs language-${effective}` : 'hljs'} />
-      </pre>
+      <div className="code-block-body">
+        <div className="code-block-gutter" contentEditable={false} aria-hidden="true">
+          {Array.from({ length: lines }, (_, i) => (
+            <div key={i}>{i + 1}</div>
+          ))}
+        </div>
+        <pre spellCheck={false}>
+          <NodeViewContent<'code'> as="code" className={effective ? `hljs language-${effective}` : 'hljs'} />
+        </pre>
+      </div>
       {isMermaid && preview && <MermaidPreview code={code} />}
     </NodeViewWrapper>
   )

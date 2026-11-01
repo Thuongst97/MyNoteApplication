@@ -1,4 +1,6 @@
 import { common, createLowlight } from 'lowlight'
+import java from 'highlight.js/lib/languages/java'
+import type { HLJSApi, Language } from 'highlight.js'
 import { mermaidGrammar } from './mermaidGrammar'
 import { MERMAID_START } from '../mermaid/renderMermaid'
 
@@ -6,10 +8,21 @@ import { MERMAID_START } from '../mermaid/renderMermaid'
 const base = createLowlight(common)
 base.register('mermaid', mermaidGrammar)
 
+/** Android Interface Definition Language: Java syntax plus AIDL's own keywords. */
+function aidl(hljs: HLJSApi): Language {
+  const def = java(hljs)
+  const kw = (def.keywords ?? {}) as Record<string, unknown>
+  const extra = ['oneway', 'in', 'out', 'inout', 'parcelable']
+  const keyword = Array.isArray(kw.keyword) ? [...kw.keyword, ...extra] : `${String(kw.keyword ?? '')} ${extra.join(' ')}`
+  return { ...def, name: 'AIDL', aliases: ['aidl'], keywords: { ...kw, keyword } }
+}
+base.register('aidl', aidl)
+
 type Root = ReturnType<typeof base.highlight>
 
 /** Human-friendly names for the language picker. Anything missing falls back to the id. */
 const LABELS: Record<string, string> = {
+  aidl: 'AIDL',
   arduino: 'Arduino',
   bash: 'Bash',
   c: 'C',
@@ -159,4 +172,28 @@ export const lowlight = {
   ...base,
   highlight: (language: string, value: string) => highlightCache(`${language}\u0000${value}`, () => base.highlight(language, value)),
   highlightAuto: (value: string) => lowlight.highlight(detectLanguage(value) ?? 'plaintext', value),
+}
+
+/** File extension → language, so a code block titled "Foo.kt" is highlighted as Kotlin. */
+const EXTENSIONS: Record<string, string> = {
+  aidl: 'aidl', c: 'c', h: 'c', cc: 'cpp', cpp: 'cpp', cxx: 'cpp', hpp: 'cpp', cs: 'csharp', css: 'css', diff: 'diff', patch: 'diff',
+  go: 'go', graphql: 'graphql', gql: 'graphql', ini: 'ini', toml: 'ini', properties: 'ini', java: 'java', js: 'javascript', mjs: 'javascript',
+  cjs: 'javascript', jsx: 'javascript', json: 'json', kt: 'kotlin', kts: 'kotlin', gradle: 'kotlin', less: 'less', lua: 'lua',
+  mk: 'makefile', md: 'markdown', mmd: 'mermaid', m: 'objectivec', mm: 'objectivec', pl: 'perl', php: 'php', txt: 'plaintext',
+  py: 'python', r: 'r', rb: 'ruby', rs: 'rust', scss: 'scss', sh: 'bash', bash: 'bash', zsh: 'bash', sql: 'sql', swift: 'swift',
+  ts: 'typescript', tsx: 'typescript', vb: 'vbnet', wat: 'wasm', html: 'xml', htm: 'xml', xml: 'xml', svg: 'xml', yml: 'yaml', yaml: 'yaml',
+}
+
+/** Language for a file name or path (by extension, or Makefile/Dockerfile-like names), or null. */
+export function languageFromFileName(name: string | null | undefined): string | null {
+  const base = String(name ?? '').trim().split(/[\\/]/).pop() ?? ''
+  if (!base) return null
+  if (/^makefile$/i.test(base)) return 'makefile'
+  const ext = /\.([a-z0-9]+)$/i.exec(base)?.[1]?.toLowerCase()
+  const lang = ext ? EXTENSIONS[ext] : undefined
+  return lang && base_has(lang) ? lang : null
+}
+
+function base_has(lang: string) {
+  return base.registered(lang)
 }

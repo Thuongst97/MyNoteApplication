@@ -12,6 +12,12 @@ export const CodeBlockNode = CodeBlockLowlight.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
+      /** File name or title shown in the header (e.g. "src/api/IService.aidl"). */
+      title: {
+        default: '',
+        parseHTML: (el) => el.getAttribute('data-title') ?? '',
+        renderHTML: (attrs) => (attrs.title ? { 'data-title': attrs.title } : {}),
+      },
       /** Mermaid only: whether the rendered diagram is shown under the code. */
       preview: {
         default: true,
