@@ -76,11 +76,12 @@ app.on('web-contents-created', (_e, contents) => {
 const dataDirOverride = process.env.PREMIUMNOTE_DATA_DIR || process.env.NOTION_CLONE_DATA_DIR
 if (dataDirOverride) app.setPath('userData', dataDirOverride)
 else {
-  // The app was renamed (NotionClone → PremiumNote), which changes Electron's default data
-  // folder. Keep using the existing notes folder so nothing is lost or duplicated.
+  // The app was renamed (NotionClone → PremiumNote, package name Premium-Note), which changes
+  // Electron's default data folder. Keep using the existing notes folder so nothing is lost
+  // or duplicated.
   const current = app.getPath('userData')
   if (!existsSync(path.join(current, 'pages'))) {
-    for (const old of ['NotionClone', 'notion-clone']) {
+    for (const old of ['PremiumNote', 'Premium-Note', 'NotionClone', 'notion-clone']) {
       const dir = path.join(app.getPath('appData'), old)
       if (existsSync(path.join(dir, 'pages'))) {
         app.setPath('userData', dir)
