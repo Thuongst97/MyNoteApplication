@@ -49,8 +49,10 @@ export function MindMapSvg({ layout, theme, selectedId, dropTargetId, draggingId
       {layout.nodes.map((n) => {
         if (!n.parentId) return null
         const p = byId.get(n.parentId)!
-        const sx = p.x + (n.side * p.w) / 2
-        const ex = n.x - (n.side * n.w) / 2
+        // Connect the facing sides (topics can be dragged anywhere, even past their parent).
+        const dir = n.x === p.x ? n.side : n.x > p.x ? 1 : -1
+        const sx = p.x + (dir * p.w) / 2
+        const ex = n.x - (dir * n.w) / 2
         const mx = (sx + ex) / 2
         return (
           <path

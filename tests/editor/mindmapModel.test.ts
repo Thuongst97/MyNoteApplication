@@ -18,6 +18,10 @@ import {
   reorderNode,
   updateNode,
   wrapText,
+  hasManualPositions,
+  nudgeTopic,
+  placeTopicAt,
+  resetPositions,
   type MindMap,
 } from '@/components/Editor/mindmap/mindmapModel'
 
@@ -218,5 +222,72 @@ describe('lists ↔ mind maps', () => {
     expect(blocks[0]).toMatchObject({ type: 'paragraph', content: [{ text: 'Topic', marks: [{ type: 'bold' }] }] })
     expect(names(listToMindMap(blocks[1], 'Topic'))).toBe('Topic(One(Deep),Two)')
     expect(mindMapToList({ root: newNode('Alone'), layout: 'balanced' })).toHaveLength(1)
+  })
+})
+
+describe('manual topic positions', () => {
+  const setup = () => {
+    let m: MindMap = newMindMap('Root', ['A', 'B', 'C', 'D'])
+    m = addChild(m, byText(m, 'A'), 'A1').map
+    m = addChild(m, byText(m, 'A'), 'A2').map
+    return m
+  }
+  const at = (m: MindMap, t: string) => layoutMindMap(m, measure).byId.get(byText(m, t))!
+
+  it('moves a topic to a point and its sub-topics follow', () => {
+    const m = setup()
+    const before = { a: at(m, 'A'), a1: at(m, 'A1') }
+    const moved = placeTopicAt(m, byText(m, 'A'), before.a.x + 40, before.a.y + 90, measure)
+    const after = { a: at(moved, 'A'), a1: at(moved, 'A1') }
+    expect(after.a.x).toBeCloseTo(before.a.x + 40, 0)
+    expect(after.a.y).toBeCloseTo(before.a.y + 90, 0)
+    expect(after.a1.x - before.a1.x).toBeCloseTo(40, 0)
+    expect(after.a1.y - before.a1.y).toBeCloseTo(90, 0)
+    // other branches stay put
+    expect(at(moved, 'C')).toMatchObject({ x: at(m, 'C').x, y: at(m, 'C').y })
+    expect(findNode(moved.root, byText(m, 'A'))!.offset).toEqual({ x: 40, y: 90 })
+  })
+
+  it('switches a first-level branch to the other side when dropped across the center', () => {
+    const m = setup()
+    expect(at(m, 'A').side).toBe(1)
+    const moved = placeTopicAt(m, byText(m, 'A'), -300, 50, measure)
+    const a = at(moved, 'A')
+    expect(a.side).toBe(-1)
+    expect(a.x).toBeCloseTo(-300, 0)
+    expect(a.y).toBeCloseTo(50, 0)
+    expect(at(moved, 'A1').x).toBeLessThan(a.x) // sub-topics grow outward on the new side
+    expect(findNode(moved.root, byText(m, 'A'))!.side).toBe(-1)
+  })
+
+  it('nudges topics, ignores the root, and dropping exactly back clears the offset', () => {
+    const m = setup()
+    const a = byText(m, 'A')
+    expect(findNode(nudgeTopic(m, a, 10, -20).root, a)!.offset).toEqual({ x: 10, y: -20 })
+    expect(findNode(nudgeTopic(nudgeTopic(m, a, 10, 0), a, -10, 0).root, a)!.offset).toBeUndefined()
+    expect(nudgeTopic(m, m.root.id, 5, 5)).toBe(m)
+    expect(placeTopicAt(m, m.root.id, 100, 100, measure)).toBe(m)
+    const p = at(m, 'A')
+    expect(findNode(placeTopicAt(m, a, p.x, p.y, measure).root, a)!.offset).toBeUndefined()
+  })
+
+  it('"Tidy up" clears all manual positions; attaching to another topic clears the moved topic position', () => {
+    let m = setup()
+    m = placeTopicAt(m, byText(m, 'A'), -300, 50, measure)
+    m = nudgeTopic(m, byText(m, 'A1'), 0, 30)
+    expect(hasManualPositions(m)).toBe(true)
+    const tidy = resetPositions(m)
+    expect(hasManualPositions(tidy)).toBe(false)
+    expect(names(tidy)).toBe(names(m))
+    expect(resetPositions(tidy)).toBe(tidy)
+    const attached = moveNode(m, byText(m, 'A1'), byText(m, 'B'))
+    expect(findNode(attached.root, byText(m, 'A1'))!.offset).toBeUndefined()
+  })
+
+  it('stores only valid positions', () => {
+    const m = normalizeMindMap({ root: { text: 'R', children: [{ text: 'a', offset: { x: 1.6, y: -2 }, side: -1 }, { text: 'b', offset: { x: 'x' }, side: 2 }] } })
+    expect(m.root.children[0]).toMatchObject({ offset: { x: 2, y: -2 }, side: -1 })
+    expect(m.root.children[1].offset).toBeUndefined()
+    expect(m.root.children[1].side).toBeUndefined()
   })
 })

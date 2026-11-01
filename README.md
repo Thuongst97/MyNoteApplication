@@ -27,6 +27,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Dragging the page edge](docs/screenshots/37-page-width-drag-light.png) | ![Page width menu](docs/screenshots/38-page-width-menu-light.png) |
 | ![Full-width page](docs/screenshots/39-page-full-width-light.png) | ![Libraries panel](docs/screenshots/40-libraries-panel-light.png) |
 | ![Collapsed libraries](docs/screenshots/41-libraries-collapsed-light.png) | ![Libraries in a drawing](docs/screenshots/42-libraries-drawing-light.png) |
+| ![Mind map with moved topics](docs/screenshots/43-mindmap-free-positions-light.png) | ![Moved topics in the page](docs/screenshots/44-mindmap-free-positions-page-light.png) |
 
 ## Features
 
@@ -53,7 +54,14 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
   | **Home** | Jump to the central topic |
   | `Ctrl/⌘+Z` | Undo |
 
-  You can also drag a topic onto another to move it, choose a *both sides* or *right-only* layout, and pan or zoom the map.
+  **Positioning topics:**
+  - **Drag a topic anywhere:** it stays where you drop it, and its sub-topics move with it.
+  - **Drop it onto another topic** (dashed highlight) to attach it there instead.
+  - **Drag a main branch across the central topic** to move it to the other side.
+  - **Shift+arrow keys** nudge the selected topic in 10px steps.
+  - **Tidy up** puts every topic back into the automatic layout.
+
+  You can also choose a *both sides* or *right-only* layout, and pan or zoom the map.
 
   **Colors:** select any topic, including the central topic, and pick a color from the toolbar's color button or the side panel. Choose one of 8 palette colors (they adjust for dark mode) or **Custom…** for any color. Sub-topics take their parent's color unless they have their own, and **Auto** resets a topic to the inherited color. The **Notes** panel lets you document each topic; topics with notes show a dot, and hovering them in the page shows the notes. Maps appear in the page as sharp images that match the theme, can be turned back into an outline (**To outline**), and all their topics and notes are searchable.
 - **Sub-pages in documents**: `/page` creates a sub-page and opens it. The parent keeps a clickable link block. Sub-pages also appear nested in the sidebar.

@@ -109,4 +109,41 @@ describe('MindMapEditor', () => {
     expect(saved.root.children[0].color).toBeUndefined()
     expect(saved.root.children[1].color).toBeUndefined()
   })
+
+  it('drags a topic to a new position (sub-topics follow), nudges with Shift+arrows and tidies up', async () => {
+    let map = newMindMap('R', ['A', 'B'])
+    map = { ...map, layout: 'right', root: { ...map.root, children: [{ ...map.root.children[0], children: [{ id: 'kid', text: 'Kid', children: [] }] }, map.root.children[1]] } }
+    const { onClose, dialog } = setup(map)
+    const a = map.root.children[0].id
+    const topicA = document.querySelector(`[data-topic-id="${a}"]`)!
+    const canvas = topicA.closest('svg')!.parentElement!
+    // drag A 120px to the right and 200px down (empty space, zoom 1)
+    fireEvent.pointerDown(topicA, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(canvas, { clientX: 160, clientY: 200 })
+    fireEvent.pointerMove(canvas, { clientX: 220, clientY: 300 })
+    fireEvent.pointerUp(canvas)
+    dialog.focus()
+    await userEvent.keyboard('{Shift>}{ArrowLeft}{/Shift}') // nudge -10
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    const saved = onClose.mock.calls[0][0] as MindMap
+    const k = saved.root.children[0]
+    expect(k.text).toBe('A')
+    // offset is in map units (depends on the fitted zoom), direction matters
+    expect(k.offset!.x).toBeGreaterThan(0)
+    expect(k.offset!.y).toBeGreaterThan(0)
+    expect(k.children[0].offset).toBeUndefined() // sub-topics follow without their own offset
+  })
+
+  it('Tidy up resets positions and keeps keyboard shortcuts working', async () => {
+    let map = newMindMap('R', ['A'])
+    map = { ...map, root: { ...map.root, children: [{ ...map.root.children[0], offset: { x: 50, y: 50 } }] } }
+    const { onClose } = setup(map)
+    await userEvent.click(screen.getByRole('button', { name: /Tidy up/ }))
+    expect(screen.getByRole('button', { name: /Tidy up/ })).toBeDisabled()
+    await new Promise((r) => requestAnimationFrame(r))
+    // focus is back in the editor, so Ctrl+Enter saves
+    await userEvent.keyboard('{Control>}{Enter}{/Control}')
+    expect(onClose).toHaveBeenCalled()
+    expect(onClose.mock.calls[0][0].root.children[0].offset).toBeUndefined()
+  })
 })

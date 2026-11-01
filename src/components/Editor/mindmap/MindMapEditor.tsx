@@ -3,6 +3,7 @@ import {
   Check,
   ChevronsDownUp,
   CornerDownRight,
+  LayoutGrid,
   ListTree,
   Maximize2,
   Minus,
@@ -29,7 +30,11 @@ import {
   removeNode,
   reorderNode,
   updateNode,
+  hasManualPositions,
   isHexColor,
+  nudgeTopic,
+  placeTopicAt,
+  resetPositions,
   type MindColor,
   type MindMap,
 } from './mindmapModel'
@@ -55,35 +60,58 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
   const [size, setSize] = useState({ w: 1000, h: 700 })
   const [showNotes, setShowNotes] = useState(true)
   const [colorOpen, setColorOpen] = useState(false)
-  const [drag, setDrag] = useState<{ id: string; target: string | null; moved: boolean; sx: number; sy: number } | null>(null)
+  /** Dragging a topic: dx/dy is the pointer movement in map units; target = topic it would attach to. */
+  const [drag, setDrag] = useState<{ id: string; target: string | null; moved: boolean; sx: number; sy: number; dx: number; dy: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const panRef = useRef<{ sx: number; sy: number; vx: number; vy: number } | null>(null)
   const dirty = past.length > 0
 
-  const layout = useMemo(() => layoutMindMap(map), [map])
+  // While dragging, the topic (and its sub-topics) follow the pointer.
+  const layout = useMemo(
+    () => layoutMindMap(drag?.moved && !drag.target ? nudgeTopic(map, drag.id, drag.dx, drag.dy) : map),
+    [map, drag],
+  )
   const tokens = MIND_TOKENS[theme]
   const sel = findNode(map.root, selected) ?? map.root
   const currentColor = resolveMindColor(layout.byId.get(sel.id)?.color ?? -1, theme)
   const mod = isMacLike() ? '⌘' : 'Ctrl'
 
-  /** Applies an edit with undo history. */
-  const commit = useCallback((next: MindMap) => {
-    setMap((cur) => {
-      if (next === cur) return cur
-      setPast((p) => [...p.slice(-99), cur])
-      setFuture([])
-      return next
+  /**
+   * Keeps keyboard shortcuts working: if focus fell out of the editor (e.g. the toolbar
+   * button just clicked became disabled), move it back.
+   */
+  const keepFocus = useCallback(() => {
+    requestAnimationFrame(() => {
+      const root = rootRef.current
+      const active = document.activeElement as HTMLButtonElement | null
+      if (root && (!active || !root.contains(active) || active.disabled)) root.focus()
     })
   }, [])
 
+  /** Applies an edit with undo history. */
+  const commit = useCallback(
+    (next: MindMap) => {
+      setMap((cur) => {
+        if (next === cur) return cur
+        setPast((p) => [...p.slice(-99), cur])
+        setFuture([])
+        return next
+      })
+      keepFocus()
+    },
+    [keepFocus],
+  )
+
   const undo = () => {
+    keepFocus()
     if (!past.length) return
     setFuture((f) => [map, ...f])
     setMap(past[past.length - 1])
     setPast((p) => p.slice(0, -1))
   }
   const redo = () => {
+    keepFocus()
     if (!future.length) return
     setPast((p) => [...p, map])
     setMap(future[0])
@@ -202,6 +230,14 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
     if (modKey && e.key.toLowerCase() === 'z') return e.preventDefault(), e.shiftKey ? redo() : undo()
     if (modKey && e.key.toLowerCase() === 'y') return e.preventDefault(), redo()
     if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return e.preventDefault(), commit(reorderNode(map, selected, e.key === 'ArrowUp' ? -1 : 1))
+    // Shift+arrows nudge the selected topic (with its sub-topics).
+    if (e.shiftKey && e.key.startsWith('Arrow') && selected !== map.root.id) {
+      e.preventDefault()
+      const step = 10
+      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key as 'ArrowLeft']
+      if (d) commit(nudgeTopic(map, selected, d[0], d[1]))
+      return
+    }
     switch (e.key) {
       case 'Tab':
         e.preventDefault()
@@ -254,12 +290,18 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
     e.stopPropagation()
     if (editing && editing.id !== id) finishEdit(true)
     setSelected(id)
-    if (id !== map.root.id) setDrag({ id, target: null, moved: false, sx: e.clientX, sy: e.clientY })
+    if (id !== map.root.id) setDrag({ id, target: null, moved: false, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0 })
   }
   const onPointerMove = (e: React.PointerEvent) => {
     if (drag) {
       const moved = drag.moved || Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 5
-      setDrag({ ...drag, moved, target: moved ? hitTopic(e.clientX, e.clientY, drag.id) : null })
+      setDrag({
+        ...drag,
+        moved,
+        dx: (e.clientX - drag.sx) / view.k,
+        dy: (e.clientY - drag.sy) / view.k,
+        target: moved ? hitTopic(e.clientX, e.clientY, drag.id) : null,
+      })
     } else if (panRef.current) {
       const p = panRef.current
       setView((v) => ({ ...v, x: p.vx + e.clientX - p.sx, y: p.vy + e.clientY - p.sy }))
@@ -267,9 +309,14 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
   }
   const onPointerUp = () => {
     if (drag?.moved && drag.target) {
+      // Dropped onto another topic: attach it there.
       const target = drag.target
       const r = findParent(map.root, drag.id)
       if (r?.id !== target) commit(moveNode(map, drag.id, target))
+    } else if (drag?.moved) {
+      // Dropped on empty space: keep it where it was dropped.
+      const n = layout.byId.get(drag.id)
+      if (n) commit(placeTopicAt(map, drag.id, n.x, n.y))
     }
     setDrag(null)
     panRef.current = null
@@ -286,7 +333,7 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
 
   const editingNode = editing ? layout.byId.get(editing.id) : null
   const zoomBy = (f: number) => setView((v) => ({ ...v, k: Math.min(3, Math.max(0.2, v.k * f)), x: v.x * f, y: v.y * f }))
-  const btn = 'flex h-8 items-center gap-1.5 rounded-md px-2 text-sm hover:bg-black/5 disabled:opacity-35 disabled:hover:bg-transparent dark:hover:bg-white/10'
+  const btn = 'flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-sm hover:bg-black/5 disabled:opacity-35 disabled:hover:bg-transparent dark:hover:bg-white/10'
 
   return (
     <div
@@ -301,7 +348,7 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
     >
       {/* Toolbar */}
       <div className="drag flex h-12 shrink-0 items-center gap-1 border-b border-black/10 px-3 dark:border-white/10" style={{ paddingLeft: isMacLike() ? 84 : undefined }}>
-        <span className="mr-2 flex items-center gap-1.5 text-sm font-medium">
+        <span className="mr-2 flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium">
           <ListTree size={16} className="text-blue-500" /> Mind map
         </span>
         <div className="no-drag flex items-center gap-0.5">
@@ -354,6 +401,15 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
           <button
             type="button"
             className={btn}
+            onClick={() => commit(resetPositions(map))}
+            disabled={!hasManualPositions(map)}
+            title="Put all topics back into the automatic layout"
+          >
+            <LayoutGrid size={15} /> Tidy up
+          </button>
+          <button
+            type="button"
+            className={btn}
             onClick={() => commit({ ...map, layout: map.layout === 'balanced' ? 'right' : 'balanced' })}
             title="Switch between both sides and right-only layout"
           >
@@ -363,8 +419,8 @@ export function MindMapEditor({ initial, theme, onClose }: Props) {
             <NotebookPen size={15} /> Notes
           </button>
         </div>
-        <span className="ml-auto hidden text-xs opacity-40 xl:inline">Tab sub-topic · Enter topic · F2 edit · Space fold · Home center · drag to move</span>
-        <button type="button" onClick={cancel} className="no-drag ml-3 flex items-center gap-1 rounded-md px-2.5 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/10">
+        <span className="ml-auto hidden min-w-0 truncate text-xs opacity-40 2xl:inline">Tab sub-topic · Enter topic · F2 edit · drag to move · drop on a topic to attach · Shift+arrows nudge</span>
+        <button type="button" onClick={cancel} className="no-drag ml-auto flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/10">
           <X size={14} /> Cancel
         </button>
         <button type="button" onClick={save} className="no-drag flex items-center gap-1 rounded-md bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">

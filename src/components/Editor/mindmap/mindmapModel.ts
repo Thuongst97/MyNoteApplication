@@ -6,6 +6,9 @@ import type { JSONContent } from '@tiptap/react'
  */
 export type MindColor = number | string
 
+const isOffset = (o: unknown): o is { x: number; y: number } =>
+  !!o && typeof o === 'object' && Number.isFinite((o as { x?: unknown }).x) && Number.isFinite((o as { y?: unknown }).y)
+
 export const isHexColor = (c: unknown): c is string => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c)
 const isMindColor = (c: unknown): c is MindColor => (typeof c === 'number' && Number.isInteger(c) && c >= 0) || isHexColor(c)
 
@@ -17,6 +20,10 @@ export interface MindNode {
   /** Color for this topic and its sub-topics (unless they set their own). */
   color?: MindColor
   collapsed?: boolean
+  /** Manual position: offset in px from where the automatic layout puts this topic. Sub-topics move with it. */
+  offset?: { x: number; y: number }
+  /** First-level branches only: which side of the central topic (1 = right, -1 = left), when chosen by dragging. */
+  side?: 1 | -1
   children: MindNode[]
 }
 
@@ -90,6 +97,8 @@ export function normalizeMindMap(raw: unknown): MindMap {
     ...(n?.note ? { note: String(n.note) } : {}),
     ...(isMindColor(n?.color) ? { color: n!.color } : {}),
     ...(n?.collapsed ? { collapsed: true } : {}),
+    ...(isOffset(n?.offset) ? { offset: { x: Math.round(n!.offset!.x), y: Math.round(n!.offset!.y) } } : {}),
+    ...(n?.side === 1 || n?.side === -1 ? { side: n.side } : {}),
     children: depth > 50 || !Array.isArray(n?.children) ? [] : n!.children.map((c) => fix(c, depth + 1)),
   })
   return { root: fix(r?.root ?? { text: 'Central topic' }, 0), layout: r?.layout === 'right' ? 'right' : 'balanced' }
@@ -132,13 +141,15 @@ export function addSibling(map: MindMap, id: string, text = ''): { map: MindMap;
   }
 }
 
-export function updateNode(map: MindMap, id: string, patch: Partial<Pick<MindNode, 'text' | 'note' | 'color' | 'collapsed'>>): MindMap {
+export function updateNode(map: MindMap, id: string, patch: Partial<Pick<MindNode, 'text' | 'note' | 'color' | 'collapsed' | 'offset' | 'side'>>): MindMap {
   return edit(map, (d) => {
     const n = findNode(d.root, id)
     if (!n) return
     Object.assign(n, patch)
     if (patch.note === '') delete n.note
     if (patch.color === undefined && 'color' in patch) delete n.color
+    if (patch.offset === undefined && 'offset' in patch) delete n.offset
+    if (patch.side === undefined && 'side' in patch) delete n.side
   })
 }
 
@@ -170,6 +181,9 @@ export function moveNode(map: MindMap, id: string, newParentId: string, index?: 
     const oldParent = findParent(d.root, id)!
     const oldIndex = oldParent.children.findIndex((c) => c.id === id)
     const [moved] = oldParent.children.splice(oldIndex, 1)
+    // A manual position only makes sense relative to the old parent.
+    delete moved.offset
+    delete moved.side
     const target = findNode(d.root, newParentId)!
     target.collapsed = false
     let at = index ?? target.children.length
@@ -297,9 +311,11 @@ export function layoutMindMap(map: MindMap, measure: Measure = defaultMeasure): 
   const place = (n: MindNode, depth: number, side: 1 | -1, anchorX: number, cy: number, inherited: MindColor, parentId: string | null) => {
     const s = size(n, depth)
     const color = n.color ?? inherited
-    const x = anchorX + (side * s.w) / 2
-    nodes.push({ id: n.id, text: n.text, lines: s.lines, note: n.note, depth, side, x, y: cy, w: s.w, h: s.h, color, parentId, hiddenChildren: n.collapsed ? countNodes(n) - 1 : 0 })
-    placeChildren(visibleChildren(n), depth + 1, side, x + (side * s.w) / 2 + side * H_GAP, cy, color, n.id)
+    // Automatic position, then the topic's manual offset (its sub-topics are laid out from here).
+    const x = anchorX + (side * s.w) / 2 + (n.offset?.x ?? 0)
+    const y = cy + (n.offset?.y ?? 0)
+    nodes.push({ id: n.id, text: n.text, lines: s.lines, note: n.note, depth, side, x, y, w: s.w, h: s.h, color, parentId, hiddenChildren: n.collapsed ? countNodes(n) - 1 : 0 })
+    placeChildren(visibleChildren(n), depth + 1, side, x + (side * s.w) / 2 + side * H_GAP, y, color, n.id)
   }
   // Sub-topics inherit their parent's color unless they set their own.
   const placeChildren = (kids: MindNode[], depth: number, side: 1 | -1, anchorX: number, cy: number, color: MindColor, parentId: string) => {
@@ -338,6 +354,11 @@ export function layoutMindMap(map: MindMap, measure: Measure = defaultMeasure): 
       y += heights[i] + V_GAP
     })
   }
+  // Branches dragged to a side stay there.
+  const all = [...right, ...left]
+  const isLeft = (c: (typeof colored)[number]) => (c.k.side ? c.k.side === -1 : left.includes(c))
+  right = all.filter((c) => !isLeft(c)).sort((a, b) => kids.indexOf(a.k) - kids.indexOf(b.k))
+  left = all.filter(isLeft).sort((a, b) => kids.indexOf(a.k) - kids.indexOf(b.k))
   side(right, 1)
   side(left.reverse(), -1) // left side reads top-to-bottom in reverse so it wraps around the root
 
@@ -426,4 +447,55 @@ export function mindMapToList(map: MindMap): JSONContent[] {
   })
   const root: JSONContent = { type: 'paragraph', content: map.root.text ? [{ type: 'text', text: map.root.text, marks: [{ type: 'bold' }] }] : [] }
   return map.root.children.length ? [root, items(map.root.children)] : [root]
+}
+
+// ---------------------------------------------------------------------------
+// Manual positions
+// ---------------------------------------------------------------------------
+
+/**
+ * Moves a topic (with its sub-topics) so its center ends up at (x, y). A first-level
+ * branch dropped on the other side of the central topic switches sides.
+ */
+export function placeTopicAt(map: MindMap, id: string, x: number, y: number, measure: Measure = defaultMeasure): MindMap {
+  if (id === map.root.id) return map
+  const parent = findParent(map.root, id)
+  let next = map
+  if (parent?.id === map.root.id) {
+    const current = layoutMindMap(map, measure).byId.get(id)
+    const wanted: 1 | -1 = x < 0 ? -1 : 1
+    if (current && current.side !== wanted) next = updateNode(next, id, { side: wanted })
+  }
+  // Where would the topic be without its own offset?
+  const auto = layoutMindMap(updateNode(next, id, { offset: undefined }), measure).byId.get(id)
+  if (!auto) return map
+  const dx = Math.round(x - auto.x)
+  const dy = Math.round(y - auto.y)
+  return updateNode(next, id, { offset: dx || dy ? { x: dx, y: dy } : undefined })
+}
+
+/** Moves a topic by (dx, dy) from where it is now. */
+export function nudgeTopic(map: MindMap, id: string, dx: number, dy: number): MindMap {
+  if (id === map.root.id) return map
+  const n = findNode(map.root, id)
+  if (!n) return map
+  const x = (n.offset?.x ?? 0) + dx
+  const y = (n.offset?.y ?? 0) + dy
+  return updateNode(map, id, { offset: x || y ? { x, y } : undefined })
+}
+
+/** True if any topic has a manual position. */
+export function hasManualPositions(map: MindMap): boolean {
+  const walk = (n: MindNode): boolean => !!n.offset || !!n.side || n.children.some(walk)
+  return walk(map.root)
+}
+
+/** Puts every topic back into the automatic layout. */
+export function resetPositions(map: MindMap): MindMap {
+  if (!hasManualPositions(map)) return map
+  const strip = (n: MindNode): MindNode => {
+    const { offset: _o, side: _s, ...rest } = n
+    return { ...rest, children: n.children.map(strip) }
+  }
+  return { ...map, root: strip(map.root) }
 }
