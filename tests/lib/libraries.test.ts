@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addLibraryUrlFrom,
+  libraryFileUrlFrom,
   emptyLibraries,
   filterLibraries,
   installLibrary,
@@ -107,5 +108,19 @@ describe('installing and storing', () => {
     expect(filterLibraries(d, 'router')[0].items.map((i) => i.id)).toEqual(['b'])
     expect(filterLibraries(d, 'network')[0].items).toHaveLength(2) // whole library matches by name
     expect(filterLibraries(d, '')).toBe(d.categories)
+  })
+})
+
+describe('direct library file links ("Download" button)', () => {
+  it('accepts https .excalidrawlib links only', () => {
+    const f = 'https://libraries.excalidraw.com/libraries/rohanp/system-design.excalidrawlib'
+    expect(libraryFileUrlFrom(f)).toBe(f)
+    expect(libraryFileUrlFrom(f + '?v=2')).toBe(f + '?v=2')
+    expect(libraryFileUrlFrom('https://libraries.excalidraw.com/index.html')).toBeNull()
+    expect(libraryFileUrlFrom('http://evil.example/x.excalidrawlib')).toBeNull()
+    expect(libraryFileUrlFrom('file:///etc/x.excalidrawlib')).toBeNull()
+    expect(libraryFileUrlFrom('https://user:pw@host/x.excalidrawlib')).toBeNull()
+    expect(libraryFileUrlFrom('http://127.0.0.1:8771/x.excalidrawlib', { allowLocalHttp: true })).toBe('http://127.0.0.1:8771/x.excalidrawlib')
+    expect(libraryFileUrlFrom('not a url')).toBeNull()
   })
 })

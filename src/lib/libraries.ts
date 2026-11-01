@@ -117,6 +117,15 @@ export function addLibraryUrlFrom(link: string, policy: UrlPolicy = {}): string 
   }
 }
 
+/** A direct link to a library file (e.g. the site's "Download" button), or null. */
+export function libraryFileUrlFrom(link: string, policy: UrlPolicy = {}): string | null {
+  try {
+    return /\.excalidrawlib$/i.test(new URL(link).pathname) && isAllowedLibraryUrl(link, policy) ? link : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Adds a downloaded library as a category. Installing the same URL again updates
  * that category instead of creating a duplicate.

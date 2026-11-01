@@ -6,7 +6,7 @@ import { ASSET_SCHEME, AssetStorage } from './assets'
 import type { PageUpdate, TaskSettings, TaskUpdate } from '../src/types'
 import { TaskStore } from './tasks'
 import { LibraryStore } from './libraries'
-import { addLibraryUrlFrom, isAllowedLibraryUrl, libraryNameFrom } from '../src/lib/libraries'
+import { addLibraryUrlFrom, libraryFileUrlFrom, libraryNameFrom } from '../src/lib/libraries'
 import { notificationText } from '../src/lib/reminders'
 import { assetResponseHeaders, FONT_SCHEME, isAppUrl, isPermissionAllowed, isSafeExternalUrl, resolveBundledFont } from './security'
 import { defaultRestoreBounds, fillsWorkArea } from './windowState'
@@ -203,13 +203,7 @@ function openLibraryBrowser() {
   browseSession.on('will-download', (ev, item) => {
     ev.preventDefault()
     const url = item.getURL()
-    let isLibraryFile = false
-    try {
-      isLibraryFile = /\.excalidrawlib$/i.test(new URL(url).pathname) && isAllowedLibraryUrl(url, { allowLocalHttp: isDev })
-    } catch {
-      // not a URL
-    }
-    if (isLibraryFile) confirmAndInstall(url)
+    if (libraryFileUrlFrom(url, { allowLocalHttp: isDev })) confirmAndInstall(url)
     else
       void dialog.showMessageBox(browseWin ?? win!, {
         type: 'info',
@@ -226,8 +220,14 @@ function openLibraryBrowser() {
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, session: browseSession, devTools: isDev },
   })
   const siteHost = new URL(site).host
+  /**
+   * "Add to Excalidraw" (…#addLibrary=<url>) and "Download" (a plain link to the .excalidrawlib
+   * file) both install the library. The download link is caught when the window navigates to it,
+   * before any response: whether the response would become a download depends on the server's
+   * content type and the platform, which made "Download" work on Windows but not on macOS.
+   */
   const handleAdd = (url: string) => {
-    const lib = addLibraryUrlFrom(url, { allowLocalHttp: isDev })
+    const lib = addLibraryUrlFrom(url, { allowLocalHttp: isDev }) ?? libraryFileUrlFrom(url, { allowLocalHttp: isDev })
     if (!lib) return false
     confirmAndInstall(lib)
     return true
