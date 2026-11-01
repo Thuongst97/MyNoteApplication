@@ -419,3 +419,17 @@ body.block-dragging .prosemirror-dropcursor-inline {
   width: 100%;
   height: 100%;
 }
+/* Two-way arrow tool sits inside Excalidraw's toolbar. While it's on, the normal arrow
+   tool (which is technically active too) is not shown as selected. */
+.two-way-arrow-slot {
+  display: contents;
+}
+.two-way-arrow-host .excalidraw .ToolIcon.fillable .ToolIcon_type_radio[data-testid='toolbar-arrow']:checked + .ToolIcon__icon {
+  background: transparent !important;
+  --icon-fill-color: inherit;
+  --keybinding-color: inherit;
+}
+.two-way-arrow-host .excalidraw .ToolIcon.fillable .ToolIcon_type_radio[data-testid='toolbar-arrow']:checked + .ToolIcon__icon svg {
+  color: inherit !important;
+  fill: none !important;
+}

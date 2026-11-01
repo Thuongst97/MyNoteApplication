@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/useAppStore'
 import { parsePageUrl } from '@/lib/links'
 import type { WhiteboardContent } from './WhiteboardPage'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
+import { useTwoWayArrowTool } from './twoWayArrow'
 
 interface Props {
   theme: Theme
@@ -20,9 +21,10 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
   const lastHash = useRef<number | null>(null)
   const lastFiles = useRef(0)
   const library = useLibraryIntegration(theme)
+  const twoWay = useTwoWayArrowTool(library.api)
 
   return (
-    <div className="relative h-full w-full">
+    <div className={`relative h-full w-full${twoWay.active ? ' two-way-arrow-host' : ''}`}>
     <Excalidraw
       excalidrawAPI={library.setApi}
       {...library.excalidrawProps}
@@ -41,6 +43,7 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
         scrollToContent: true,
       }}
       onChange={(elements, appState, files) => {
+        twoWay.onAppStateChange(appState)
         const hash = hashElementsVersion(elements)
         const fileCount = Object.keys(files).length
         if (lastHash.current === null) {
@@ -79,6 +82,7 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
       </MainMenu>
     </Excalidraw>
     {library.panel}
+    {twoWay.button}
     </div>
   )
 }

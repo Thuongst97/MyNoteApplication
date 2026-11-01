@@ -8,6 +8,7 @@ import type { Theme } from '@/stores/useAppStore'
 import { isMacLike } from '@/lib/utils'
 import type { DrawingData } from './drawingModel'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
+import { useTwoWayArrowTool } from '@/components/Whiteboard/twoWayArrow'
 
 interface Props {
   initial: DrawingData
@@ -22,6 +23,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const dirty = useRef(false)
   const library = useLibraryIntegration(theme)
+  const twoWay = useTwoWayArrowTool(library.api)
 
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -106,7 +108,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
         </button>
       </div>
-      <div className="relative min-h-0 flex-1">
+      <div className={`relative min-h-0 flex-1${twoWay.active ? ' two-way-arrow-host' : ''}`}>
         <Excalidraw
           excalidrawAPI={(api) => {
             apiRef.current = api
@@ -128,7 +130,8 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
             },
             scrollToContent: true,
           }}
-          onChange={(_elements, _state, _files) => {
+          onChange={(_elements, state, _files) => {
+            twoWay.onAppStateChange(state)
             if (apiRef.current) dirty.current = true
           }}
           UIOptions={{
@@ -144,6 +147,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           </MainMenu>
         </Excalidraw>
         {library.panel}
+        {twoWay.button}
       </div>
     </div>
   )

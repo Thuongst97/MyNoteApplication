@@ -28,6 +28,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 | ![Full-width page](docs/screenshots/39-page-full-width-light.png) | ![Libraries panel](docs/screenshots/40-libraries-panel-light.png) |
 | ![Collapsed libraries](docs/screenshots/41-libraries-collapsed-light.png) | ![Libraries in a drawing](docs/screenshots/42-libraries-drawing-light.png) |
 | ![Mind map with moved topics](docs/screenshots/43-mindmap-free-positions-light.png) | ![Moved topics in the page](docs/screenshots/44-mindmap-free-positions-page-light.png) |
+| ![Two-way arrow tool](docs/screenshots/45-two-way-arrow-tool-light.png) | ![Two-way arrows](docs/screenshots/46-two-way-arrows-light.png) |
 
 ## Features
 
@@ -68,6 +69,7 @@ Runs on Windows and macOS (and Linux), stores everything locally, and uses a fra
 - **Page links & block references**: type `[[` (anywhere) or `@` (after a space) to link to any page, or create one on the spot. To link to a specific block, open the block's **⋮⋮ → Copy link to block** and paste it into any page. It shows as *Page › start of block*, and clicking it opens the page, scrolls to the block and highlights it. Each page lists **Linked from** (backlinks) at the bottom. **Copy link to page** is in the sidebar page menu.
 - **Graph view** (sidebar, or `Ctrl/⌘+Shift+G`): every page as a node, connected by links and (optionally) sub-page relations. Drag nodes, pan, zoom, and hover to highlight connections. Search to find a page, and click a node to open it.
 - **Infinite canvas / whiteboard pages**: **New whiteboard** in the sidebar (or *Add whiteboard inside* on a page) creates a page that is one endless canvas with shapes, arrows, text, pen, images, colors and layers. Changes save automatically. Shapes can link to pages (paste a copied page link into a shape's link), and clicking the link opens the page. Whiteboard text is searchable, and whiteboards appear in the sidebar, search and graph.
+- **Two-way arrows**: whiteboards and drawings have a **↔ Two-way arrow** tool right after the arrow tool, for arrows with heads at both ends. Like the other tools it applies to the next arrow; with the tool lock 🔒 it stays on. Choosing the normal arrow (or pressing `A` / `5`) goes back to one-way arrows. Existing arrows can still be changed in the style panel under *Arrowheads*.
 - **Drawing libraries (saved permanently)**: in any whiteboard or drawing, the **Library** button opens a panel where every library is its own **collapsible category**, with **Expand all / Collapse all**, search (by library name, item name or text inside items), and per-library **Rename / Update from source / Delete**. Items can be deleted one by one.
   - **Install:** **Browse libraries** opens the Excalidraw libraries website in an app window. Clicking *Add to Excalidraw* there downloads the library and saves it. You can also **Install from link** or **Import file (.excalidrawlib)**.
   - **Use:** click an item to place it in the middle of the view, or drag it onto the canvas.
