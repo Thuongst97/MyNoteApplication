@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+    # New release notes on this branch publish a release (see the last step).
+    branches: ['claude/sharp-brown-grboj6']
+    paths: ['release-notes/**']
 
 jobs:
   build:
@@ -61,14 +64,25 @@ jobs:
             dist_electron/*.dmg
             dist_electron/*.zip
           if-no-files-found: error
-      # Version tags (v1.2.3) publish the Windows installer as a GitHub release, with the
-      # notes from release-notes/<tag>.md.
+      # Publishing: a version tag (v1.2.3), or new release notes pushed to the branch, creates
+      # the GitHub release v<package.json version> with the Windows installer and the notes
+      # from release-notes/<tag>.md. (The tag is created by GitHub if it doesn't exist.)
+      - name: Release tag
+        id: tag
+        if: runner.os == 'Windows' && github.event_name == 'push'
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then tag="$GITHUB_REF_NAME"; else tag="v$(node -p "require('./package.json').version")"; fi
+          test -f "release-notes/$tag.md" || { echo "::error::release-notes/$tag.md is missing"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Publish GitHub release (Windows)
-        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        if: steps.tag.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: PremiumNote ${{ github.ref_name }}
-          body_path: release-notes/${{ github.ref_name }}.md
+          tag_name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: PremiumNote ${{ steps.tag.outputs.tag }}
+          body_path: release-notes/${{ steps.tag.outputs.tag }}.md
           files: |
             dist_electron/*.exe
           make_latest: true
