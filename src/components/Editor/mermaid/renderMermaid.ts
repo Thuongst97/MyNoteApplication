@@ -12,6 +12,26 @@ function loadMermaid() {
   return mermaidPromise
 }
 
+/** Tags that never belong in a diagram label (they load things or run code). */
+const DANGEROUS_TAGS = /^(script|style|iframe|frame|object|embed|img|image|svg|math|video|audio|source|picture|link|meta|base|form|input|textarea|select|button|details|dialog|template|foreignobject|a|marquee)$/i
+
+/**
+ * Removes HTML that could run code from diagram text *before* mermaid sees it. Mermaid puts
+ * label HTML into the page for a moment to measure it before cleaning it, so event handlers
+ * in labels would reach the live page (the app's CSP blocks them; this removes them first).
+ * Normal diagram syntax (-->, <|--, <<interface>>, <br>, <b>…) is unchanged.
+ */
+export function defangMermaid(code: string): string {
+  return code
+    .replace(/<\/?([a-zA-Z][\w:-]*)(\s[^<>]*)?\/?>/g, (tag, name: string, attrs: string | undefined) => {
+      if (DANGEROUS_TAGS.test(name)) return ''
+      // Keep simple formatting tags, but never their attributes (onclick, style, href…).
+      if (!attrs) return tag
+      return tag.startsWith('</') ? `</${name}>` : `<${name}>`
+    })
+    .replace(/\b(javascript|vbscript|data)\s*:/gi, '$1-blocked:')
+}
+
 export interface MermaidResult {
   svg?: string
   error?: string
@@ -23,7 +43,7 @@ export interface MermaidResult {
  */
 export function renderMermaid(code: string, theme: Theme): Promise<MermaidResult> {
   const job = queue.then(async (): Promise<MermaidResult> => {
-    const trimmed = code.trim()
+    const trimmed = defangMermaid(code.trim())
     if (!trimmed) return { error: 'Empty diagram' }
     const mermaid = await loadMermaid()
     mermaid.initialize({

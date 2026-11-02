@@ -14,9 +14,15 @@ purifier?.addHook('afterSanitizeAttributes', (node) => {
     node.setAttribute('rel', 'noopener noreferrer')
   }
 })
+/** Old-browser script hooks in CSS (javascript: URLs, expression(), behavior/-moz-binding). */
+const CSS_SCRIPT = /javascript:|vbscript:|expression\s*\(|behavior\s*:|-moz-binding/gi
 purifier?.addHook('uponSanitizeElement', (node, data) => {
-  // No loading of other stylesheets (also blocked by the app's CSP).
-  if (data.tagName === 'style') node.textContent = (node.textContent ?? '').replace(/@import[^;]*;?/gi, '')
+  // No loading of other stylesheets (also blocked by the app's CSP), no script hooks.
+  if (data.tagName === 'style') node.textContent = (node.textContent ?? '').replace(/@import[^;]*;?/gi, '').replace(CSS_SCRIPT, 'blocked:')
+})
+purifier?.addHook('uponSanitizeAttribute', (_node, data) => {
+  if (data.attrName === 'style' && CSS_SCRIPT.test(data.attrValue)) data.attrValue = data.attrValue.replace(CSS_SCRIPT, 'blocked:')
+  CSS_SCRIPT.lastIndex = 0
 })
 
 /** `html` / `body` selectors in the user's CSS apply to the block's root instead. */

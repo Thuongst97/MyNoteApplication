@@ -25,7 +25,16 @@ export async function renderPlantUml(serverInput: unknown, source: unknown, fetc
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
   try {
-    const res = await fetchImpl(url, { signal: ctrl.signal, redirect: 'follow' })
+    // Redirects are followed by hand: at most 3, and only to http(s) (never to file:, the
+    // app's own schemes or anything else a server might point at).
+    let target = url
+    let res = await fetchImpl(target, { signal: ctrl.signal, redirect: 'manual', credentials: 'omit' })
+    for (let hops = 0; res.status >= 300 && res.status < 400 && res.headers.get('location'); hops++) {
+      const next = new URL(res.headers.get('location')!, target)
+      if (hops >= 3 || (next.protocol !== 'https:' && next.protocol !== 'http:')) return { error: 'The PlantUML server redirected to an address that is not allowed.' }
+      target = next.toString()
+      res = await fetchImpl(target, { signal: ctrl.signal, redirect: 'manual', credentials: 'omit' })
+    }
     const type = res.headers.get('content-type') ?? ''
     const text = await res.text()
     if (!/svg/i.test(type) || !/<svg[\s>]/i.test(text)) return { error: `The server didn't return a diagram (HTTP ${res.status}).` }

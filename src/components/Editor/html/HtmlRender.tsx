@@ -22,5 +22,12 @@ export function HtmlRender({ source, className }: { source: string; className?: 
     const root = host.shadowRoot ?? host.attachShadow({ mode: 'open' })
     root.innerHTML = `<style>${BASE_CSS}</style><div class="html-root">${html}</div>`
   }, [html])
-  return <div ref={ref} className={className} data-html-block="" />
+  // The wrapper is outside the block's style scope, so the block's own CSS can't undo it:
+  // `contain: paint` keeps everything the block draws (even position: fixed) inside its box,
+  // so a shared page can't cover the app with a fake screen.
+  return (
+    <div className="html-block-frame" style={{ contain: 'layout paint', overflow: 'hidden', position: 'relative', isolation: 'isolate' }}>
+      <div ref={ref} className={className} data-html-block="" />
+    </div>
+  )
 }

@@ -60,3 +60,24 @@ describe('/puml', () => {
     expect(docToText({ type: 'doc', content: [{ type: 'plantuml', attrs: { source: 'Alice -> Bob' } }] } as never)).toBe('Alice -> Bob')
   })
 })
+
+describe('PlantUML redirects', () => {
+  beforeEach(() => clearPlantUmlCache())
+  const redirect = (to: string) => new Response(null, { status: 302, headers: { location: to } })
+  it('follows a few http(s) redirects only', async () => {
+    const f = vi.fn().mockResolvedValueOnce(redirect('https://other.example/svg/x')).mockResolvedValueOnce(reply(SVG))
+    expect(await renderPlantUml('http://localhost:8080', 'A', f as never)).toEqual({ svg: SVG })
+    expect(f.mock.calls[1][0]).toBe('https://other.example/svg/x')
+    expect(f.mock.calls[0][1]).toMatchObject({ redirect: 'manual', credentials: 'omit' })
+  })
+  it.each(['file:///etc/passwd', 'notion-asset://local/00000000-0000-0000-0000-000000000000.svg', 'javascript:alert(1)'])('refuses a redirect to %s', async (to) => {
+    const f = vi.fn().mockResolvedValueOnce(redirect(to))
+    expect(await renderPlantUml('http://localhost:8080', 'A', f as never)).toMatchObject({ error: expect.stringContaining('not allowed') })
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+  it('stops redirect loops', async () => {
+    const f = vi.fn().mockImplementation(async () => redirect('https://loop.example/'))
+    expect(await renderPlantUml('http://localhost:8080', 'A', f as never)).toMatchObject({ error: expect.stringContaining('not allowed') })
+    expect(f.mock.calls.length).toBeLessThanOrEqual(4)
+  })
+})

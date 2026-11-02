@@ -37,7 +37,8 @@ export function cleanTitle(v: unknown): string {
 
 /** Icon: a short string (an emoji) or null. */
 export function cleanIcon(v: unknown): string | null {
-  return typeof v === 'string' && v.trim() && v.length <= MAX_ICON ? v : null
+  // An emoji or a short symbol: no markup characters, no control characters.
+  return typeof v === 'string' && v.trim() && v.length <= MAX_ICON && !/[<>"'`&\\\u0000-\u001f\u007f]/.test(v) ? v : null
 }
 
 /** Cover: only values that render as a safe background, otherwise null. */
