@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { CellSelection } from '@tiptap/pm/tables'
 import { BubbleMenu } from '@tiptap/react/menus'
@@ -30,6 +31,16 @@ function currentTable(editor: Editor): HTMLElement | null {
 /** `appendTo`: where the menu element lives (e.g. document.body when the editor is zoomed). */
 export function TableToolbar({ editor, appendTo }: { editor: Editor; appendTo?: HTMLElement }) {
   const run = (fn: (c: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => fn(editor.chain().focus()).run()
+  // When this editor loses focus (e.g. another box on a slide is clicked), re-check the
+  // toolbar so it doesn't stay up next to a table nobody is editing.
+  useEffect(() => {
+    const onBlur = () =>
+      setTimeout(() => {
+        if (!editor.isDestroyed && !editor.isFocused) editor.view.dispatch(editor.state.tr.setMeta('tableToolbar', 'hide').setMeta('addToHistory', false))
+      })
+    editor.on('blur', onBlur)
+    return () => void editor.off('blur', onBlur)
+  }, [editor])
   // Re-evaluated on every transaction so buttons enable/disable as the cursor moves.
   const can = useEditorState({
     editor,
@@ -66,7 +77,8 @@ export function TableToolbar({ editor, appendTo }: { editor: Editor; appendTo?: 
       pluginKey="tableToolbar"
       options={{ placement: 'bottom-start', offset: 6, flip: true, shift: { padding: 8 } }}
       // Hidden while text is selected inside a cell, where the formatting toolbar shows instead.
-      shouldShow={({ editor: e, state }) => e.isEditable && e.isActive('table') && (state.selection.empty || state.selection instanceof CellSelection)}
+      // Only in the editor being typed in (slides have one editor per box, each keeps its cursor).
+      shouldShow={({ editor: e, state }) => e.isEditable && e.isFocused && e.isActive('table') && (state.selection.empty || state.selection instanceof CellSelection)}
       getReferencedVirtualElement={() => {
         const table = currentTable(editor)
         return table ? { getBoundingClientRect: () => table.getBoundingClientRect() } : null

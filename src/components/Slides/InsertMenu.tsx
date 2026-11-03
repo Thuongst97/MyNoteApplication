@@ -93,11 +93,11 @@ export function InsertMenu({
   return (
     <>
       <div ref={ref} className="relative">
-        <button type="button" className={btn} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
-          <Plus size={15} className="opacity-70" /> Insert <ChevronDown size={13} className="opacity-60" />
+        <button aria-label="Insert" type="button" className={btn} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+          <Plus size={15} className="opacity-70" /> <span className="tb-label">Insert</span> <ChevronDown size={13} className="opacity-60" />
         </button>
         {open && (
-          <div role="menu" className="absolute left-0 top-full z-50 mt-1 grid w-[300px] animate-pop-in grid-cols-2 gap-0.5 rounded-lg border border-black/10 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#252525]">
+          <div role="menu" className="absolute left-0 top-full z-50 mt-1 grid w-[372px] animate-pop-in grid-cols-2 gap-0.5 rounded-lg border border-black/10 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#252525]">
             {INSERTABLE.map((it) => {
               const cmd = SLASH_COMMANDS.find((c) => c.title === it.title)
               const Icon = it.title === 'Text' ? Type : (cmd?.icon ?? Type)
@@ -110,7 +110,7 @@ export function InsertMenu({
                     setOpen(false)
                     onInsert(it.title, it.width)
                   }}
-                  className="flex h-8 items-center gap-2 rounded-md px-2 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex h-8 items-center gap-2 rounded-md px-2 whitespace-nowrap text-left text-sm hover:bg-black/5 dark:hover:bg-white/10"
                 >
                   <Icon size={15} className="shrink-0 opacity-70" /> {it.label ?? it.title}
                 </button>
@@ -119,7 +119,7 @@ export function InsertMenu({
           </div>
         )}
       </div>
-      <button
+      <button aria-label="Detach block"
         type="button"
         className={btn}
         disabled={!canDetach}
@@ -127,7 +127,7 @@ export function InsertMenu({
         onClick={onDetach}
         title="Put the block with the cursor (chart, code, image…) in its own box you can move anywhere"
       >
-        <SquareDashedMousePointer size={15} className="opacity-70" /> Detach block
+        <SquareDashedMousePointer size={15} className="opacity-70" /> <span className="tb-label">Detach block</span>
       </button>
       {canAlign && onAlign && (
         <div ref={alignRef} className="relative">

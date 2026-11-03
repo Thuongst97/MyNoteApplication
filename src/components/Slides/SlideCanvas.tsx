@@ -2,7 +2,7 @@ import { createContext, memo, useContext, useEffect, useId, useLayoutEffect, use
 import { EditorContent, useEditor, type JSONContent } from '@tiptap/react'
 import { createEditorExtensions } from '@/components/Editor/extensions'
 import { StaticBlocksContext } from '@/components/Editor/staticBlocks'
-import { MAIN_FRAME, PAD_X, PAD_Y, SLIDE_BACKGROUNDS, SLIDE_H, SLIDE_W, buildCss, buildSteps, footerShown, type FooterSettings, type Rect, type SlideBox, type SlideData } from '@/lib/presentation'
+import { MAIN_FRAME, PAD_X, PAD_Y, SLIDE_BACKGROUNDS, SLIDE_H, SLIDE_W, buildCss, buildSteps, footerShown, masterShown, type FooterSettings, type SlideMaster, type Rect, type SlideBox, type SlideData } from '@/lib/presentation'
 import { GRAIN_BG, themeVars, type SlideTheme } from '@/lib/slideThemes'
 import { SurfaceThemeContext } from '@/components/Editor/docTheme'
 import { InkLayer } from './InkLayer'
@@ -21,6 +21,9 @@ export interface DeckInfo {
   total: number
   /** 1-based number of a slide (0: unknown). */
   numberOf: (slideId: string) => number
+  master?: SlideMaster | null
+  /** Changes the footer (editing on the slide); missing where it can't be edited. */
+  setFooter?: (patch: Partial<FooterSettings>) => void
 }
 export const DeckContext = createContext<DeckInfo | null>(null)
 
@@ -56,13 +59,49 @@ function ThemeLayers({ theme, title }: { theme: SlideTheme; title: boolean }) {
 }
 
 /** Footer: hairline, text / date on the left, "03 / 12" on the right. */
-function SlideFooter({ deck, slideId }: { deck: DeckInfo; slideId?: string }) {
+function SlideFooter({ deck, slideId, editable }: { deck: DeckInfo; slideId?: string; editable?: boolean }) {
   const f = deck.footer!
   const n = slideId ? deck.numberOf(slideId) : 0
   const left = [f.text ?? '', f.date ?? ''].filter(Boolean)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const canEdit = editable && !!deck.setFooter
+  const finish = (save: boolean) => {
+    setEditing(false)
+    if (save) deck.setFooter?.({ text: draft.trim() || undefined })
+  }
   return (
-    <div className="slide-footer" data-testid="slide-footer">
-      <span>{left.length ? left.join('  ·  ') : ''}</span>
+    <div className={cn('slide-footer', f.caps === false && 'slide-footer-plain', canEdit && 'slide-footer-editable')} data-testid="slide-footer">
+      {editing ? (
+        <input
+          autoFocus
+          aria-label="Footer text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => finish(true)}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === 'Enter') finish(true)
+            else if (e.key === 'Escape') finish(false)
+          }}
+          className="slide-footer-input"
+        />
+      ) : canEdit ? (
+        <button
+          type="button"
+          title="Click to edit the footer (all slides)"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => {
+            setDraft(f.text ?? '')
+            setEditing(true)
+          }}
+          className="slide-footer-text"
+        >
+          {left.length ? left.join('  ·  ') : <span style={{ opacity: 0.5 }}>Click to add footer text</span>}
+        </button>
+      ) : (
+        <span>{left.length ? left.join('  ·  ') : ''}</span>
+      )}
       {f.slideNumbers && n > 0 && (
         <span>
           {String(n).padStart(2, '0')} <span style={{ opacity: 0.5 }}>/ {String(deck.total).padStart(2, '0')}</span>
@@ -95,26 +134,48 @@ export function SlideFrame({
   width,
   className,
   children,
+  editing,
+  noMaster,
 }: {
-  slide: Pick<SlideData, 'background' | 'layout'> & { id?: string }
+  slide: Pick<SlideData, 'background' | 'layout'> & { id?: string; hideMaster?: boolean }
   font?: string | null
   width?: number
   className?: string
   children: ReactNode
+  /** The slide being edited (its footer can be edited in place). */
+  editing?: boolean
+  /** Don't draw the master's objects (the master itself is being edited). */
+  noMaster?: boolean
 }) {
   const { boxRef, zoom } = useFitZoom(width)
   const deck = useContext(DeckContext)
   const theme = deck?.theme ?? null
-  const look = slideLook(slide, theme)
+  // Slides on the default background take the master's background.
+  const effective = slide.background === 'default' && deck?.master?.background ? { ...slide, background: deck.master.background } : slide
+  const look = slideLook(effective, theme)
+  const master = deck?.master
+  const showMaster = !noMaster && masterShown(master, slide)
   return (
     <div ref={boxRef} className={cn('relative w-full overflow-hidden', className)} style={{ aspectRatio: '16 / 9', ...(width && { width }) }}>
       <div
         className={cn('absolute left-0 top-0', !theme && 'bg-canvas-light text-ink-light dark:bg-canvas-dark dark:text-ink-dark', look.className)}
         style={{ width: SLIDE_W, height: SLIDE_H, zoom, ...(theme ? {} : fontStyle(font as never)), ...look.style }}
       >
-        {theme && <ThemeLayers theme={theme} title={slide.layout === 'title' && slide.background === 'default'} />}
-        <SurfaceThemeContext.Provider value={theme ? (look.dark ? 'dark' : 'light') : null}>{children}</SurfaceThemeContext.Provider>
-        {deck && footerShown(deck.footer, slide) && <SlideFooter deck={deck} slideId={slide.id} />}
+        {theme && <ThemeLayers theme={theme} title={slide.layout === 'title' && effective.background === 'default'} />}
+        <SurfaceThemeContext.Provider value={theme ? (look.dark ? 'dark' : 'light') : null}>
+          {/* Slide master objects: behind the slide's own content, not editable here. */}
+          {showMaster && (
+            <div className="pointer-events-none absolute inset-0" data-testid="master-layer" aria-hidden>
+              <StaticBlocksContext.Provider value>
+                {master!.boxes!.map((b) => (
+                  <SlideBoxView key={b.id} box={b} />
+                ))}
+              </StaticBlocksContext.Provider>
+            </div>
+          )}
+          {children}
+        </SurfaceThemeContext.Provider>
+        {deck && footerShown(deck.footer, slide) && <SlideFooter deck={deck} slideId={slide.id} editable={editing} />}
       </div>
     </div>
   )
@@ -174,7 +235,8 @@ export const rectStyle = (r: Pick<Rect, 'x' | 'y' | 'w'> & { h?: number }): Reac
 /** The slide's main text area, read-only, at its frame; too much content shrinks to fit. */
 export const SlideBody = memo(function SlideBody({ content, frame = MAIN_FRAME }: { content: JSONContent; frame?: Rect }) {
   const editor = useReadOnlyEditor(content)
-  const { innerRef, zoom } = useAutoFit([editor, content, frame.h], 0.5, frame.h)
+  // Text keeps its size whatever the frame's size (min 1 = never shrink); it may run past it.
+  const { innerRef, zoom } = useAutoFit([editor, content, frame.h], 1, frame.h)
   return (
     <div className="slide-main" style={rectStyle(frame)}>
       <div ref={innerRef} className="slide-content" style={{ zoom }}>

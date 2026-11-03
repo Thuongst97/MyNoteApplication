@@ -70,6 +70,8 @@ export interface SlideData {
   hidden?: boolean
   /** Speaker notes. */
   notes?: string
+  /** Don't draw the slide master's objects on this slide. */
+  hideMaster?: boolean
   transition?: SlideTransition
   animations?: SlideAnimation[]
   ink?: InkStroke[]
@@ -85,6 +87,20 @@ export interface FooterSettings {
   date?: string
   /** Not on title slides (default on). */
   hideOnTitle?: boolean
+  /** Footer text in capitals (default on; false = as typed). */
+  caps?: boolean
+}
+
+/**
+ * Slide master (like PowerPoint's): objects drawn on every slide behind its own content
+ * (a logo, a tagline, a decorative shape…) and an optional background for all slides.
+ */
+export interface SlideMaster {
+  boxes?: SlideBox[]
+  /** Background of slides that use the default background. */
+  background?: SlideBackground
+  /** Master objects also on title slides (default: not). */
+  onTitle?: boolean
 }
 
 export interface PresentationContent {
@@ -93,6 +109,7 @@ export interface PresentationContent {
   /** Look of the whole deck (see slideThemes.ts); none = plain. */
   theme?: ThemeId
   footer?: FooterSettings
+  master?: SlideMaster
 }
 
 export const LAYOUTS: Array<{ id: SlideLayout; label: string }> = [
@@ -183,6 +200,7 @@ export function normalizePresentation(raw: unknown): PresentationContent {
     const boxes = normalizeBoxes(s.boxes, seen)
     if (boxes.length) slide.boxes = boxes
     if (s.hidden === true) slide.hidden = true
+    if (s.hideMaster === true) slide.hideMaster = true
     if (typeof s.notes === 'string' && s.notes) slide.notes = s.notes.slice(0, 20000)
     slides.push(slide)
   }
@@ -191,6 +209,8 @@ export function normalizePresentation(raw: unknown): PresentationContent {
   if (theme) out.theme = theme.id
   const footer = normalizeFooter((r as { footer?: unknown } | null)?.footer)
   if (footer) out.footer = footer
+  const master = normalizeMaster((r as { master?: unknown } | null)?.master, seen)
+  if (master) out.master = master
   return out
 }
 
@@ -464,6 +484,7 @@ export function normalizeFooter(raw: unknown): FooterSettings | null {
   if (typeof f.text === 'string' && f.text.trim()) out.text = f.text.slice(0, 120)
   if (typeof f.date === 'string' && f.date.trim()) out.date = f.date.slice(0, 60)
   if (f.hideOnTitle === false) out.hideOnTitle = false
+  if (f.caps === false) out.caps = false
   return out.slideNumbers || out.text || out.date ? out : null
 }
 
@@ -491,4 +512,22 @@ export function alignRect(r: Rect, how: AlignHow): { x: number; y: number } {
     case 'bottom':
       return { x: r.x, y: SLIDE_H - PAD_Y - r.h }
   }
+}
+
+/** A stored slide master with unknown values dropped (null: none). */
+export function normalizeMaster(raw: unknown, seen: Set<string> = new Set()): SlideMaster | null {
+  if (!raw || typeof raw !== 'object') return null
+  const m = raw as Partial<SlideMaster>
+  const out: SlideMaster = {}
+  const boxes = normalizeBoxes(m.boxes, seen)
+  if (boxes.length) out.boxes = boxes
+  if (typeof m.background === 'string' && m.background !== 'default' && m.background in SLIDE_BACKGROUNDS) out.background = m.background
+  if (m.onTitle === true) out.onTitle = true
+  return out.boxes || out.background || out.onTitle ? out : null
+}
+
+/** Are the master's objects drawn on this slide? */
+export function masterShown(master: SlideMaster | null | undefined, slide: Pick<SlideData, 'layout' | 'hideMaster'>): boolean {
+  if (!master?.boxes?.length || slide.hideMaster) return false
+  return slide.layout !== 'title' || master.onTitle === true
 }

@@ -1165,3 +1165,18 @@ body.block-dragging .prosemirror-dropcursor-inline {
   z-index: 1;
 }
 .slide-surface:not(.slide-themed) .slide-footer { opacity: 0.55; }
+.slide-footer.slide-footer-plain { text-transform: none; letter-spacing: 0.02em; }
+/* Editing a slide: the footer text can be clicked and edited (for all slides). */
+.slide-footer.slide-footer-editable { pointer-events: none; z-index: 30; }
+.slide-footer-text { pointer-events: auto; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 2px 6px; margin: -2px -6px; border-radius: 4px; cursor: text; }
+.slide-footer-text:hover { outline: 1px dashed currentColor; outline-offset: 2px; }
+.slide-footer-input { pointer-events: auto; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: rgba(127,127,127,.12); border: 1px solid #2383e2; border-radius: 4px; padding: 2px 6px; margin: -3px -7px; outline: none; width: 520px; }
+
+/* Presentation toolbar: labels give way to icons (with tooltips) when the window is narrow. */
+.slide-toolbar { container-type: inline-size; }
+@container (max-width: 1420px) {
+  .slide-toolbar .tb-label { display: none; }
+}
+@media (max-width: 1500px) {
+  .master-hint { display: none; }
+}

@@ -1,7 +1,7 @@
 import type { AnyExtension } from '@tiptap/react'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
+import { PlaceholderLite } from './placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
@@ -51,12 +51,11 @@ export function createEditorExtensions(opts: EditorExtensionOptions = {}): AnyEx
       dropcursor: { color: '#2383e2', width: 3 },
       link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
     }),
-    Placeholder.configure({
+    PlaceholderLite.configure({
       // Also inside callouts, columns and toggles (only the line with the cursor shows it).
-      includeChildren: true,
-      showOnlyCurrent: !opts.placeholderEverywhere,
+      everywhere: !!opts.placeholderEverywhere,
       placeholder: ({ node, editor, hasAnchor }) => {
-        const custom = opts.placeholder?.(node, { hasAnchor, doc: editor.state.doc })
+        const custom = opts.placeholder?.(node, { hasAnchor: hasAnchor && editor.isFocused, doc: editor.state.doc })
         if (typeof custom === 'string') return custom
         if (node.type.name === 'heading') return `Heading ${node.attrs.level}`
         if (node.type.name === 'codeBlock') return ''

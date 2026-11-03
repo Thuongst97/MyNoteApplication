@@ -58,9 +58,12 @@ export function SlideEditSurface({
   onBox,
   onActive,
   onDeleteBox,
+  noMain,
 }: {
   pageId: string
   slide: SlideData
+  /** Only boxes (the slide master has no main text area). */
+  noMain?: boolean
   selected: SlideSelection
   onSelect: (s: SlideSelection) => void
   onEditMain: (content: JSONContent) => void
@@ -78,7 +81,7 @@ export function SlideEditSurface({
 
   /** Every other object's rectangle (for snapping). */
   const othersThan = (id: string): Rect[] => {
-    const out: Rect[] = id === 'main' ? [] : [frame]
+    const out: Rect[] = id === 'main' || noMain ? [] : [frame]
     for (const b of boxes) if (b.id !== id) out.push({ x: b.x, y: b.y, w: b.w, h: boxEls.current.get(b.id)?.offsetHeight ?? MIN_BOX_H })
     return out
   }
@@ -119,6 +122,7 @@ export function SlideEditSurface({
     <div ref={surfaceRef} className="absolute inset-0" data-testid="slide-edit-surface">
       {/* Clicking the empty slide unselects. */}
       <div className="absolute inset-0" onMouseDown={() => onSelect(null)} />
+      {!noMain && (
       <ObjectFrame
         id="main"
         rect={frame}
@@ -131,6 +135,7 @@ export function SlideEditSurface({
       >
         <MainEditor pageId={pageId} slide={slide} frame={frame} onEdit={onEditMain} onActive={onActive} onFocus={() => onSelect('main')} />
       </ObjectFrame>
+      )}
       {boxes.map((b) => (
         <ObjectFrame
           key={b.id}
@@ -321,10 +326,11 @@ function MainEditor({
   onFocus: () => void
 }) {
   const [version, setVersion] = useState(0)
-  const { innerRef, zoom } = useAutoFit([version, frame.h], 0.6, frame.h)
+  // Resizing the text area never changes the text size (like a PowerPoint text box).
+  const { innerRef, zoom } = useAutoFit([version, frame.h], 1, frame.h)
   const ready = useEditorTracking(null, onActive, onFocus)
   return (
-    <div className="slide-main h-full overflow-y-auto" style={{ height: frame.h }}>
+    <div className="slide-main h-full overflow-visible" style={{ height: frame.h }}>
       <style>{animationBadges(slide)}</style>
       <div ref={innerRef} className="slide-content slide-editing" style={{ zoom }}>
         <InSlideContext.Provider value>
