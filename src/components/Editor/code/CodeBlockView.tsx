@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, Maximize2 } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, Copy, Eye, EyeOff, Loader2, Maximize2 } from 'lucide-react'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { useAppStore } from '@/stores/useAppStore'
 import { renderMermaid, type MermaidResult } from '../mermaid/renderMermaid'
@@ -80,6 +80,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
         )}
         <label className="code-block-lang" title="Language">
           <span>{language ? languageLabel(language) : autoLabel}</span>
+          <ChevronDown size={12} strokeWidth={2.5} aria-hidden="true" />
           <select
             value={language ?? ''}
             disabled={!editable}
