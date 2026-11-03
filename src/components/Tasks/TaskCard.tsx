@@ -60,14 +60,14 @@ export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onT
         'group flex cursor-grab items-center gap-3 rounded-[14px] border px-3.5 py-3 text-[14.5px] outline-none transition active:cursor-grabbing',
         task.completed
           ? 'border-transparent bg-transparent'
-          : 'border-[#EEEEEE] bg-[#F7F7F7] hover:border-[#E0E0E0] hover:bg-[#F3F3F3] dark:border-white/[0.05] dark:bg-white/[0.035] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055]',
+          : 'border-[#E2DDD5] bg-white shadow-[0_1px_2px_rgba(41,37,36,0.06)] hover:border-[#CFC8BE] hover:shadow-[0_2px_6px_rgba(41,37,36,0.08)] dark:shadow-none dark:border-white/[0.05] dark:bg-white/[0.035] dark:hover:border-white/[0.1] dark:hover:bg-white/[0.055]',
         'focus-visible:ring-2 focus-visible:ring-[#C9A563]/60',
         highlighted && 'animate-pulse ring-2 ring-[#C9A563]',
       )}
     >
       <span
         aria-hidden
-        className="w-4 shrink-0 text-right text-[13px] font-semibold tabular-nums text-[#A3A3A3] dark:text-[#7E7B76]"
+        className="w-4 shrink-0 text-right text-[13px] font-semibold tabular-nums text-[#78716C] dark:text-[#7E7B76]"
         style={rank === 1 ? { color: accent } : undefined}
       >
         {rank ?? ''}
@@ -83,7 +83,7 @@ export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onT
         }}
         className={cn(
           'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors',
-          !task.completed && 'border-[#D4D4D4] bg-white hover:border-[#737373] dark:border-white/25 dark:bg-transparent dark:hover:border-[#D9B97A]',
+          !task.completed && 'border-[#A8A29E] bg-white hover:border-[#57534E] dark:border-white/25 dark:bg-transparent dark:hover:border-[#D9B97A]',
         )}
         style={task.completed ? { background: accent, borderColor: accent } : undefined}
       >
@@ -93,21 +93,21 @@ export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onT
         <div
           className={cn(
             'break-words leading-snug',
-            task.completed ? 'text-[#B5B5B5] line-through dark:text-[#6D6A65]' : 'text-[#171717] dark:text-[#ECE7DD]',
+            task.completed ? 'text-[#6B655E] line-through decoration-[#A8A29E] dark:text-[#6D6A65] dark:decoration-current' : 'text-[#1C1917] dark:text-[#ECE7DD]',
             !task.title && 'opacity-60',
           )}
         >
           {task.title || 'Untitled task'}
         </div>
-        {task.notes && !task.completed && <div className="mt-0.5 truncate text-[12.5px] text-[#8A8A8A] dark:text-[#7E7B76]">{task.notes.split('\n')[0]}</div>}
+        {task.notes && !task.completed && <div className="mt-0.5 truncate text-[12.5px] text-[#57534E] dark:text-[#7E7B76]">{task.notes.split('\n')[0]}</div>}
       </div>
       {task.dueAt !== null && !task.completed && (
         <span
           className={cn(
             'flex shrink-0 items-center gap-1 whitespace-nowrap text-xs',
-            state === 'overdue' && 'font-medium text-[#C24848] dark:text-[#E07A7A]',
-            state === 'soon' && 'font-medium text-[#A8843F] dark:text-[#D9B97A]',
-            (state === 'later' || state === null) && 'text-[#8A8A8A] dark:text-[#9C978E]',
+            state === 'overdue' && 'font-semibold text-[#B42318] dark:font-medium dark:text-[#E07A7A]',
+            state === 'soon' && 'font-semibold text-[#8A5A12] dark:font-medium dark:text-[#D9B97A]',
+            (state === 'later' || state === null) && 'text-[#57534E] dark:text-[#9C978E]',
           )}
         >
           {state === 'overdue' ? 'Overdue · ' : <Calendar size={12} className="opacity-70" />}

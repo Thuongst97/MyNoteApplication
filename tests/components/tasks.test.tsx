@@ -79,15 +79,15 @@ describe('TaskMatrix', () => {
     // The quadrant's dot (and border/glow) use the custom color; others keep the Onyx default.
     const dot = (region: HTMLElement) => within(region).getByTestId('quadrant-dot').style.background
     expect(dot(doFirst)).toBe('rgb(143, 191, 159)')
-    expect(doFirst.style.borderColor).toBe('rgba(143, 191, 159, 0.35)')
+    expect(doFirst.style.borderColor).toBe('rgba(143, 191, 159, 0.45)')
     // Light-mode defaults: deep green for Schedule, with a matching border.
     expect(dot(screen.getByRole('region', { name: 'Schedule' }))).toBe('rgb(28, 130, 86)')
-    expect(screen.getByRole('region', { name: 'Schedule' }).style.borderColor).toBe('rgba(28, 130, 86, 0.35)')
+    expect(screen.getByRole('region', { name: 'Schedule' }).style.borderColor).toBe('rgba(28, 130, 86, 0.45)')
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Color of Do first' }))
     await userEvent.click(within(doFirst).getByRole('button', { name: 'Default' }))
     expect(setSettings).toHaveBeenLastCalledWith({ quadrantColors: {} })
     expect(dot(doFirst)).toBe('rgb(153, 58, 26)')
-    expect(doFirst.style.borderColor).toBe('rgba(153, 58, 26, 0.35)')
+    expect(doFirst.style.borderColor).toBe('rgba(153, 58, 26, 0.45)')
     // Dark mode keeps its own defaults and no colored border unless recolored.
     act(() => useAppStore.setState({ theme: 'dark' }))
     expect(dot(doFirst)).toBe('rgb(224, 122, 122)')

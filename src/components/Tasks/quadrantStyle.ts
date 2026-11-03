@@ -93,4 +93,4 @@ export const withAlpha = (hex: string, a: number) => `${hex}${Math.round(Math.mi
 
 /** Shared "pill" button look of the header (Hide completed, Reminders) — neutral black & white. */
 export const PILL =
-  'flex items-center gap-1.5 rounded-xl border border-[#E5E5E5] bg-white px-4 py-2 text-[13px] text-[#525252] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-[#D4D4D4] hover:text-[#171717] dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-[#BDB7AC] dark:shadow-none dark:hover:border-white/[0.14] dark:hover:text-[#ECE7DD]'
+  'flex items-center gap-1.5 rounded-xl border border-[#DCD6CD] bg-white px-4 py-2 text-[13px] font-medium text-[#44403C] shadow-[0_1px_2px_rgba(41,37,36,0.05)] transition-colors hover:border-[#C7BFB4] hover:text-[#1C1917] dark:font-normal dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-[#BDB7AC] dark:shadow-none dark:hover:border-white/[0.14] dark:hover:text-[#ECE7DD]'

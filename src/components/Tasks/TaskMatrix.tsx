@@ -90,13 +90,13 @@ export function TaskMatrix() {
         {/* Header */}
         <div className="mb-7 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
-            <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#A8843F] dark:text-[#D9B97A]">Focus</div>
+            <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#8A5A12] dark:text-[#D9B97A]">Focus</div>
             <h1 className="text-[42px] font-semibold leading-none tracking-[-0.025em] text-[#171717] dark:bg-gradient-to-b dark:from-white dark:to-[#CFC6B6] dark:bg-clip-text dark:text-transparent">
               Tasks
             </h1>
-            <p className="mt-3 text-sm text-[#8A8A8A] dark:text-[#8D8A85]">
+            <p className="mt-3 text-sm text-[#57534E] dark:text-[#8D8A85]">
               <span className="font-medium text-[#171717] dark:text-[#ECE7DD]">{open.length} open</span>
-              {overdue > 0 && <span className="text-[#C24848] dark:text-[#E07A7A]"> · {overdue} overdue</span>}
+              {overdue > 0 && <span className="font-medium text-[#B42318] dark:font-normal dark:text-[#E07A7A]"> · {overdue} overdue</span>}
               <span> · Eisenhower matrix</span>
             </p>
           </div>
@@ -210,12 +210,14 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
       }}
       className={cn(
         'group/quad relative flex min-h-[300px] flex-col overflow-hidden rounded-[20px] border px-[22px] pb-4 pt-5 transition-shadow',
-        'border-[#EAEAEA] bg-white shadow-[0_24px_48px_-30px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.04)]',
+        'border-[#E2DDD5] bg-[var(--quad-tint)] shadow-[0_24px_48px_-30px_rgba(41,37,36,0.22),0_1px_2px_rgba(41,37,36,0.05)]',
         'dark:border-white/[0.07] dark:bg-transparent dark:bg-gradient-to-b dark:from-white/[0.045] dark:to-white/[0.02] dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.05)]',
       )}
       style={{
         ...(dropAt !== null && { boxShadow: `0 0 0 2px ${withAlpha(accent, 0.55)}` }),
-        ...(coloredBorder && { borderColor: withAlpha(accent, 0.35) }),
+        ...(coloredBorder && { borderColor: withAlpha(accent, 0.45) }),
+        // Light mode: a faint wash of the quadrant's color so the white task cards stand out.
+        ['--quad-tint' as string]: withAlpha(accent, 0.045),
       }}
     >
 
@@ -225,14 +227,14 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         className="pointer-events-none absolute inset-0 hidden dark:block"
         style={{ background: `radial-gradient(620px 170px at 0% 0%, ${withAlpha(accent, 0.09)}, transparent 62%)` }}
       />
-      <header className="relative mb-3.5 flex items-center gap-3">
+      <header className="relative mb-3.5 flex items-center gap-3 border-b border-[#E7E2DA] pb-3 dark:border-b-0 dark:pb-0">
         <span
           data-testid="quadrant-dot"
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ background: accent, boxShadow: `0 0 0 4px ${withAlpha(accent, 0.14)}, 0 0 14px ${withAlpha(accent, 0.35)}` }}
         />
         <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{q.title}</h2>
-        <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#9A9A9A] dark:text-[#7E7B76]">{HINTS[id]}</span>
+        <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#6B655E] dark:text-[#7E7B76]">{HINTS[id]}</span>
         <ColorPicker
           trigger="icon"
           align="right"
@@ -244,7 +246,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
           onChange={setQuadrantColor}
           className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100"
         />
-        <span className="rounded-lg border border-[#EAEAEA] bg-[#F5F5F5] px-2 py-0.5 text-xs tabular-nums text-[#6E6E6E] dark:border-white/[0.07] dark:bg-white/[0.06] dark:text-[#BDB7AC]">
+        <span className="rounded-lg border border-[#E2DDD5] bg-white px-2 py-0.5 text-xs font-medium tabular-nums text-[#44403C] dark:border-white/[0.07] dark:bg-white/[0.06] dark:text-[#BDB7AC]">
           {openCount}
         </span>
       </header>
@@ -272,7 +274,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         })}
         {dropAt !== null && dropAt >= landing.length && <DropLine color={accent} />}
         {tasks.length === 0 && !adding && (
-          <div className="rounded-[14px] border border-dashed border-[#E5E5E5] px-4 py-7 text-center text-[13.5px] text-[#A3A3A3] dark:border-white/[0.08] dark:text-[#6D6A65]">
+          <div className="rounded-[14px] border border-dashed border-[#D6D0C7] px-4 py-7 text-center text-[13.5px] text-[#6B655E] dark:border-white/[0.08] dark:text-[#6D6A65]">
             Clear. Keep it that way.
           </div>
         )}
@@ -294,14 +296,14 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
               }
             }}
             placeholder="Task name, then Enter"
-            className="rounded-[14px] border bg-white px-3.5 py-2.5 text-[14.5px] text-[#171717] outline-none placeholder:text-[#A3A3A3] dark:bg-white/[0.04] dark:text-[#ECE7DD] dark:placeholder:text-[#6D6A65]"
+            className="rounded-[14px] border bg-white px-3.5 py-2.5 text-[14.5px] text-[#171717] outline-none placeholder:text-[#78716C] dark:bg-white/[0.04] dark:text-[#ECE7DD] dark:placeholder:text-[#6D6A65]"
             style={{ borderColor: withAlpha(accent, 0.6) }}
           />
         ) : (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] text-[#9A9A9A] transition-colors hover:text-[#171717] dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]"
+            className="mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] font-medium text-[#57534E] transition-colors hover:text-[#1C1917] dark:font-normal dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]"
           >
             <Plus size={14} /> Add task
           </button>
