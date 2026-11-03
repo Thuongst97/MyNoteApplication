@@ -3,6 +3,10 @@ import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { NodeSelection } from '@tiptap/pm/state'
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
   CheckSquare,
   ChevronDown,
@@ -19,13 +23,13 @@ import {
   Strikethrough,
   Type,
   Underline,
+  PaintBucket,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ColorPalette } from './ColorPalette'
+import { currentTextAlign, type TextAlignValue } from './textAlign'
 
-/** Notion-style colors, stored as CSS variables so they adapt to dark/light mode. */
-export const COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'] as const
-const label = (c: string) => c[0].toUpperCase() + c.slice(1)
 
 export const FONT_SIZES: Array<{ label: string; value: string | null }> = [
   { label: 'Small', value: '13px' },
@@ -55,7 +59,17 @@ const BLOCK_TYPES: BlockType[] = [
   { label: 'Code', icon: Code2, isActive: (e) => e.isActive('codeBlock'), apply: (e) => e.chain().focus().clearNodes().toggleCodeBlock().run() },
 ]
 
-type Menu = 'turn' | 'size' | 'color' | 'link' | null
+type Menu = 'turn' | 'size' | 'color' | 'fill' | 'link' | null
+
+/** The colors the font color / fill buttons apply when clicked (last picked, like Office). */
+const lastColors = { text: '#FF0000', fill: '#FFFF00' }
+
+const ALIGN_BUTTONS: Array<[TextAlignValue, string, LucideIcon, string]> = [
+  ['left', 'Align left', AlignLeft, ''],
+  ['center', 'Center', AlignCenter, 'Ctrl+Shift+E'],
+  ['right', 'Align right', AlignRight, 'Ctrl+Shift+R'],
+  ['justify', 'Justify', AlignJustify, 'Ctrl+Shift+J'],
+]
 
 /** Floating toolbar shown when text is selected. */
 /** `appendTo`: where the menu element lives (e.g. document.body when the editor is zoomed). */
@@ -78,6 +92,7 @@ export function FormattingToolbar({ editor, appendTo }: { editor: Editor; append
       background: (e.getAttributes('textStyle').backgroundColor as string | undefined) ?? null,
       fontSize: (e.getAttributes('textStyle').fontSize as string | undefined) ?? null,
       block: BLOCK_TYPES.find((b) => b.isActive(e))?.label ?? 'Text',
+      align: currentTextAlign(e),
       selFrom: e.state.selection.from,
     }),
   })
@@ -222,44 +237,63 @@ export function FormattingToolbar({ editor, appendTo }: { editor: Editor; append
         </div>
 
         <Divider />
-        {/* Colors */}
-        <div className="relative">
-          <ToolButton label="Text color" active={menu === 'color'} onClick={() => toggle('color')}>
-            <span
-              className="flex h-5 w-5 items-center justify-center rounded border border-black/10 text-[13px] font-semibold dark:border-white/15"
-              style={{ color: s.color ?? undefined, background: s.background ?? undefined }}
-            >
-              A
-            </span>
-            <ChevronDown size={13} className="opacity-50" />
+        {/* Font color and fill (Office-style split buttons: click applies the last color) */}
+        <div className="relative flex items-center">
+          <ToolButton label={`Font color (${lastColors.text})`} onClick={() => editor.chain().focus().setColor(lastColors.text).run()}>
+            <ColorGlyph letter color={lastColors.text} />
+          </ToolButton>
+          <ToolButton narrow label="Font color options" active={menu === 'color'} onClick={() => toggle('color')}>
+            <ChevronDown size={12} className="opacity-60" />
           </ToolButton>
           {menu === 'color' && (
-            <Dropdown className="max-h-[60vh] w-52 overflow-y-auto">
-              <DropdownTitle>Text color</DropdownTitle>
-              <DropdownItem active={!s.color} onClick={() => editor.chain().focus().unsetColor().run()}>
-                <Swatch /> Default
-              </DropdownItem>
-              {COLORS.map((c) => (
-                <DropdownItem key={c} active={s.color === `var(--c-${c})`} onClick={() => editor.chain().focus().setColor(`var(--c-${c})`).run()}>
-                  <Swatch color={`var(--c-${c})`} /> {label(c)}
-                </DropdownItem>
-              ))}
-              <DropdownTitle>Background</DropdownTitle>
-              <DropdownItem active={!s.background} onClick={() => editor.chain().focus().unsetBackgroundColor().run()}>
-                <Swatch /> Default
-              </DropdownItem>
-              {COLORS.map((c) => (
-                <DropdownItem
-                  key={c}
-                  active={s.background === `var(--bg-${c})`}
-                  onClick={() => editor.chain().focus().setBackgroundColor(`var(--bg-${c})`).run()}
-                >
-                  <Swatch background={`var(--bg-${c})`} /> {label(c)} background
-                </DropdownItem>
-              ))}
+            <Dropdown className="w-auto">
+              <ColorPalette
+                value={s.color}
+                noneLabel="Automatic"
+                moreLabel="More Colors…"
+                onPick={(c) => {
+                  if (c) {
+                    lastColors.text = c
+                    editor.chain().focus().setColor(c).run()
+                  } else editor.chain().focus().unsetColor().run()
+                  setMenu(null)
+                }}
+              />
             </Dropdown>
           )}
         </div>
+        <div className="relative flex items-center">
+          <ToolButton label={`Fill color (${lastColors.fill})`} onClick={() => editor.chain().focus().setBackgroundColor(lastColors.fill).run()}>
+            <ColorGlyph color={lastColors.fill} />
+          </ToolButton>
+          <ToolButton narrow label="Fill color options" active={menu === 'fill'} onClick={() => toggle('fill')}>
+            <ChevronDown size={12} className="opacity-60" />
+          </ToolButton>
+          {menu === 'fill' && (
+            <Dropdown className="w-auto">
+              <ColorPalette
+                value={s.background}
+                noneLabel="No Fill"
+                noneIcon="none"
+                moreLabel="More Fill Colors…"
+                onPick={(c) => {
+                  if (c) {
+                    lastColors.fill = c
+                    editor.chain().focus().setBackgroundColor(c).run()
+                  } else editor.chain().focus().unsetBackgroundColor().run()
+                  setMenu(null)
+                }}
+              />
+            </Dropdown>
+          )}
+        </div>
+
+        <Divider />
+        {ALIGN_BUTTONS.map(([value, name, Icon, keys]) => (
+          <ToolButton key={value} label={`${name}${keys ? ` (${keys})` : ''}`} active={s.align === value} onClick={() => editor.chain().focus().setTextAlign(value).run()}>
+            <Icon size={15} />
+          </ToolButton>
+        ))}
       </div>
     </BubbleMenu>
   )
@@ -271,12 +305,14 @@ function ToolButton({
   onClick,
   active,
   wide,
+  narrow,
 }: {
   children: React.ReactNode
   label: string
   onClick: () => void
   active?: boolean
   wide?: boolean
+  narrow?: boolean
 }) {
   return (
     <button
@@ -287,7 +323,7 @@ function ToolButton({
       onClick={onClick}
       className={cn(
         'flex h-7 items-center justify-center gap-1 whitespace-nowrap rounded-md hover:bg-black/5 dark:hover:bg-white/10',
-        wide ? 'px-2' : 'w-7',
+        wide ? 'px-2' : narrow ? 'w-4' : 'w-7',
         active && 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
       )}
     >
@@ -330,13 +366,16 @@ function DropdownItem({ children, onClick, active }: { children: React.ReactNode
   )
 }
 
-function Swatch({ color, background }: { color?: string; background?: string }) {
+/** "A" with a color bar (font color) or a paint bucket-like square with a bar (fill). */
+function ColorGlyph({ color, letter }: { color: string; letter?: boolean }) {
   return (
-    <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-black/10 text-xs font-semibold dark:border-white/15"
-      style={{ color, background }}
-    >
-      A
+    <span className="flex flex-col items-center leading-none">
+      {letter ? (
+        <span className="text-[14px] font-semibold leading-[13px]">A</span>
+      ) : (
+        <PaintBucket size={13} />
+      )}
+      <span className="mt-[2px] h-[4px] w-[16px] rounded-[1px] border border-black/10 dark:border-white/15" style={{ background: color }} />
     </span>
   )
 }

@@ -25,6 +25,7 @@ import { ColumnNode, ColumnsNode } from '@/components/Editor/blocks/ColumnsNode'
 import { DetailsContent, DetailsSummary, ToggleNode } from '@/components/Editor/blocks/ToggleNode'
 import { EquationNode } from '@/components/Editor/equation/EquationNode'
 import { PlantUmlNode } from '@/components/Editor/plantuml/PlantUmlNode'
+import { TextAlign } from '@/components/Editor/textAlign'
 
 /** Same nodes as the app, without React node views (plain DOM rendering). */
 const noView = <T extends AnyExtension>(ext: T) => (ext as unknown as { extend: (c: object) => T }).extend({ addNodeView: () => null })
@@ -65,6 +66,7 @@ export function makeEditor(content: JSONContent | string = '') {
       TextStyle,
       Color,
       BackgroundColor,
+      TextAlign,
       FontSize,
       noView(MermaidNode),
       noView(ChartNode),

@@ -18,6 +18,7 @@ import { PlantUmlNode } from './plantuml/PlantUmlNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ResizableTableRow, RowResize } from './table/rowResize'
 import { FindHighlight } from './find/findPlugin'
+import { TextAlign } from './textAlign'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
 import { DrawingNode } from './drawing/DrawingNode'
@@ -83,6 +84,7 @@ export function createEditorExtensions(opts: EditorExtensionOptions = {}): AnyEx
     Color,
     BackgroundColor,
     FontSize,
+    TextAlign,
     TaskList,
     TaskItem.configure({ nested: true }),
     Image.extend({
