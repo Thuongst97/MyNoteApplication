@@ -10,6 +10,8 @@ import { Backlinks } from './links/Backlinks'
 import { WidthHandles } from './WidthHandles'
 import { widthStyle, type PageWidth } from '@/lib/pageWidth'
 import { fontStyle } from '@/lib/pageFont'
+import { setFindTarget, useFindStore } from '@/stores/useFindStore'
+import { editorFindProvider } from './find/editorFind'
 
 /**
  * Loads a page's content and renders header + editor.
@@ -56,7 +58,17 @@ export function PageView({ pageId }: { pageId: string }) {
     }
   }, [pageId])
 
-  const onChange = useCallback((json: JSONContent) => autoSaver.schedule({ id: pageId, content: json }), [pageId])
+  const onChange = useCallback(
+    (json: JSONContent) => {
+      autoSaver.schedule({ id: pageId, content: json })
+      // An open find bar recounts its matches.
+      if (useFindStore.getState().open) useFindStore.getState().contentChanged()
+    },
+    [pageId],
+  )
+
+  // Ctrl+F finds in this page's editor.
+  useEffect(() => setFindTarget(editorFindProvider(() => editorRef.current)), [])
 
   // If the user presses Enter in the title before the editor finished loading,
   // remember it and focus once the editor is ready.
@@ -74,6 +86,7 @@ export function PageView({ pageId }: { pageId: string }) {
   const onEditorReady = useCallback(
     (editor: TiptapEditor) => {
       editorRef.current = editor
+      useFindStore.getState().contentChanged()
       // TipTap may create the editor twice while mounting; act on the one that survives.
       setTimeout(() => {
         const blockId = pendingBlock.current

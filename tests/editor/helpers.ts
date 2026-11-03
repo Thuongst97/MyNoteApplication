@@ -18,6 +18,7 @@ import { CodeBlockNode } from '@/components/Editor/code/CodeBlockNode'
 import { MarkdownNode } from '@/components/Editor/markdown/MarkdownNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ResizableTableRow, RowResize } from '@/components/Editor/table/rowResize'
+import { FindHighlight } from '@/components/Editor/find/findPlugin'
 import { HtmlNode } from '@/components/Editor/html/HtmlNode'
 import { CalloutNode } from '@/components/Editor/blocks/CalloutNode'
 import { ColumnNode, ColumnsNode } from '@/components/Editor/blocks/ColumnsNode'
@@ -49,6 +50,7 @@ export function makeEditor(content: JSONContent | string = '') {
       noView(PlantUmlNode),
       TableKit.configure({ table: { resizable: true, cellMinWidth: 48 }, tableRow: false }),
       ResizableTableRow,
+      FindHighlight,
       RowResize,
       TaskList,
       TaskItem.configure({ nested: true }),

@@ -13,6 +13,7 @@ import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
 import '@/stores/useTabsStore'
 import { NewTabView } from '@/components/Tabs/NewTabView'
+import { FindBar } from '@/components/Find/FindBar'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
 import { useAppZoom } from '@/hooks/useAppZoom'
 import { api } from '@/lib/api'
@@ -67,6 +68,8 @@ export default function App() {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar />
+        <div className="relative flex min-h-0 flex-1 flex-col">
+        <FindBar />
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden" id="canvas-scroll">
           <ErrorBoundary what={view === 'page' ? 'this page' : `the ${view} view`} resetKey={`${view}:${activePageId}`}>
           {!isLoaded ? (
@@ -98,6 +101,7 @@ export default function App() {
             </div>
           )}
           </ErrorBoundary>
+        </div>
         </div>
       </main>
       <SearchModal />

@@ -67,9 +67,18 @@ describe('App (integration)', () => {
 
   it('keyboard shortcuts open search, tasks, graph and toggle sidebar/theme', async () => {
     await renderApp()
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.keyDown(window, { key: 'F', ctrlKey: true, shiftKey: true })
     expect(await screen.findByPlaceholderText('Search pages…')).toBeInTheDocument()
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    fireEvent.keyDown(window, { key: 'F', ctrlKey: true, shiftKey: true })
+    // Ctrl+F: the find bar for the open page.
+    fireEvent.keyDown(window, { key: 'f', ctrlKey: true })
+    expect(await screen.findByRole('search', { name: 'Find in page' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Find'), { target: { value: 'Welcome' } })
+    await waitFor(() => expect(screen.getByTestId('find-count')).toHaveTextContent('1 of 1'))
+    expect(document.querySelectorAll('.ProseMirror .find-match')).toHaveLength(1)
+    fireEvent.keyDown(screen.getByLabelText('Find'), { key: 'Escape' })
+    expect(screen.queryByRole('search', { name: 'Find in page' })).toBeNull()
+    expect(document.querySelectorAll('.ProseMirror .find-match')).toHaveLength(0)
     fireEvent.keyDown(window, { key: '\\', ctrlKey: true })
     expect(s().isSidebarOpen).toBe(false)
     fireEvent.keyDown(window, { key: 'L', ctrlKey: true, shiftKey: true })

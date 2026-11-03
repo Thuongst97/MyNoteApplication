@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { useAppStore } from '@/stores/useAppStore'
 import { useTabsStore } from '@/stores/useTabsStore'
+import { useFindStore } from '@/stores/useFindStore'
 import { isMacLike } from '@/lib/utils'
 
 /**
  * App-wide keyboard shortcuts:
- *  - Ctrl/⌘+K        open search
+ *  - Ctrl/⌘+Shift+F  search all pages, whiteboards and presentations
+ *  - Ctrl/⌘+F        find in the open tab (see FindBar)
  *  - Ctrl/⌘+N        new page
  *  - Ctrl/⌘+\        toggle sidebar
  *  - Ctrl/⌘+Shift+L  toggle dark/light mode
@@ -15,7 +17,7 @@ import { isMacLike } from '@/lib/utils'
  *  - Ctrl/⌘+T new tab · Ctrl/⌘+W close tab · Ctrl/⌘+1…8 go to tab, 9 = last tab
  *  - Ctrl+Tab / Ctrl+Shift+Tab (also Ctrl+PageDown/PageUp) next / previous tab
  *  - Alt+← / Alt+→ (⌘+[ / ⌘+] on Mac, mouse back/forward buttons) back / forward
- * On a whiteboard, Ctrl+K / Ctrl+Shift+G / Ctrl+Shift+L belong to the canvas.
+ * On a whiteboard, Ctrl+F / Ctrl+K / Ctrl+Shift+G / Ctrl+Shift+L belong to the canvas.
  */
 export function useGlobalShortcuts() {
   useEffect(() => {
@@ -56,16 +58,30 @@ export function useGlobalShortcuts() {
       }
       const s = useAppStore.getState()
       const key = e.key.toLowerCase()
-      if (onBoard && (key === 'k' || (e.shiftKey && (key === 'g' || key === 'l')))) return
+      // Ctrl+F on a whiteboard: the canvas has its own search.
+      if (onBoard && ((key === 'f' && !e.shiftKey) || key === 'k' || (e.shiftKey && (key === 'g' || key === 'l')))) return
       if (key === 't' && !e.shiftKey) {
         e.preventDefault()
         tabs.newTab()
       } else if (key === 'w' && !e.shiftKey) {
         e.preventDefault()
         tabs.closeTab(tabs.activeTabId)
-      } else if (key === 'k' && !e.shiftKey) {
+      } else if (key === 'f' && e.shiftKey) {
         e.preventDefault()
+        useFindStore.getState().setOpen(false)
         s.setSearchOpen(!s.isSearchOpen)
+      } else if (key === 'f') {
+        e.preventDefault()
+        const find = useFindStore.getState()
+        // Views without a find target (Tasks, Graph, new tab) use the search of all pages.
+        if (!find.provider) {
+          s.setSearchOpen(true)
+          return
+        }
+        s.setSearchOpen(false)
+        const selected = find.provider.selectedText?.() ?? ''
+        if (selected && !selected.includes('\n') && selected.length <= 200) find.set({ query: selected })
+        find.requestFocus()
       } else if (key === 'n' && !e.shiftKey) {
         e.preventDefault()
         void s.createPage(null)

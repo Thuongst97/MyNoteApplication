@@ -17,6 +17,7 @@ import { EquationNode } from './equation/EquationNode'
 import { PlantUmlNode } from './plantuml/PlantUmlNode'
 import { TableKit } from '@tiptap/extension-table'
 import { ResizableTableRow, RowResize } from './table/rowResize'
+import { FindHighlight } from './find/findPlugin'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
 import { DrawingNode } from './drawing/DrawingNode'
@@ -67,6 +68,7 @@ export function createEditorExtensions(opts: EditorExtensionOptions = {}): AnyEx
     // Drag column borders to resize columns; rows get a height attribute (RowResize).
     TableKit.configure({ table: { resizable: true, cellMinWidth: 48, lastColumnResizable: true }, tableRow: false }),
     ResizableTableRow,
+    FindHighlight,
     RowResize,
     MarkdownNode,
     HtmlNode,

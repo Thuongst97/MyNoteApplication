@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { SLIDE_W, SlideFrame, SlideView } from './SlideCanvas'
 import { SlideEditSurface, requestInsert, type ActiveEditor, type SlideSelection } from './SlideObjects'
 import { InsertMenu } from './InsertMenu'
+import { slidesFindProvider } from './slidesFind'
+import { setFindTarget, useFindStore } from '@/stores/useFindStore'
 import { blockAtCursor } from './AnimationPanel'
 import { PresentMode, type ShowInk } from './PresentMode'
 import { InkLayer, PEN_WIDTHS, type InkTool } from './InkLayer'
@@ -69,6 +71,8 @@ export function PresentationPage({ pageId }: { pageId: string }) {
       if (thumbTimer.current) clearTimeout(thumbTimer.current)
       if (quiet) thumbTimer.current = setTimeout(() => setSlides(slidesRef.current), 200)
       else setSlides(next)
+      // An open find bar recounts its matches.
+      if (useFindStore.getState().open) useFindStore.getState().contentChanged()
     },
     [pageId],
   )
@@ -188,6 +192,18 @@ export function PresentationPage({ pageId }: { pageId: string }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [draw])
+
+  // Ctrl+F finds in every slide of this presentation.
+  const currentRef = useRef(currentId)
+  currentRef.current = currentId
+  useEffect(() => {
+    const provider = slidesFindProvider({ slides: () => slidesRef.current, currentId: () => currentRef.current, open: setCurrentId })
+    const off = setFindTarget(provider)
+    return () => {
+      off()
+      provider.dispose()
+    }
+  }, [])
 
   // F5 presents from the first slide, Shift+F5 from the current one.
   useEffect(() => {

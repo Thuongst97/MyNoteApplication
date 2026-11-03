@@ -73,7 +73,7 @@ export function Sidebar() {
           >
             <Search size={16} className="opacity-70" />
             <span className="flex-1 text-left">Search</span>
-            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘K' : 'Ctrl+K'}</kbd>
+            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘⇧F' : 'Ctrl+Shift+F'}</kbd>
           </button>
           <button
             type="button"

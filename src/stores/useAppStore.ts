@@ -298,12 +298,13 @@ export const WELCOME_DOC: JSONContent = {
       type: 'taskList',
       content: [
         ['Type ', '/', ' on an empty line to open the block menu'],
-        ['Press ', 'Ctrl/⌘ + K', ' to search across all pages'],
+        ['Press ', 'Ctrl/⌘ + Shift + F', ' to search across all pages'],
+        ['Press ', 'Ctrl/⌘ + F', ' to find text in the open page'],
         ['Hover a page in the sidebar and click ', '+', ' to add a sub-page'],
         ['Everything auto-saves to your computer as you type', '', ''],
-      ].map(([a, code, b], i) => ({
+      ].map(([a, code, b], i, all) => ({
         type: 'taskItem',
-        attrs: { checked: i === 3 },
+        attrs: { checked: i === all.length - 1 },
         content: [
           {
             type: 'paragraph',

@@ -7,6 +7,7 @@ import { MAIN_FRAME, MIN_BOX_H, MIN_BOX_W, SLIDE_H, SLIDE_W, buildSteps, snapBox
 import { cn } from '@/lib/utils'
 import { rectStyle, useAutoFit } from './SlideCanvas'
 import { runInsert } from './InsertMenu'
+import { registerSlideEditor } from './slidesFind'
 
 /** New boxes waiting for their editor to be filled with a block (box id → slash command title). */
 const pendingInserts = new Map<string, string>()
@@ -383,6 +384,8 @@ function useEditorTracking(boxId: string | null, onActive: (a: ActiveEditor | nu
   return useCallback(
     (editor: TiptapEditor) => {
       editorRef.current = editor
+      // Find in page (Ctrl+F) highlights in this slide's editors.
+      registerSlideEditor(boxId ?? 'main', editor)
       // A box just inserted from the Insert menu: put its block in (chart, code…).
       const pending = boxId ? pendingInserts.get(boxId) : undefined
       if (pending && boxId) {
