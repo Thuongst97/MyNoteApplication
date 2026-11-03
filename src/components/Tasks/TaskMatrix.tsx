@@ -11,6 +11,8 @@ import { ColorPicker } from '@/components/ui/ColorPicker'
 import { TaskCard, dueState, taskDrag } from './TaskCard'
 import { dropIndexFromY, orderForIndex, sortByPriority } from '@/lib/taskOrder'
 import { TaskDialog } from './TaskDialog'
+import { BackgroundPicker } from './BackgroundPicker'
+import { STICKY, type QuadrantBackground } from '@/lib/quadrantColors'
 
 /** Short hints shown next to each quadrant's title. */
 const HINTS: Record<Quadrant, string> = {
@@ -143,6 +145,17 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
   const theme = useAppStore((s) => s.theme)
   // Light mode: every quadrant has a border in its color. Dark mode: only when recolored.
   const coloredBorder = !!custom || theme === 'light'
+  const background = useTaskStore((s) => s.settings.quadrantBackgrounds?.[id])
+  // Sticky Notes colors are a light-mode style; dark mode keeps its own look.
+  const sticky = theme === 'light' && background && background !== 'white' ? STICKY[background] : null
+  const onDarkPaper = !!sticky?.dark
+  const setBackground = (bg: QuadrantBackground | null) => {
+    const { settings, setSettings } = useTaskStore.getState()
+    const next = { ...settings.quadrantBackgrounds }
+    if (bg) next[id] = bg
+    else delete next[id]
+    void setSettings({ quadrantBackgrounds: next })
+  }
   const setQuadrantColor = (color: string | null) => {
     const { settings, setSettings } = useTaskStore.getState()
     const next = { ...settings.quadrantColors }
@@ -215,8 +228,13 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
       style={{
         ...(dropAt !== null && { boxShadow: `0 0 0 2px ${withAlpha(accent, 0.55)}` }),
         ...(coloredBorder && { borderColor: withAlpha(accent, 0.45) }),
-        // Light mode: a faint wash of the quadrant's color so the white task cards stand out.
-        ['--quad-tint' as string]: withAlpha(accent, 0.045),
+        // Light mode: a faint wash of the quadrant's color so the white task cards stand out,
+        // or the chosen background (white / Sticky Notes paper).
+        ['--quad-tint' as string]: sticky ? sticky.body : background === 'white' && theme === 'light' ? '#ffffff' : withAlpha(accent, 0.045),
+        ...(sticky && {
+          borderColor: sticky.band,
+          ...(dropAt === null && { boxShadow: '0 16px 30px -20px rgba(41,37,36,0.38), 0 2px 5px rgba(41,37,36,0.07)' }),
+        }),
       }}
     >
 
@@ -226,14 +244,31 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         className="pointer-events-none absolute inset-0 hidden dark:block"
         style={{ background: `radial-gradient(620px 170px at 0% 0%, ${withAlpha(accent, 0.09)}, transparent 62%)` }}
       />
-      <header className="relative mb-3.5 flex items-center gap-3 border-b border-[#E7E2DA] pb-3 dark:border-b-0 dark:pb-0">
+      <header
+        className={cn(
+          'relative mb-3.5 flex items-center gap-3',
+          // Sticky Notes: a deeper band across the top of the note.
+          sticky ? '-mx-[22px] -mt-5 px-[22px] pb-3 pt-4' : 'border-b border-[#E7E2DA] pb-3 dark:border-b-0 dark:pb-0',
+        )}
+        style={sticky ? { background: sticky.band } : undefined}
+      >
         <span
           data-testid="quadrant-dot"
           className="h-2 w-2 shrink-0 rounded-full"
           style={{ background: accent, boxShadow: `0 0 0 4px ${withAlpha(accent, 0.14)}, 0 0 14px ${withAlpha(accent, 0.35)}` }}
         />
-        <h2 className="text-[17px] font-semibold tracking-[-0.01em]">{q.title}</h2>
-        <span className="min-w-0 flex-1 truncate text-[12.5px] text-[#6B655E] dark:text-[#7E7B76]">{HINTS[id]}</span>
+        <h2 className={cn('text-[17px] font-semibold tracking-[-0.01em]', onDarkPaper && 'text-white')}>{q.title}</h2>
+        <span className={cn('min-w-0 flex-1 truncate text-[12.5px]', onDarkPaper ? 'text-[#E7E5E4]' : 'text-[#6B655E] dark:text-[#7E7B76]')}>{HINTS[id]}</span>
+        <BackgroundPicker
+          label={q.title}
+          value={background as QuadrantBackground | undefined}
+          tint={withAlpha(accent, 0.12)}
+          onChange={setBackground}
+          className={cn(
+            'opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100',
+            onDarkPaper && '[&>button]:text-white [&>button:hover]:bg-white/15',
+          )}
+        />
         <ColorPicker
           trigger="icon"
           align="right"
@@ -243,7 +278,10 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
           choices={QUADRANT_PRESETS}
           autoLabel="Default"
           onChange={setQuadrantColor}
-          className="opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100"
+          className={cn(
+            'opacity-0 transition-opacity focus-within:opacity-100 group-hover/quad:opacity-100 has-[[aria-expanded=true]]:opacity-100',
+            onDarkPaper && '[&_button]:text-white',
+          )}
         />
         <span className="rounded-lg border border-[#E2DDD5] bg-white px-2 py-0.5 text-xs font-medium tabular-nums text-[#44403C] dark:border-white/[0.07] dark:bg-white/[0.06] dark:text-[#BDB7AC]">
           {openCount}
@@ -265,6 +303,7 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
                 accent={accent}
                 highlighted={flashId === t.id}
                 onOpen={() => onOpen(t.id)}
+                onDarkPaper={onDarkPaper}
                 onToggle={() => void onUpdate({ id: t.id, completed: !t.completed })}
                 onMove={(d) => move(t.id, d)}
               />
@@ -273,7 +312,12 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
         })}
         {dropAt !== null && dropAt >= landing.length && <DropLine color={accent} />}
         {tasks.length === 0 && !adding && (
-          <div className="rounded-[14px] border border-dashed border-[#D6D0C7] px-4 py-7 text-center text-[13.5px] text-[#6B655E] dark:border-white/[0.08] dark:text-[#6D6A65]">
+          <div
+            className={cn(
+              'rounded-[14px] border border-dashed px-4 py-7 text-center text-[13.5px]',
+              onDarkPaper ? 'border-white/35 text-[#F5F5F4]' : 'border-[#D6D0C7] text-[#6B655E] dark:border-white/[0.08] dark:text-[#6D6A65]',
+            )}
+          >
             Clear. Keep it that way.
           </div>
         )}
@@ -302,7 +346,10 @@ function QuadrantColumn({ id, tasks, now, flashId, onOpen, onAdd, onUpdate }: Qu
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] font-medium text-[#57534E] transition-colors hover:text-[#1C1917] dark:font-normal dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]"
+            className={cn(
+              'mt-auto flex items-center gap-1.5 self-start rounded-lg px-1 pt-2 text-left text-[13px] font-medium transition-colors',
+              onDarkPaper ? 'text-[#F5F5F4] hover:text-white' : 'text-[#57534E] hover:text-[#1C1917] dark:font-normal dark:text-[#8D8A85] dark:hover:text-[#ECE7DD]',
+            )}
           >
             <Plus size={14} /> Add task
           </button>

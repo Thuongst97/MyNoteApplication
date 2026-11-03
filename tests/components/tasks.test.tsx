@@ -94,6 +94,27 @@ describe('TaskMatrix', () => {
     expect(doFirst.style.borderColor).toBe('')
   })
 
+  it('sets a Sticky Notes background per quadrant (light mode) and resets it', async () => {
+    useAppStore.setState({ theme: 'light' })
+    render(<TaskMatrix now={NOW} />)
+    const schedule = () => screen.getByRole('region', { name: 'Schedule' })
+    await userEvent.click(within(schedule()).getByRole('button', { name: 'Schedule background' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Yellow' }))
+    expect(useTaskStore.getState().settings.quadrantBackgrounds).toEqual({ schedule: 'yellow' })
+    expect(schedule().style.getPropertyValue('--quad-tint')).toBe('#FFF7D1') // paper
+    expect(within(schedule()).getByRole('heading', { name: 'Schedule' }).parentElement!.style.background).toBe('rgb(255, 242, 171)') // band
+    // Other quadrants keep their default tint.
+    expect(screen.getByRole('region', { name: 'Do first' }).style.getPropertyValue('--quad-tint')).not.toBe('#FFF7D1')
+    // Charcoal: dark paper with light heading text.
+    await userEvent.click(within(schedule()).getByRole('button', { name: 'Schedule background' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Charcoal' }))
+    expect(within(schedule()).getByRole('heading', { name: 'Schedule' }).className).toMatch(/text-white/)
+    // Back to default.
+    await userEvent.click(within(schedule()).getByRole('button', { name: 'Schedule background' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Default' }))
+    expect(useTaskStore.getState().settings.quadrantBackgrounds).toEqual({})
+  })
+
   it('shows the four quadrants with their meaning', () => {
     render(<TaskMatrix />)
     for (const q of ['Do first', 'Schedule', 'Delegate', 'Eliminate']) expect(screen.getByRole('region', { name: q })).toBeInTheDocument()

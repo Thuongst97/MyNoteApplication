@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Task, TaskSettings, TaskUpdate } from '../src/types'
-import { cleanQuadrantColors } from '../src/lib/quadrantColors'
+import { cleanQuadrantBackgrounds, cleanQuadrantColors } from '../src/lib/quadrantColors'
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, type DueNotification } from '../src/lib/reminders'
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
@@ -43,6 +43,7 @@ export class TaskStore {
         for (const t of Array.isArray(list) ? list : []) if (t && typeof t.id === 'string') this.tasks.set(t.id, t)
         this.settings = { ...DEFAULT_TASK_SETTINGS, ...(await readJson<Partial<TaskSettings>>(this.settingsFile, {})) }
         this.settings = withQuadrantColors(this.settings, this.settings.quadrantColors)
+        this.settings = withQuadrantBackgrounds(this.settings, this.settings.quadrantBackgrounds)
       })()
     }
     return this.loaded
@@ -85,7 +86,9 @@ export class TaskStore {
     if (Array.isArray(patch.defaultReminders))
       next.defaultReminders = [...new Set(patch.defaultReminders.map(Number).filter((m) => Number.isFinite(m) && m >= 0))].sort((a, b) => a - b)
     if (typeof patch.runInBackground === 'boolean') next.runInBackground = patch.runInBackground
-    this.settings = patch.quadrantColors !== undefined ? withQuadrantColors(next, patch.quadrantColors) : next
+    let withColors = patch.quadrantColors !== undefined ? withQuadrantColors(next, patch.quadrantColors) : next
+    if (patch.quadrantBackgrounds !== undefined) withColors = withQuadrantBackgrounds(withColors, patch.quadrantBackgrounds)
+    this.settings = withColors
     await writeJsonAtomic(this.settingsFile, this.settings)
     return this.settings
   }
@@ -107,4 +110,11 @@ function withQuadrantColors(settings: TaskSettings, raw: unknown): TaskSettings 
   const { quadrantColors: _old, ...rest } = settings
   const colors = cleanQuadrantColors(raw)
   return Object.keys(colors).length ? { ...rest, quadrantColors: colors } : rest
+}
+
+/** Stores only valid quadrant backgrounds, and no key at all when none are set. */
+function withQuadrantBackgrounds(settings: TaskSettings, raw: unknown): TaskSettings {
+  const { quadrantBackgrounds: _old, ...rest } = settings
+  const bgs = cleanQuadrantBackgrounds(raw)
+  return Object.keys(bgs).length ? { ...rest, quadrantBackgrounds: bgs } : rest
 }

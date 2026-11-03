@@ -2,6 +2,7 @@ import type { ElectronAPI, Page, PageMeta, SearchResult, Task, TaskSettings } fr
 import { emptyLibraries, installLibrary, isAllowedLibraryUrl, libraryNameFrom, normalizeLibraries, parseLibraryFile, type LibraryData } from './libraries'
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, notificationText } from './reminders'
 import { docToText, makeSnippet } from './docText'
+import { cleanQuadrantBackgrounds } from './quadrantColors'
 import { extractLinks } from './links'
 
 declare global {
@@ -203,6 +204,7 @@ function createBrowserTasksApi(): ElectronAPI['tasks'] {
     getSettings: async () => ({ ...DEFAULT_TASK_SETTINGS, ...read<Partial<TaskSettings>>(SETTINGS, {}) }),
     setSettings: async (patch) => {
       const next = { ...DEFAULT_TASK_SETTINGS, ...read<Partial<TaskSettings>>(SETTINGS, {}), ...patch }
+      if (patch.quadrantBackgrounds !== undefined) next.quadrantBackgrounds = cleanQuadrantBackgrounds(patch.quadrantBackgrounds)
       localStorage.setItem(SETTINGS, JSON.stringify(next))
       return next
     },

@@ -34,3 +34,13 @@ describe('quadrant colors', () => {
     expect(Object.keys(cleanQuadrantColors(Object.fromEntries(QUADRANT_PRESETS.slice(0, 4).map((c, i) => [['do', 'schedule', 'delegate', 'eliminate'][i], c]))))).toHaveLength(4)
   })
 })
+
+describe('quadrant backgrounds', () => {
+  it('keeps only known choices for known quadrants', async () => {
+    const { cleanQuadrantBackgrounds, STICKY } = await import('@/lib/quadrantColors')
+    expect(cleanQuadrantBackgrounds({ do: 'yellow', schedule: 'white', delegate: 'url(x)', eliminate: 7, other: 'pink' })).toEqual({ do: 'yellow', schedule: 'white' })
+    expect(cleanQuadrantBackgrounds(null)).toEqual({})
+    expect(STICKY.yellow).toMatchObject({ body: '#FFF7D1', band: '#FFF2AB' })
+    expect(STICKY.charcoal.dark).toBe(true)
+  })
+})

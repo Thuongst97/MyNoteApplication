@@ -60,6 +60,8 @@ export interface TaskSettings {
   runInBackground: boolean
   /** Custom quadrant colors (#rrggbb) for the Eisenhower Matrix; missing = default. */
   quadrantColors?: Partial<Record<'do' | 'schedule' | 'delegate' | 'eliminate', string>>
+  /** Quadrant backgrounds: 'white' or a Sticky Notes color; missing = the default tint. */
+  quadrantBackgrounds?: Partial<Record<'do' | 'schedule' | 'delegate' | 'eliminate', 'white' | 'yellow' | 'green' | 'pink' | 'purple' | 'blue' | 'gray' | 'charcoal'>>
 }
 
 export interface PageLinkEdge {

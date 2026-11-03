@@ -25,10 +25,12 @@ interface TaskCardProps {
   onOpen: () => void
   /** Alt+↑ / Alt+↓: move the task up or down one place. */
   onMove?: (delta: -1 | 1) => void
+  /** On dark paper (Charcoal sticky): completed tasks (no card) use light text. */
+  onDarkPaper?: boolean
 }
 
 /** One task row: priority number, checkbox, title (+ note), due date. Drag it to reorder. */
-export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onToggle, onOpen, onMove }: TaskCardProps) {
+export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onToggle, onOpen, onMove, onDarkPaper }: TaskCardProps) {
   const state = dueState(task, now)
   return (
     <div
@@ -93,7 +95,7 @@ export function TaskCard({ task, now, highlighted, rank, accent = '#4F7FC9', onT
         <div
           className={cn(
             'break-words leading-snug',
-            task.completed ? 'text-[#6B655E] line-through decoration-[#A8A29E] dark:text-[#6D6A65] dark:decoration-current' : 'text-[#1C1917] dark:text-[#ECE7DD]',
+            task.completed ? onDarkPaper ? 'text-[#E7E5E4] line-through decoration-[#D6D3D1]' : 'text-[#6B655E] line-through decoration-[#A8A29E] dark:text-[#6D6A65] dark:decoration-current' : 'text-[#1C1917] dark:text-[#ECE7DD]',
             !task.title && 'opacity-60',
           )}
         >

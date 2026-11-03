@@ -55,3 +55,34 @@ export function quadrantPalette(hex: string, theme: 'light' | 'dark') {
   if (theme === 'dark') return { background: alpha(hex, 0.06), border: alpha(hex, 0.28), accent: mix(hex, '#ffffff', 0.8), ring: alpha(hex, 0.55) }
   return { background: mix(hex, '#ffffff', 0.07), border: alpha(hex, 0.45), accent: mix(hex, '#1f2937', 0.82), ring: alpha(hex, 0.5) }
 }
+
+/** Background choices for a quadrant: plain white, or a Windows Sticky Notes color. */
+export type QuadrantBackground = 'white' | 'yellow' | 'green' | 'pink' | 'purple' | 'blue' | 'gray' | 'charcoal'
+export type QuadrantBackgrounds = Partial<Record<QuadrantId, QuadrantBackground>>
+
+/**
+ * Sticky Notes palette (as in Windows): a pale paper body and a slightly deeper band across
+ * the top. Charcoal is dark paper, so its text is light.
+ */
+export const STICKY: Record<Exclude<QuadrantBackground, 'white'>, { label: string; body: string; band: string; dark?: boolean }> = {
+  yellow: { label: 'Yellow', body: '#FFF7D1', band: '#FFF2AB' },
+  green: { label: 'Green', body: '#E4F9E0', band: '#CBF1C4' },
+  pink: { label: 'Pink', body: '#FFE4F1', band: '#FFCCE5' },
+  purple: { label: 'Purple', body: '#F2E6FF', band: '#E7CFFF' },
+  blue: { label: 'Blue', body: '#E2F1FF', band: '#CDE9FF' },
+  gray: { label: 'Gray', body: '#F3F2F1', band: '#E0E0E0' },
+  charcoal: { label: 'Charcoal', body: '#696969', band: '#454545', dark: true },
+}
+
+export const QUADRANT_BACKGROUNDS: QuadrantBackground[] = ['white', 'yellow', 'green', 'pink', 'purple', 'blue', 'gray', 'charcoal']
+
+/** Keeps only known background choices for known quadrants. */
+export function cleanQuadrantBackgrounds(raw: unknown): QuadrantBackgrounds {
+  const out: QuadrantBackgrounds = {}
+  if (!raw || typeof raw !== 'object') return out
+  for (const id of IDS) {
+    const v = (raw as Record<string, unknown>)[id]
+    if (typeof v === 'string' && (QUADRANT_BACKGROUNDS as string[]).includes(v)) out[id] = v as QuadrantBackground
+  }
+  return out
+}
