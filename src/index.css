@@ -360,7 +360,9 @@ body {
   font-size: var(--code-size);
   line-height: var(--code-line);
   color: #8c959f;
-  white-space: pre;
+  /* One number per line. !important: the editor's stylesheet (loaded later) sets
+     white-space: normal on non-editable parts, which put the numbers side by side. */
+  white-space: pre !important;
   user-select: none;
 }
 .dark .notion-editor .code-block-gutter { color: #4b5263; }

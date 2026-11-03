@@ -178,3 +178,14 @@ describe('code block title & AIDL', () => {
     e.destroy()
   })
 })
+
+describe('code block line numbers', () => {
+  it('stay one per line (the gutter rule must beat the editor stylesheet)', async () => {
+    const fs = await import('node:fs')
+    const css = fs.readFileSync('src/index.css', 'utf8')
+    const rule = /\.notion-editor \.code-block-gutter \{[^}]*\}/.exec(css)![0]
+    // TipTap injects `.ProseMirror [contenteditable="false"] { white-space: normal }` after the
+    // app's CSS; without !important the numbers end up side by side ("1 2 3").
+    expect(rule).toMatch(/white-space:\s*pre\s*!important/)
+  })
+})
