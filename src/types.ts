@@ -1,11 +1,11 @@
 import type { JSONContent } from '@tiptap/react'
 
 /** Lightweight page metadata used to build the sidebar tree. */
-export type PageKind = 'doc' | 'whiteboard'
+export type PageKind = 'doc' | 'whiteboard' | 'slides'
 
 export interface PageMeta {
   id: string
-  /** 'doc' = block document, 'whiteboard' = infinite canvas. */
+  /** 'doc' = block document, 'whiteboard' = infinite canvas, 'slides' = presentation. */
   kind: PageKind
   title: string
   /** An emoji used as the page icon, or null for the default icon. */

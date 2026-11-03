@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { normalizeKind } from '../src/lib/pageMeta'
 import type { Page, PageMeta, PageUpdate } from '../src/types'
 
 /**
@@ -141,7 +142,7 @@ export async function importPages(storage: Storage, assets: Assets, bundle: Page
     const mappedParent = isRoot ? parentId : p.parentId && idMap.has(p.parentId) ? idMap.get(p.parentId)! : idMap.get(root.id)!
     const saved = await storage.save({
       id: idMap.get(p.id)!,
-      kind: p.kind === 'whiteboard' ? 'whiteboard' : 'doc',
+      kind: normalizeKind(p.kind),
       title: typeof p.title === 'string' ? p.title : '',
       icon: typeof p.icon === 'string' ? p.icon : null,
       cover: typeof p.cover === 'string' ? (remap(p.cover) as string) : null,

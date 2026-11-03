@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Shapes, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
@@ -122,6 +122,14 @@ export function Sidebar() {
           >
             <Shapes size={16} className="opacity-70" />
             <span className="flex-1 text-left">New whiteboard</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void createPage(null, { kind: 'slides', title: 'Untitled presentation' })}
+            className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+          >
+            <Presentation size={16} className="opacity-70" />
+            <span className="flex-1 text-left">New presentation</span>
           </button>
           <button
             type="button"

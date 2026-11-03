@@ -3,6 +3,7 @@ import { emptyLibraries, installLibrary, isAllowedLibraryUrl, libraryNameFrom, n
 import { applyTaskUpdate, collectDueReminders, DEFAULT_TASK_SETTINGS, notificationText } from './reminders'
 import { docToText, makeSnippet } from './docText'
 import { cleanQuadrantBackgrounds } from './quadrantColors'
+import { normalizeKind } from './pageMeta'
 import { extractLinks } from './links'
 
 declare global {
@@ -25,7 +26,7 @@ function createBrowserApi(): ElectronAPI {
     }
   }
   const store = (pages: Record<string, Page>) => localStorage.setItem(KEY, JSON.stringify(pages))
-  const meta = ({ content: _c, ...m }: Page): PageMeta => ({ ...m, kind: m.kind === 'whiteboard' ? 'whiteboard' : 'doc' })
+  const meta = ({ content: _c, ...m }: Page): PageMeta => ({ ...m, kind: normalizeKind(m.kind) })
   const deleted = new Set<string>()
   const tick = <T,>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 0))
 
@@ -39,7 +40,7 @@ function createBrowserApi(): ElectronAPI {
       const pages = load()
       const now = Date.now()
       const prev: Page = pages[u.id] ?? {
-        id: u.id, kind: u.kind === 'whiteboard' ? 'whiteboard' : 'doc', title: '', icon: null, cover: null, parentId: null,
+        id: u.id, kind: normalizeKind(u.kind), title: '', icon: null, cover: null, parentId: null,
         order: now, createdAt: now, updatedAt: now, content: null,
       }
       const clean = Object.fromEntries(Object.entries(u).filter(([, v]) => v !== undefined))

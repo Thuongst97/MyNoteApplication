@@ -36,6 +36,18 @@ describe('useAppStore', () => {
     expect(s().activePageId).toBe(a)
   })
 
+  it('creates presentations with a title slide named after the page', async () => {
+    const id = await s().createPage(null, { kind: 'slides', title: 'Roadmap' })
+    expect(s().pages.find((p) => p.id === id)!.kind).toBe('slides')
+    const c = (await api.readPage(id))!.content as { type: string; slides: Array<{ layout: string }> }
+    expect(c.type).toBe('slides')
+    expect(c.slides.map((x) => x.layout)).toEqual(['title', 'content'])
+    expect(JSON.stringify(c.slides[0])).toContain('Roadmap')
+    // The placeholder name isn't put on the slide.
+    const id2 = await s().createPage(null, { kind: 'slides', title: 'Untitled presentation' })
+    expect(JSON.stringify((await api.readPage(id2))!.content)).not.toContain('Untitled')
+  })
+
   it('creates whiteboards with an empty canvas', async () => {
     const id = await s().createPage(null, { kind: 'whiteboard' })
     expect(s().pages.find((p) => p.id === id)!.kind).toBe('whiteboard')

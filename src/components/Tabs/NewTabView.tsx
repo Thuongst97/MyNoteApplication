@@ -1,4 +1,5 @@
-import { CheckSquare, FilePlus, FileText, Network, Shapes } from 'lucide-react'
+import { CheckSquare, FilePlus, Network, Presentation, Shapes } from 'lucide-react'
+import { PageKindIcon } from '@/components/ui/PageKindIcon'
 import { useAppStore } from '@/stores/useAppStore'
 import { openPageFromClick } from '@/stores/useTabsStore'
 
@@ -29,6 +30,9 @@ export function NewTabView() {
         <button type="button" className={action} onClick={() => void createPage(null, { kind: 'whiteboard' })}>
           <Shapes size={15} className="opacity-70" /> New whiteboard
         </button>
+        <button type="button" className={action} onClick={() => void createPage(null, { kind: 'slides', title: 'Untitled presentation' })}>
+          <Presentation size={15} className="opacity-70" /> New presentation
+        </button>
         <button type="button" className={action} onClick={() => openTasks()}>
           <CheckSquare size={15} className="opacity-70" /> Tasks
         </button>
@@ -46,7 +50,7 @@ export function NewTabView() {
               onAuxClick={(e) => e.button === 1 && openPageFromClick(p.id, e)}
               className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
             >
-              <span className="flex w-5 shrink-0 justify-center">{p.icon ?? (p.kind === 'whiteboard' ? <Shapes size={15} className="opacity-60" /> : <FileText size={15} className="opacity-60" />)}</span>
+              <span className="flex w-5 shrink-0 justify-center">{p.icon ?? <PageKindIcon kind={p.kind} size={15} className="opacity-60" />}</span>
               <span className="truncate">{p.title || 'Untitled'}</span>
               {p.parentId && <span className="ml-auto max-w-[45%] shrink-0 truncate text-xs opacity-40">{path(p.parentId)}</span>}
             </button>

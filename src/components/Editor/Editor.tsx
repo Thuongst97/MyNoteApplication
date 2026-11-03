@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor, type JSONContent, type Editor as TiptapEditor } from '@tiptap/react'
 import type { EditorView } from '@tiptap/pm/view'
+import type { Node as PMNode } from '@tiptap/pm/model'
 import { FormattingToolbar } from './FormattingToolbar'
-import { createEditorExtensions } from './extensions'
+import { createEditorExtensions, type EditorExtensionOptions } from './extensions'
 import { TableToolbar } from './TableToolbar'
 import { imageFilesFrom, insertImageFiles } from '@/lib/images'
 import { looksLikeMarkdown, markdownToHtml } from '@/lib/markdown'
@@ -23,10 +24,31 @@ interface EditorProps {
   onReady?: (editor: TiptapEditor) => void
   /** Called when the user presses ArrowUp / Backspace at the very start of the document. */
   onExitTop?: () => void
+  /**
+   * 'slide': the editor of a presentation slide — no page gutter, block handle or bottom
+   * padding, with slide placeholders.
+   */
+  variant?: 'page' | 'slide'
+}
+
+/** PowerPoint-like prompts in a near-empty slide; elsewhere only on the line with the cursor. */
+const slidePlaceholder: EditorExtensionOptions['placeholder'] = (node, { hasAnchor, doc }) => {
+  if (node.type.name === 'heading') return Number(node.attrs.level) <= 2 ? 'Click to add title' : `Heading ${node.attrs.level}`
+  if (node.type.name !== 'paragraph') return null
+  // "Click to add text" on the first body line while the slide has no body text yet.
+  let first: PMNode | null = null
+  let bodyEmpty = true
+  doc.forEach((b) => {
+    if (b.type.name === 'heading') return
+    if (b.textContent.trim() || !['paragraph', 'bulletList', 'orderedList', 'taskList'].includes(b.type.name)) bodyEmpty = false
+    if (!first) first = b.type.name === 'paragraph' ? b : (b.firstChild?.firstChild ?? null)
+  })
+  if (bodyEmpty && first === node) return 'Click to add text'
+  return hasAnchor ? "Type '/' for blocks" : ''
 }
 
 /** TipTap block canvas. Mount one instance per page (keyed by page id). */
-export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }: EditorProps) {
+export function Editor({ pageId, initialContent, onChange, onReady, onExitTop, variant = 'page' }: EditorProps) {
   const onChangeRef = useRef(onChange)
   const onExitTopRef = useRef(onExitTop)
   onChangeRef.current = onChange
@@ -35,7 +57,7 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
   const editorRef = useRef<TiptapEditor | null>(null)
 
   const editor = useEditor({
-    extensions: createEditorExtensions(),
+    extensions: createEditorExtensions(variant === 'slide' ? { placeholder: slidePlaceholder, placeholderEverywhere: true } : {}),
     content: initialContent ?? '',
     editorProps: {
       attributes: {
@@ -136,6 +158,17 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop }:
   }, [editor])
 
   const containerRef = useRef<HTMLDivElement>(null)
+
+  if (variant === 'slide') {
+    return (
+      <div ref={containerRef} className="relative">
+        <EditorContent editor={editor} />
+        {/* The slide is zoomed: menus live in <body> so they keep their normal size and place. */}
+        {editor && editor.isEditable && <FormattingToolbar editor={editor} appendTo={document.body} />}
+        {editor && editor.isEditable && <TableToolbar editor={editor} appendTo={document.body} />}
+      </div>
+    )
+  }
 
   return (
     // Extends into the left gutter so the block handle stays reachable.

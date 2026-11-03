@@ -1,5 +1,6 @@
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
-import { FileText, FileX, Shapes } from 'lucide-react'
+import { pageKindIcon } from '@/components/ui/PageKindIcon'
+import { FileX } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { openPageFromClick } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
@@ -44,7 +45,7 @@ function MentionView({ node, selected }: NodeViewProps) {
   const blockId = node.attrs.blockId as string | null
   const label = node.attrs.label as string
   const page = useAppStore((s) => s.pages.find((p) => p.id === pageId))
-  const Icon = !page ? FileX : page.kind === 'whiteboard' ? Shapes : FileText
+  const Icon = !page ? FileX : pageKindIcon(page.kind)
   const open = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()

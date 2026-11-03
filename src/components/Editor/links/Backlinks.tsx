@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, FileText, Link2, Shapes } from 'lucide-react'
+import { PageKindIcon } from '@/components/ui/PageKindIcon'
+import { ChevronRight, Link2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/stores/useAppStore'
 import { openPageFromClick } from '@/stores/useTabsStore'
@@ -41,7 +42,7 @@ export function Backlinks({ pageId }: { pageId: string }) {
               className="flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
             >
               <span className="flex w-5 justify-center leading-none">
-                {p!.icon ?? (p!.kind === 'whiteboard' ? <Shapes size={15} className="opacity-60" /> : <FileText size={15} className="opacity-60" />)}
+                {p!.icon ?? <PageKindIcon kind={p!.kind} size={15} className="opacity-60" />}
               </span>
               <span className="truncate underline decoration-black/20 underline-offset-[3px] dark:decoration-white/20">{p!.title || 'Untitled'}</span>
             </button>

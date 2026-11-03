@@ -1,4 +1,4 @@
-import type { PageMeta } from '@/types'
+import type { PageKind, PageMeta } from '@/types'
 import { normalizeWidth } from './pageWidth'
 import { normalizeFont } from './pageFont'
 
@@ -46,11 +46,16 @@ export function cleanCover(v: unknown): string | null {
   return typeof v === 'string' && coverToCss(v) ? v : null
 }
 
+/** A known page kind ('doc' for anything else). */
+export function normalizeKind(v: unknown): PageKind {
+  return v === 'whiteboard' || v === 'slides' ? v : 'doc'
+}
+
 /** Makes page metadata from disk safe to display (corrupted or hand-edited files). */
 export function cleanPageMeta(raw: Partial<PageMeta> & { id: string }): PageMeta {
   return {
     id: raw.id,
-    kind: raw.kind === 'whiteboard' ? 'whiteboard' : 'doc',
+    kind: normalizeKind(raw.kind),
     title: cleanTitle(raw.title),
     icon: cleanIcon(raw.icon),
     cover: cleanCover(raw.cover),

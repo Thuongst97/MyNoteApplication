@@ -960,3 +960,43 @@ body.block-dragging .prosemirror-dropcursor-inline {
 .notion-editor .equation-render { overflow-x: auto; padding: 0.4rem 0; }
 .notion-editor .equation-render .katex-display { margin: 0.25rem 0; }
 .notion-editor .equation-error { color: #d44c47; font-family: ui-monospace, monospace; font-size: 0.85em; white-space: pre-wrap; }
+
+/* ---------- Presentation slides (1280×720 surface, zoomed to fit) ---------- */
+.slide-surface { overflow: hidden; }
+.slide-light { color: #2f2e2b; }
+.slide-dark { color: #f3f4f6; }
+.slide-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.slide-layout-title .slide-body { justify-content: center; }
+.slide-content .notion-editor {
+  font-size: 28px;
+  line-height: 1.45;
+}
+.slide-content .notion-editor > :first-child { margin-top: 0 !important; }
+.slide-content .notion-editor h1 {
+  font-size: 2.3em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0.35em 0 0.3em;
+}
+.slide-content .notion-editor h2 {
+  font-size: 1.6em;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0.4em 0 0.45em;
+}
+.slide-content .notion-editor li { margin: 0.18em 0; }
+.slide-layout-title .slide-content .notion-editor { text-align: center; }
+.slide-layout-title .slide-content .notion-editor h1 { font-size: 2.6em; }
+.slide-layout-title .slide-content .notion-editor p { font-size: 1.1em; opacity: 0.75; }
+/* Placeholders on light/dark slide backgrounds follow the slide's text color. */
+.slide-light .notion-editor .is-empty::before,
+.slide-dark .notion-editor .is-empty::before { color: currentColor; opacity: 0.35; }
+.slide-content .notion-editor .is-empty::before { width: 100%; }
+.slide-layout-title .slide-content .notion-editor .is-empty::before { text-align: center; }
+/* Every empty block shows its prompt in the slide editor, focused or not. */
+.slide-editing .notion-editor:not(.ProseMirror-focused) p.is-empty:not(.is-editor-empty)::before { content: attr(data-placeholder); }

@@ -49,7 +49,7 @@ export function TopBar() {
         {/* Free space to drag the window by. */}
         <div className="min-w-6 flex-1 self-stretch" />
         <SaveIndicator />
-        {view === 'page' && activePageId && byId.get(activePageId)?.kind !== 'whiteboard' && (
+        {view === 'page' && activePageId && (byId.get(activePageId)?.kind ?? 'doc') === 'doc' && (
           <div className="no-drag">
             <PageOptions pageId={activePageId} />
           </div>

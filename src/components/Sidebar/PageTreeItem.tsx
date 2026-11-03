@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronRight, FileDown, FileText, FileUp, Link2, MoreHorizontal, Pencil, Plus, Shapes, Trash2, FilePlus, PanelTop } from 'lucide-react'
+import { PageKindIcon } from '@/components/ui/PageKindIcon'
+import { ChevronRight, FileDown, FileUp, Link2, MoreHorizontal, Pencil, Plus, Presentation, Shapes, Trash2, FilePlus, PanelTop } from 'lucide-react'
 import { exportPageToFile, importPageFile } from '@/components/Editor/pageFiles'
 import { pageUrl } from '@/lib/links'
 import type { PageMeta } from '@/types'
@@ -100,7 +101,7 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           />
         </button>
         <span className="flex w-5 shrink-0 items-center justify-center text-[15px] leading-none">
-          {page.icon ?? (page.kind === 'whiteboard' ? <Shapes size={15} className="opacity-60" /> : <FileText size={15} className="opacity-60" />)}
+          {page.icon ?? <PageKindIcon kind={page.kind} size={15} className="opacity-60" />}
         </span>
 
         {renaming ? (
@@ -173,6 +174,15 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
               }}
             >
               Add whiteboard inside
+            </MenuItem>
+            <MenuItem
+              icon={<Presentation size={14} />}
+              onClick={() => {
+                setMenuOpen(false)
+                void createPage(page.id, { kind: 'slides', title: 'Untitled presentation' })
+              }}
+            >
+              Add presentation inside
             </MenuItem>
             <MenuItem
               icon={<Link2 size={14} />}

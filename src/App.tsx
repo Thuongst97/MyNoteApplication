@@ -7,6 +7,7 @@ import { SearchModal } from '@/components/Search/SearchModal'
 import { TaskMatrix } from '@/components/Tasks/TaskMatrix'
 import { GraphView } from '@/components/Graph/GraphView'
 import { WhiteboardPage } from '@/components/Whiteboard/WhiteboardPage'
+import { PresentationPage } from '@/components/Slides/PresentationPage'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore } from '@/stores/useAppStore'
@@ -74,6 +75,8 @@ export default function App() {
             <NewTabView />
           ) : activePageId && activeExists && activePage?.kind === 'whiteboard' ? (
             <WhiteboardPage key={activePageId} pageId={activePageId} />
+          ) : activePageId && activeExists && activePage?.kind === 'slides' ? (
+            <PresentationPage key={activePageId} pageId={activePageId} />
           ) : activePageId && activeExists ? (
             <PageView key={activePageId} pageId={activePageId} />
           ) : (

@@ -233,7 +233,7 @@ export function GraphView() {
               if (n.x === undefined) return null
               const dim = isDim(n.id)
               const r = radius(n)
-              const fill = n.page.kind === 'whiteboard' ? colors[1] : colors[0]
+              const fill = n.page.kind === 'whiteboard' ? colors[1] : n.page.kind === 'slides' ? (colors[2] ?? colors[1]) : colors[0]
               return (
                 <g
                   key={n.id}
@@ -273,6 +273,9 @@ export function GraphView() {
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ background: colors[1] }} /> Whiteboard
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: colors[2] ?? colors[1] }} /> Presentation
           </span>
           <span className="opacity-70">Drag to move · scroll to zoom · click to open</span>
         </div>

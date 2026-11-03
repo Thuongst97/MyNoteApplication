@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckSquare, FileText, Network, Plus, Shapes, X } from 'lucide-react'
+import { PageKindIcon } from '@/components/ui/PageKindIcon'
+import { ArrowLeft, ArrowRight, CheckSquare, FileText, Network, Plus, X } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { current, useTabsStore, type Tab, type TabTarget } from '@/stores/useTabsStore'
 import type { PageMeta } from '@/types'
@@ -12,7 +13,7 @@ export function tabLabel(target: TabTarget, byId: Map<string, PageMeta>): { titl
   const page = byId.get(target.slice(5))
   return {
     title: page?.title || 'Untitled',
-    icon: page?.icon ? <span className="text-[14px] leading-none">{page.icon}</span> : page?.kind === 'whiteboard' ? <Shapes size={14} className="opacity-60" /> : <FileText size={14} className="opacity-60" />,
+    icon: page?.icon ? <span className="text-[14px] leading-none">{page.icon}</span> : <PageKindIcon kind={page?.kind} size={14} className="opacity-60" />,
   }
 }
 

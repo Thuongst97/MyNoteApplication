@@ -58,7 +58,8 @@ const BLOCK_TYPES: BlockType[] = [
 type Menu = 'turn' | 'size' | 'color' | 'link' | null
 
 /** Floating toolbar shown when text is selected. */
-export function FormattingToolbar({ editor }: { editor: Editor }) {
+/** `appendTo`: where the menu element lives (e.g. document.body when the editor is zoomed). */
+export function FormattingToolbar({ editor, appendTo }: { editor: Editor; appendTo?: HTMLElement }) {
   const [menu, setMenu] = useState<Menu>(null)
   const [href, setHref] = useState('')
   const linkRef = useRef<HTMLInputElement>(null)
@@ -102,6 +103,7 @@ export function FormattingToolbar({ editor }: { editor: Editor }) {
   return (
     <BubbleMenu
       editor={editor}
+      appendTo={appendTo}
       options={{ placement: 'top', offset: 8, flip: true, shift: { padding: 8 } }}
       shouldShow={({ editor: e, state }) => {
         const { selection } = state

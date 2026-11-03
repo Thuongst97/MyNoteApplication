@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { newPresentation } from '@/lib/presentation'
 import { create } from 'zustand'
 import type { JSONContent } from '@tiptap/react'
 import type { PageKind, PageMeta } from '@/types'
@@ -162,7 +163,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       focusTitleFor: init?.navigate === false ? s.focusTitleFor : id,
     }))
     if (init?.navigate !== false) get().setActivePage(id)
-    const content = init?.content ?? (kind === 'whiteboard' ? { type: 'whiteboard', scene: { elements: [], files: {} } } : null)
+    const content =
+      init?.content ??
+      (kind === 'whiteboard' ? { type: 'whiteboard', scene: { elements: [], files: {} } } : kind === 'slides' ? newPresentation(init?.title === 'Untitled presentation' ? '' : (init?.title ?? '')) : null)
     await api.savePage({ ...meta, content })
     set((s) => ({ linksVersion: s.linksVersion + 1 }))
     return id

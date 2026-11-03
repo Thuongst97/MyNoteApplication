@@ -27,7 +27,8 @@ function currentTable(editor: Editor): HTMLElement | null {
 }
 
 /** Floating toolbar under a table while the cursor is inside it: add/remove rows & columns, header, delete. */
-export function TableToolbar({ editor }: { editor: Editor }) {
+/** `appendTo`: where the menu element lives (e.g. document.body when the editor is zoomed). */
+export function TableToolbar({ editor, appendTo }: { editor: Editor; appendTo?: HTMLElement }) {
   const run = (fn: (c: ReturnType<Editor['chain']>) => ReturnType<Editor['chain']>) => fn(editor.chain().focus()).run()
   // Re-evaluated on every transaction so buttons enable/disable as the cursor moves.
   const can = useEditorState({
@@ -61,6 +62,7 @@ export function TableToolbar({ editor }: { editor: Editor }) {
   return (
     <BubbleMenu
       editor={editor}
+      appendTo={appendTo}
       pluginKey="tableToolbar"
       options={{ placement: 'bottom-start', offset: 6, flip: true, shift: { padding: 8 } }}
       // Hidden while text is selected inside a cell, where the formatting toolbar shows instead.

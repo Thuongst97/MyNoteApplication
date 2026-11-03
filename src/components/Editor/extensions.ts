@@ -1,4 +1,5 @@
 import type { AnyExtension } from '@tiptap/react'
+import type { Node as PMNode } from '@tiptap/pm/model'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
@@ -31,7 +32,14 @@ import { MoveBlockShortcuts } from './blockMove'
  * Every extension of the page editor. Shared by the editor and by code that needs the
  * same document schema without an editor (e.g. turning imported Markdown into a page).
  */
-export function createEditorExtensions(): AnyExtension[] {
+export interface EditorExtensionOptions {
+  /** Placeholder text for an empty block (null/undefined = the page editor's default). */
+  placeholder?: (node: PMNode, ctx: { hasAnchor: boolean; doc: PMNode }) => string | null | undefined
+  /** Show placeholders in every empty block, not just the one with the cursor. */
+  placeholderEverywhere?: boolean
+}
+
+export function createEditorExtensions(opts: EditorExtensionOptions = {}): AnyExtension[] {
   return [
     StarterKit.configure({
       heading: { levels: [1, 2, 3, 4] },
@@ -44,7 +52,10 @@ export function createEditorExtensions(): AnyExtension[] {
     Placeholder.configure({
       // Also inside callouts, columns and toggles (only the line with the cursor shows it).
       includeChildren: true,
-      placeholder: ({ node }) => {
+      showOnlyCurrent: !opts.placeholderEverywhere,
+      placeholder: ({ node, editor, hasAnchor }) => {
+        const custom = opts.placeholder?.(node, { hasAnchor, doc: editor.state.doc })
+        if (typeof custom === 'string') return custom
         if (node.type.name === 'heading') return `Heading ${node.attrs.level}`
         if (node.type.name === 'codeBlock') return ''
         if (node.type.name === 'detailsSummary') return 'Toggle'

@@ -1,5 +1,6 @@
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
-import { ArrowUpRight, FileText, FileX, Shapes } from 'lucide-react'
+import { pageKindIcon } from '@/components/ui/PageKindIcon'
+import { ArrowUpRight, FileX } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { openPageFromClick } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
@@ -56,7 +57,7 @@ function PageLinkView({ node, selected }: NodeViewProps) {
   const pageId = node.attrs.pageId as string
   const page = useAppStore((s) => s.pages.find((p) => p.id === pageId))
   const open = (e?: React.MouseEvent) => page && openPageFromClick(pageId, e)
-  const Icon = !page ? FileX : page.kind === 'whiteboard' ? Shapes : FileText
+  const Icon = !page ? FileX : pageKindIcon(page.kind)
 
   return (
     <NodeViewWrapper data-drag-handle className="my-0.5">

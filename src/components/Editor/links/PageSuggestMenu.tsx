@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import { FileText, Plus, Shapes } from 'lucide-react'
+import { PageKindIcon } from '@/components/ui/PageKindIcon'
+import { Plus } from 'lucide-react'
 import type { PageMeta } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -58,7 +59,7 @@ export const PageSuggestMenu = forwardRef<PageSuggestMenuHandle, PageSuggestMenu
           {item.kind === 'page' ? (
             <>
               <span className="flex w-5 shrink-0 justify-center text-base leading-none">
-                {item.page.icon ?? (item.page.kind === 'whiteboard' ? <Shapes size={16} className="opacity-60" /> : <FileText size={16} className="opacity-60" />)}
+                {item.page.icon ?? <PageKindIcon kind={item.page.kind} size={16} className="opacity-60" />}
               </span>
               <span className="min-w-0 flex-1">
                 <span className={cn('block truncate', !item.page.title && 'opacity-50')}>{item.page.title || 'Untitled'}</span>
