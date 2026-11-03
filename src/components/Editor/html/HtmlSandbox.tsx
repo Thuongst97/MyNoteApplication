@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/stores/useAppStore'
 
 export const SANDBOX_ORIGIN = 'pn-sandbox://frame'
+/** Window event: Esc was pressed inside an interactive block. */
+export const SANDBOX_ESCAPE = 'pn-sandbox-escape'
 const MIN_H = 24
 const MAX_H = 4000
 
@@ -32,6 +34,8 @@ img, video, svg, canvas { max-width: 100%; }
     report();
   });
   addEventListener('load', report);
+  // Esc inside the block still closes the expanded view (keys don't leave the frame otherwise).
+  addEventListener('keydown', function (e) { if (e.key === 'Escape') parent.postMessage({ type: 'pn-escape' }, '*'); }, true);
 })();
 </script>`
   return `<!doctype html><html><head>${head}</head><body><div id="pn-root" style="display:flow-root">${source}</div></body></html>`
@@ -48,7 +52,7 @@ export function clampHeight(v: unknown): number | null {
  * Runs an HTML block's scripts in a sandboxed frame: opaque origin (no access to the app,
  * its data or its API), no popups, forms or navigation, and no network unless `allowNetwork`.
  */
-export function HtmlSandbox({ source, allowNetwork }: { source: string; allowNetwork?: boolean }) {
+export function HtmlSandbox({ source, allowNetwork, fill }: { source: string; allowNetwork?: boolean; fill?: boolean }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const theme = useAppStore((s) => s.theme)
   const [height, setHeight] = useState(120)
@@ -65,7 +69,7 @@ export function HtmlSandbox({ source, allowNetwork }: { source: string; allowNet
       else if (e.data.type === 'pn-height') {
         const h = clampHeight(e.data.height)
         if (h !== null) setHeight(h)
-      }
+      } else if (e.data.type === 'pn-escape') window.dispatchEvent(new CustomEvent(SANDBOX_ESCAPE))
     }
     window.addEventListener('message', onMessage)
     // Changing the source (or theme) restarts the block from a fresh frame.
@@ -82,7 +86,8 @@ export function HtmlSandbox({ source, allowNetwork }: { source: string; allowNet
       allow=""
       referrerPolicy="no-referrer"
       className="block w-full border-0 bg-transparent"
-      style={{ height, colorScheme: theme }}
+      // fill: the frame takes the whole area it's given (expanded view) and scrolls inside.
+      style={{ height: fill ? '100%' : height, minHeight: fill ? 'calc(100vh - 7rem)' : undefined, flex: fill ? '1 1 auto' : undefined, colorScheme: theme }}
     />
   )
 }

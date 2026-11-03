@@ -86,4 +86,14 @@ describe('interactive HTML blocks', () => {
     expect(block.attrs).toMatchObject({ interactive: true, trusted: true, allowNetwork: false })
     editor.destroy()
   })
+
+  it('the frame forwards Esc so an expanded view can close', () => {
+    expect(sandboxDocument('<p>x</p>', 'light')).toContain("parent.postMessage({ type: 'pn-escape' }, '*')")
+  })
+
+  it('expanded view: the frame fills the area instead of following its content height', () => {
+    render(<HtmlBlockRender source={SRC} attrs={{ interactive: true, trusted: true }} fill />)
+    expect((screen.getByTestId('html-sandbox') as HTMLIFrameElement).style.height).toBe('100%')
+  })
 })
+

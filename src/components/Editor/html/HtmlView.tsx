@@ -4,6 +4,7 @@ import { CodeXml, Globe, Play, Zap } from 'lucide-react'
 import { SourceBlockView, type SourceKind, type SourceRenderProps } from '../markdown/SourceBlockView'
 import { HtmlRender } from './HtmlRender'
 import { HtmlSandbox } from './HtmlSandbox'
+import { HtmlViewer } from './HtmlViewer'
 import { useStaticBlocks } from '../staticBlocks'
 import { sanitizeHtml } from '@/lib/html'
 
@@ -43,6 +44,7 @@ export const HTML_KIND: SourceKind = {
   help: { url: 'https://developer.mozilla.org/en-US/docs/Web/HTML', label: 'HTML reference' },
   template: HTML_TEMPLATE,
   Render: HtmlBlockRender,
+  FullView: HtmlFullView,
   EditorFooter: ScriptSettings,
   draftAttrs: ['interactive', 'allowNetwork', 'trusted'],
   // Saving scripts you've just written/reviewed counts as running them.
@@ -60,7 +62,7 @@ export function HtmlView(props: NodeViewProps) {
  * Plain HTML is sanitized and shown in a style scope. With JavaScript on, the block runs in a
  * sandboxed frame — but scripts that came from elsewhere (imported or pasted) wait for Run.
  */
-export function HtmlBlockRender({ source, className, attrs, setAttrs }: SourceRenderProps) {
+export function HtmlBlockRender({ source, className, attrs, setAttrs, fill }: SourceRenderProps & { fill?: boolean }) {
   const still = useStaticBlocks()
   const [ranHere, setRanHere] = useState(false)
   if (!attrs?.interactive) return <HtmlRender source={source} className={className} />
@@ -97,7 +99,20 @@ export function HtmlBlockRender({ source, className, attrs, setAttrs }: SourceRe
       </div>
     )
   }
-  return <HtmlSandbox source={source} allowNetwork={!!attrs.allowNetwork} />
+  return <HtmlSandbox source={source} allowNetwork={!!attrs.allowNetwork} fill={fill} />
+}
+
+/** Expanded HTML block: the whole window, with page widths and zoom (see HtmlViewer). */
+function HtmlFullView({ source, attrs, setAttrs, onClose }: SourceRenderProps & { onClose: () => void }) {
+  return (
+    <HtmlViewer title={attrs?.interactive ? 'Interactive HTML' : 'HTML'} onClose={onClose}>
+      {(fill) => (
+        <div className="flex min-h-0 flex-1 flex-col px-6 py-4">
+          <HtmlBlockRender source={source} className="markdown-body selectable-text" attrs={attrs} setAttrs={setAttrs} fill={fill} />
+        </div>
+      )}
+    </HtmlViewer>
+  )
 }
 
 /** "Run JavaScript" and "Allow internet access" switches under the HTML editor. */

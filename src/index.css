@@ -760,6 +760,13 @@ body {
 }
 
 /* ---------- Mermaid diagrams ---------- */
+.notion-editor .plantuml-svg svg {
+  /* Shrinks proportionally with the page; never squashed (see fitSvg). */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+}
 .notion-editor .mermaid-svg svg {
   max-width: 100%;
   height: auto;

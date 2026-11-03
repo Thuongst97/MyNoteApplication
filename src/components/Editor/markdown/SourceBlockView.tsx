@@ -22,6 +22,8 @@ export interface SourceKind {
   toBlocksHtml?: (source: string) => string
   /** Diagram blocks: offer a full-window viewer (zoom & pan) for the rendered SVG. */
   expandable?: boolean
+  /** A full-window view of the block (e.g. a big HTML page); shown by the Expand button. */
+  FullView?: (props: SourceRenderProps & { onClose: () => void }) => React.ReactElement
   /** Has a frame (on by default, `border` attribute) with a Border toggle, like drawings. */
   borderToggle?: boolean
   /** Extra controls under the editor (e.g. the PlantUML server, the HTML block's scripts switch). */
@@ -80,6 +82,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
   const [preview, setPreview] = useState(source)
   const [copied, setCopied] = useState(false)
   const [expandedSvg, setExpandedSvg] = useState<string | null>(null)
+  const [fullView, setFullView] = useState(false)
   const expand = () => {
     const svg = renderedRef.current?.querySelector('svg')
     if (svg) setExpandedSvg(svg.outerHTML)
@@ -234,6 +237,11 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
                   <Maximize2 size={14} /> Expand
                 </ToolbarButton>
               )}
+              {kind.FullView && (
+                <ToolbarButton label={`Expand ${kind.name}`} onClick={() => setFullView(true)}>
+                  <Maximize2 size={14} /> Expand
+                </ToolbarButton>
+              )}
               {kind.borderToggle && (
                 <ToolbarButton
                   label={node.attrs.border !== false ? 'Hide border' : 'Show border'}
@@ -261,6 +269,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
           )}
         </div>
       )}
+      {fullView && kind.FullView && <kind.FullView source={source} attrs={node.attrs} setAttrs={editor.isEditable ? updateAttributes : undefined} onClose={() => setFullView(false)} />}
       {expandedSvg && <DiagramViewer svg={expandedSvg} title={`${kind.name} diagram`} onClose={() => setExpandedSvg(null)} />}
     </NodeViewWrapper>
   )

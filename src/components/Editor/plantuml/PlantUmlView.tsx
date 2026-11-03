@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { fitSvg } from '@/lib/svgFit'
 import type { NodeViewProps } from '@tiptap/react'
 import { Loader2, Network } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -34,11 +35,12 @@ export function PlantUmlRender({ source, className }: { source: string; classNam
       cancelled = true
     }
   }, [server, source])
-  const svg = useMemo(() => (state.svg ? sanitizeSvg(state.svg) : ''), [state.svg])
+  // Scales down proportionally to fit the page (Expand shows it full size).
+  const svg = useMemo(() => (state.svg ? fitSvg(sanitizeSvg(state.svg)) : ''), [state.svg])
   return (
     <div className={`plantuml-render relative ${className ?? ''}`}>
       {svg ? (
-        <div className="plantuml-svg flex justify-center overflow-x-auto" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className="plantuml-svg flex justify-center" dangerouslySetInnerHTML={{ __html: svg }} />
       ) : state.error ? (
         <div className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">{state.error}</div>
       ) : null}
