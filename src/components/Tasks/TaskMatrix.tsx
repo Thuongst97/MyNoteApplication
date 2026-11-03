@@ -90,7 +90,6 @@ export function TaskMatrix() {
         {/* Header */}
         <div className="mb-7 flex flex-wrap items-end gap-3">
           <div className="min-w-0 flex-1">
-            <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#8A5A12] dark:text-[#D9B97A]">Focus</div>
             <h1 className="text-[42px] font-semibold leading-none tracking-[-0.025em] text-[#171717] dark:bg-gradient-to-b dark:from-white dark:to-[#CFC6B6] dark:bg-clip-text dark:text-transparent">
               Tasks
             </h1>
