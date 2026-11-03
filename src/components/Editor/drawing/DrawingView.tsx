@@ -14,7 +14,7 @@ const DrawingEditor = lazy(() => import('./DrawingEditor'))
 export function DrawingView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const theme = useAppStore((s) => s.theme)
   const data = useMemo(() => normalizeDrawing(node.attrs.data), [node.attrs.data])
-  const [open, setOpen] = useState<boolean>(!!node.attrs.isNew)
+  const [open, setOpen] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)
   const align = node.attrs.align as string
   // Previews may come from pasted content: never trust them as HTML.
   const svg = useMemo(() => sanitizeSvg(theme === 'dark' ? data.svgDark : data.svgLight), [data, theme])

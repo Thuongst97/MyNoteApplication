@@ -259,6 +259,20 @@ describe('PresentationPage', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(screen.queryByTestId('present-mode')).toBeNull() // no ink: no question
   })
+
+  it('diagrams and charts on a slide are edited in a full-size dialog; thumbnails never open editors', async () => {
+    await setup()
+    const el = document.querySelector('.ProseMirror[contenteditable="true"]') as HTMLElement & { editor: import('@tiptap/react').Editor }
+    act(() => void el.editor.chain().focus('end').insertMermaid('').run())
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Mermaid diagram' })
+    expect(dialog.closest('[data-testid="block-edit-dialog"]')!.parentElement).toBe(document.body)
+    expect(screen.getByText(/Editing Mermaid diagram/)).toBeInTheDocument()
+    // Only one editor is open: the thumbnail of the same slide shows the block, not an editor.
+    await waitFor(() => expect(document.querySelectorAll('[role="dialog"][aria-label="Edit Mermaid diagram"]')).toHaveLength(1))
+    fireEvent.click(within(dialog).getByRole('button', { name: /Cancel/ }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Mermaid diagram' })).toBeNull())
+  })
+
 })
 
 function cleanupAndRender(id: string) {

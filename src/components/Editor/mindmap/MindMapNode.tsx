@@ -81,7 +81,7 @@ function MindMapView({ node, updateAttributes, deleteNode, selected, editor, get
   const theme = useAppStore((s) => s.theme)
   const map = useMemo(() => normalizeMindMap(node.attrs.map), [node.attrs.map])
   const layout = useMemo(() => layoutMindMap(map), [map])
-  const [open, setOpen] = useState<boolean>(!!node.attrs.isNew)
+  const [open, setOpen] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)
   const align = node.attrs.align as string
   const b = layout.bounds
   const pad = 24

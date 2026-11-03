@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { Blocks, Check, Code2, Copy, Maximize2, Square, Trash2, X, type LucideIcon } from 'lucide-react'
 import { blockFrameClass } from '../blockBorder'
@@ -72,7 +73,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
     return () => el.removeEventListener('mousedown', onDown, true)
   })
   const source: string = node.attrs.source ?? ''
-  const [editing, setEditing] = useState(source.trim() === '')
+  const [editing, setEditing] = useState(source.trim() === '' && editor.isEditable)
   const [draft, setDraft] = useState(source)
   const pickDraftAttrs = () => Object.fromEntries((kind.draftAttrs ?? []).map((k) => [k, node.attrs[k]]))
   const [draftAttrs, setDraftAttrs] = useState<Record<string, unknown>>(pickDraftAttrs)
@@ -161,6 +162,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
       )}
     >
       {editing ? (
+        <BlockEditPanel title={kind.name}>
         <div contentEditable={false} className="no-drag rounded-lg bg-[#f7f6f3] p-3 dark:bg-[#202020]">
           <div className="mb-2 flex items-center gap-2 text-xs opacity-60">
             <kind.icon size={14} /> {kind.hint}
@@ -220,6 +222,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
             </button>
           </div>
         </div>
+        </BlockEditPanel>
       ) : (
         <div ref={renderedRef} contentEditable={false} className="relative px-1 py-1">
           {/* Selectable, copyable text: double-click selects a word; use Edit to change the source. */}

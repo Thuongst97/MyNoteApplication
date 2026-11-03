@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Maximize2, Square, Trash2, Workflow, X } from 'lucide-react'
 import { blockFrameClass } from '../blockBorder'
@@ -12,7 +13,7 @@ import { placeCursorAfter } from './MermaidNode'
 export function MermaidView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const code: string = node.attrs.code ?? ''
   const theme = useAppStore((s) => s.theme)
-  const [editing, setEditing] = useState(code.trim() === '')
+  const [editing, setEditing] = useState(code.trim() === '' && editor.isEditable)
   const [draft, setDraft] = useState(code)
   const [saved, setSaved] = useState<MermaidResult | null>(null)
   const [preview, setPreview] = useState<MermaidResult | null>(null)
@@ -98,6 +99,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
       data-drag-handle
     >
       {editing ? (
+        <BlockEditPanel title="Mermaid diagram">
         <div contentEditable={false} className="no-drag rounded-lg bg-[#f7f6f3] p-3 dark:bg-[#202020]">
           <div className="mb-2 flex items-center gap-2 text-xs opacity-60">
             <Workflow size={14} /> Mermaid diagram — paste or type the code
@@ -165,6 +167,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
             </div>
           )}
         </div>
+        </BlockEditPanel>
       ) : (
         <div contentEditable={false} onDoubleClick={startEdit} className="relative px-2 py-3">
           <DiagramOutput result={shown} onFix={startEdit} align={node.attrs.align} />

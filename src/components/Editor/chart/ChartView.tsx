@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import {
   AreaChart as AreaIcon,
@@ -50,7 +51,7 @@ const TYPE_ICONS: Record<ChartType, LucideIcon> = {
 export function ChartView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const theme = useAppStore((s) => s.theme)
   const spec = useMemo(() => normalizeSpec(node.attrs.spec), [node.attrs.spec])
-  const [editing, setEditing] = useState<boolean>(!!node.attrs.isNew)
+  const [editing, setEditing] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)
   const [draft, setDraft] = useState<ChartSpec>(spec)
   const [showTable, setShowTable] = useState(false)
   const align = node.attrs.align as string
@@ -90,7 +91,9 @@ export function ChartView({ node, updateAttributes, deleteNode, selected, editor
       )}
     >
       {editing ? (
+        <BlockEditPanel title="chart">
         <ChartEditor draft={draft} setDraft={setDraft} theme={theme} onSave={save} onCancel={cancel} />
+        </BlockEditPanel>
       ) : (
         <div contentEditable={false} onDoubleClick={() => editor.isEditable && setEditing(true)} className="relative px-3 py-3">
           <div

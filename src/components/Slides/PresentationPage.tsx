@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
 import { Editor } from '@/components/Editor/Editor'
+import { InSlideContext } from '@/components/Editor/BlockEditPanel'
 import { HIGHLIGHT_COLORS, INK_COLORS, buildSteps, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
 import { cn } from '@/lib/utils'
 import { PAD_X, PAD_Y, SlideFrame, SlideView, useAutoFit } from './SlideCanvas'
@@ -227,6 +228,7 @@ function EditableSlide({
     <div className="slide-body overflow-y-auto" style={{ padding: `${PAD_Y}px ${PAD_X}px` }}>
       <style>{animationBadges(slide)}</style>
       <div ref={innerRef} className="slide-content slide-editing" style={{ zoom }}>
+        <InSlideContext.Provider value>
         <Editor
           pageId={pageId}
           variant="slide"
@@ -237,6 +239,7 @@ function EditableSlide({
             setVersion((v) => v + 1)
           }}
         />
+        </InSlideContext.Provider>
       </div>
     </div>
   )
