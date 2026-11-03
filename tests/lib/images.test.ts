@@ -49,3 +49,46 @@ describe('images', () => {
     expect(alert).toHaveBeenCalledWith(expect.stringContaining('disk full'))
   })
 })
+
+describe('pickImageFile', () => {
+  const capture = () => {
+    let input: HTMLInputElement | null = null
+    const orig = HTMLInputElement.prototype.click
+    HTMLInputElement.prototype.click = function (this: HTMLInputElement) {
+      input = this
+    }
+    return { get: () => input!, restore: () => (HTMLInputElement.prototype.click = orig) }
+  }
+
+  it('resolves to null when the picker is cancelled (no stuck "Uploading…")', async () => {
+    const { pickImageFile } = await import('@/lib/images')
+    const c = capture()
+    const p = pickImageFile()
+    c.get().dispatchEvent(new Event('cancel'))
+    expect(await p).toBeNull()
+    c.restore()
+  })
+
+  it('resolves to the chosen file', async () => {
+    const { pickImageFile } = await import('@/lib/images')
+    const c = capture()
+    const p = pickImageFile()
+    const file = new File([new Uint8Array([1])], 'a.png', { type: 'image/png' })
+    Object.defineProperty(c.get(), 'files', { value: [file] })
+    c.get().dispatchEvent(new Event('change'))
+    expect(await p).toBe(file)
+    c.restore()
+  })
+
+  it('falls back to "cancelled" when the window regains focus without a file', async () => {
+    vi.useFakeTimers()
+    const { pickImageFile } = await import('@/lib/images')
+    const c = capture()
+    const p = pickImageFile()
+    window.dispatchEvent(new Event('focus'))
+    await vi.advanceTimersByTimeAsync(600)
+    expect(await p).toBeNull()
+    c.restore()
+    vi.useRealTimers()
+  })
+})

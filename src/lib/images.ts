@@ -64,16 +64,33 @@ export function pickAndInsertImages(editor: Editor) {
  * (a file in the app's data folder; a data URL in a browser). Resolves to its URL,
  * or null when nothing was picked. Throws a readable error for bad files.
  */
-export function pickAndStoreImage(): Promise<string | null> {
-  return new Promise((resolve, reject) => {
+export async function pickAndStoreImage(): Promise<string | null> {
+  const file = await pickImageFile()
+  return file ? storeImageFile(file) : null
+}
+
+/**
+ * Opens the file picker for one image. Resolves to the file, or null when the picker is
+ * cancelled (the 'cancel' event; as a fallback, the window getting focus back with no file).
+ */
+export function pickImageFile(): Promise<File | null> {
+  return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = IMAGE_MIME_TYPES.filter((t) => t !== 'image/svg+xml').join(',')
-    input.onchange = () => {
-      const file = input.files?.[0]
-      if (!file) return resolve(null)
-      storeImageFile(file).then(resolve, reject)
+    let done = false
+    const finish = (file: File | null) => {
+      if (done) return
+      done = true
+      window.removeEventListener('focus', onFocus)
+      resolve(file)
     }
+    // Some platforms don't send 'cancel': when the window is focused again and no file
+    // arrives shortly after, treat it as cancelled.
+    const onFocus = () => setTimeout(() => finish(input.files?.[0] ?? null), 500)
+    input.addEventListener('change', () => finish(input.files?.[0] ?? null))
+    input.addEventListener('cancel', () => finish(null))
+    window.addEventListener('focus', onFocus)
     input.click()
   })
 }

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { ImageIcon, Loader2, Smile, Shuffle, Trash2, Upload } from 'lucide-react'
-import { imageFilesFrom, pickAndStoreImage, storeImageFile } from '@/lib/images'
+import { imageFilesFrom, pickImageFile, storeImageFile } from '@/lib/images'
 import { useAppStore } from '@/stores/useAppStore'
 import type { PageMeta } from '@/types'
 import { Popover } from '@/components/ui/Popover'
@@ -25,11 +25,12 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
   const [uploading, setUploading] = useState(false)
   const [dropping, setDropping] = useState(false)
 
-  /** Uploads a cover image (picked or dropped) and uses it. */
-  const uploadCover = async (get: () => Promise<string | null>) => {
+  /** Uploads a cover image file (picked or dropped) and uses it. */
+  const uploadCover = async (file: File | null) => {
+    if (!file) return // picker cancelled: nothing to do
     setUploading(true)
     try {
-      const url = await get()
+      const url = await storeImageFile(file)
       if (url) {
         onChange({ cover: url })
         setCoverOpen(false)
@@ -76,7 +77,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
             if (!file) return
             e.preventDefault()
             e.stopPropagation()
-            void uploadCover(() => storeImageFile(file))
+            void uploadCover(file)
           }}
         >
           <div className="absolute bottom-3 right-4 flex gap-1 opacity-0 transition-opacity group-hover/cover:opacity-100">
@@ -86,7 +87,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
                 <button
                   type="button"
                   disabled={uploading}
-                  onClick={() => void uploadCover(pickAndStoreImage)}
+                  onClick={() => void pickImageFile().then(uploadCover)}
                   className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-black/15 px-3 py-2.5 text-sm hover:border-blue-400 hover:bg-blue-500/5 disabled:opacity-60 dark:border-white/20"
                 >
                   {uploading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} className="opacity-70" />}
