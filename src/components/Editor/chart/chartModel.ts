@@ -20,6 +20,98 @@ export interface ChartSpec {
   seriesColors?: Array<string | null>
   /** Custom color per row/label (null = automatic). Used by pie and parts of a whole. */
   labelColors?: Array<string | null>
+  /** Look of the chart (legend, data labels, number format…); missing = defaults. */
+  format?: ChartFormat
+}
+
+export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none'
+export type NumberFormat = 'number' | 'compact' | 'percent' | 'currency'
+export type PieLabel = 'percent' | 'value' | 'both'
+export type ChartHeight = 'small' | 'medium' | 'large'
+
+export interface ChartFormat {
+  /** Where the legend goes (default: on top, and only with several series). */
+  legend?: LegendPosition
+  /** Show each value on its bar / point / slice. */
+  dataLabels?: boolean
+  /** Pie: what slice labels show (default percent). */
+  pieLabel?: PieLabel
+  /** Horizontal (or vertical, for bars) gridlines (default on). */
+  gridlines?: boolean
+  xTitle?: string
+  yTitle?: string
+  numberFormat?: NumberFormat
+  /** Currency symbol for numberFormat "currency". */
+  currency?: string
+  /** Fixed number of decimals (default: as needed, up to 2). */
+  decimals?: number
+  /** Columns/bars stacked on top of each other. */
+  stacked?: boolean
+  /** Lines drawn as smooth curves. */
+  smooth?: boolean
+  height?: ChartHeight
+}
+
+export const LEGEND_POSITIONS: LegendPosition[] = ['top', 'bottom', 'left', 'right', 'none']
+export const NUMBER_FORMATS: Array<{ id: NumberFormat; label: string }> = [
+  { id: 'number', label: 'Number (1,234.5)' },
+  { id: 'compact', label: 'Compact (1.2K)' },
+  { id: 'percent', label: 'Percent (12%)' },
+  { id: 'currency', label: 'Currency ($1,234)' },
+]
+export const CURRENCIES = ['$', '€', '£', '¥', '₫', '₩', '₹']
+export const CHART_HEIGHTS: Record<ChartHeight, number> = { small: 220, medium: 300, large: 420 }
+
+/** A stored format with unknown values dropped. */
+export function normalizeFormat(raw: unknown): ChartFormat | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  const f: ChartFormat = {}
+  if (LEGEND_POSITIONS.includes(r.legend as LegendPosition)) f.legend = r.legend as LegendPosition
+  if (typeof r.dataLabels === 'boolean') f.dataLabels = r.dataLabels
+  if (r.pieLabel === 'percent' || r.pieLabel === 'value' || r.pieLabel === 'both') f.pieLabel = r.pieLabel
+  if (typeof r.gridlines === 'boolean') f.gridlines = r.gridlines
+  if (typeof r.xTitle === 'string' && r.xTitle.trim()) f.xTitle = r.xTitle.slice(0, 80)
+  if (typeof r.yTitle === 'string' && r.yTitle.trim()) f.yTitle = r.yTitle.slice(0, 80)
+  if (NUMBER_FORMATS.some((n) => n.id === r.numberFormat)) f.numberFormat = r.numberFormat as NumberFormat
+  if (typeof r.currency === 'string' && CURRENCIES.includes(r.currency)) f.currency = r.currency
+  if (Number.isInteger(r.decimals) && (r.decimals as number) >= 0 && (r.decimals as number) <= 4) f.decimals = r.decimals as number
+  if (r.stacked === true) f.stacked = true
+  if (r.smooth === true) f.smooth = true
+  if (r.height === 'small' || r.height === 'medium' || r.height === 'large') f.height = r.height
+  return Object.keys(f).length ? f : undefined
+}
+
+/** A value written the way the chart's number format says (percent: 12 → "12%"). */
+export function formatValue(n: number | null | undefined, f: ChartFormat | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return '–'
+  const digits = f?.decimals
+  const opts: Intl.NumberFormatOptions = digits !== undefined ? { minimumFractionDigits: digits, maximumFractionDigits: digits } : { maximumFractionDigits: 2 }
+  switch (f?.numberFormat) {
+    case 'compact':
+      return Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: digits ?? 1, minimumFractionDigits: digits ?? 0 }).format(n)
+    case 'percent':
+      return `${n.toLocaleString(undefined, opts)}%`
+    case 'currency': {
+      const sym = f.currency ?? '$'
+      const body = Math.abs(n).toLocaleString(undefined, digits !== undefined ? opts : { maximumFractionDigits: 2 })
+      return `${n < 0 ? '-' : ''}${sym}${body}`
+    }
+    default:
+      return n.toLocaleString(undefined, opts)
+  }
+}
+
+/** Short value for axis ticks (large numbers compact, with the format's unit). */
+export function formatTick(n: number, f: ChartFormat | undefined): string {
+  if (Math.abs(n) >= 10000 && f?.numberFormat !== 'compact') {
+    const c = Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(Math.abs(n))
+    const sign = n < 0 ? '-' : ''
+    if (f?.numberFormat === 'currency') return `${sign}${f.currency ?? '$'}${c}`
+    if (f?.numberFormat === 'percent') return `${sign}${c}%`
+    return `${sign}${c}`
+  }
+  return formatValue(n, f && { ...f, decimals: undefined })
 }
 
 /** Categorical palette (fixed order, never cycled), validated against this app's surfaces. */
@@ -137,6 +229,8 @@ export function normalizeSpec(raw: unknown): ChartSpec {
   const lc = colors(r.labelColors, labels.length)
   if (sc.some(Boolean)) out.seriesColors = sc
   if (lc.some(Boolean)) out.labelColors = lc
+  const format = normalizeFormat(r.format)
+  if (format) out.format = format
   return out
 }
 

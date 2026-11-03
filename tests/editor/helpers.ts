@@ -17,6 +17,7 @@ import { MoveBlockShortcuts } from '@/components/Editor/blockMove'
 import { CodeBlockNode } from '@/components/Editor/code/CodeBlockNode'
 import { MarkdownNode } from '@/components/Editor/markdown/MarkdownNode'
 import { TableKit } from '@tiptap/extension-table'
+import { ResizableTableRow, RowResize } from '@/components/Editor/table/rowResize'
 import { HtmlNode } from '@/components/Editor/html/HtmlNode'
 import { CalloutNode } from '@/components/Editor/blocks/CalloutNode'
 import { ColumnNode, ColumnsNode } from '@/components/Editor/blocks/ColumnsNode'
@@ -46,7 +47,9 @@ export function makeEditor(content: JSONContent | string = '') {
       DetailsContent,
       noView(EquationNode),
       noView(PlantUmlNode),
-      TableKit.configure({ table: { resizable: false } }),
+      TableKit.configure({ table: { resizable: true, cellMinWidth: 48 }, tableRow: false }),
+      ResizableTableRow,
+      RowResize,
       TaskList,
       TaskItem.configure({ nested: true }),
       Image.extend({

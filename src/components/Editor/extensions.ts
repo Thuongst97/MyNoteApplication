@@ -16,6 +16,7 @@ import { DetailsContent, DetailsSummary, ToggleNode } from './blocks/ToggleNode'
 import { EquationNode } from './equation/EquationNode'
 import { PlantUmlNode } from './plantuml/PlantUmlNode'
 import { TableKit } from '@tiptap/extension-table'
+import { ResizableTableRow, RowResize } from './table/rowResize'
 import { ImageSelection } from './ImageSelection'
 import { ChartNode } from './chart/ChartNode'
 import { DrawingNode } from './drawing/DrawingNode'
@@ -63,7 +64,10 @@ export function createEditorExtensions(opts: EditorExtensionOptions = {}): AnyEx
       },
     }),
     CodeBlockNode,
-    TableKit.configure({ table: { resizable: false } }),
+    // Drag column borders to resize columns; rows get a height attribute (RowResize).
+    TableKit.configure({ table: { resizable: true, cellMinWidth: 48, lastColumnResizable: true }, tableRow: false }),
+    ResizableTableRow,
+    RowResize,
     MarkdownNode,
     HtmlNode,
     CalloutNode,

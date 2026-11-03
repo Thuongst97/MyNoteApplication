@@ -536,8 +536,28 @@ body {
 }
 .notion-editor .tableWrapper th,
 .notion-editor .tableWrapper td {
+  min-width: 48px;
+}
+/* Columns nobody has resized yet start at a comfortable size. */
+.notion-editor .tableWrapper th:not([colwidth]),
+.notion-editor .tableWrapper td:not([colwidth]) {
   min-width: 110px;
 }
+/* Column resizing (drag a column's right border) and row resizing (drag a row's bottom border). */
+.notion-editor .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: #2383e2;
+  pointer-events: none;
+  z-index: 2;
+}
+.notion-editor.resize-cursor,
+.notion-editor.resize-cursor * { cursor: col-resize !important; }
+.notion-editor.row-resize-cursor,
+.notion-editor.row-resize-cursor * { cursor: row-resize !important; }
 .notion-editor th,
 .notion-editor td {
   border: 1px solid rgba(55, 53, 47, 0.16);

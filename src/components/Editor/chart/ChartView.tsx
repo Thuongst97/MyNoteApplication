@@ -25,7 +25,8 @@ import { placeCursorAfter } from '../mermaid/MermaidNode'
 import {
   CHART_TYPES,
   MAX_SERIES,
-  formatNumber,
+  formatValue,
+  normalizeFormat,
   normalizeSpec,
   partColor,
   partsOf,
@@ -36,6 +37,7 @@ import {
   type ChartType,
 } from './chartModel'
 import { ColorPicker } from '@/components/ui/ColorPicker'
+import { ChartFormatPanel } from './ChartFormatPanel'
 
 const ChartRender = lazy(() => import('./ChartRender'))
 
@@ -169,7 +171,7 @@ function DataTable({ spec }: { spec: ChartSpec }) {
               <td className="px-2 py-1.5">{l}</td>
               {spec.series.map((s, i) => (
                 <td key={i} className="px-2 py-1.5 text-right tabular-nums">
-                  {formatNumber(s.values[r])}
+                  {formatValue(s.values[r], spec.format)}
                 </td>
               ))}
             </tr>
@@ -189,6 +191,7 @@ interface ChartEditorProps {
 }
 
 function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorProps) {
+  const [tab, setTab] = useState<'data' | 'format'>('data')
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [pasteError, setPasteError] = useState<string | null>(null)
@@ -277,13 +280,29 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
           </label>
         )}
       </div>
-      {byRow && (
+      <div className="mt-3 flex gap-1 border-b border-black/10 dark:border-white/10" role="tablist" aria-label="Chart editor">
+        {(['data', 'format'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={cn('-mb-px border-b-2 px-3 py-1.5 text-xs font-medium', tab === t ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent opacity-60 hover:opacity-100')}
+          >
+            {t === 'data' ? 'Data' : 'Format'}
+          </button>
+        ))}
+      </div>
+      {tab === 'format' && <ChartFormatPanel draft={draft} onChange={(format) => update((d) => ({ ...d, format: normalizeFormat(format) }))} />}
+      {tab === 'data' && byRow && (
         <div className="mt-2 text-xs opacity-60">
           Each row is one {draft.type === 'pie' ? 'slice' : 'part'} (values from the first series). Click a row's color square to change its color.
         </div>
       )}
 
       {/* Data grid */}
+      {tab === 'data' && (
       <div className="mt-3 max-h-[300px] overflow-auto rounded-md border border-black/10 bg-white dark:border-white/10 dark:bg-[#191919]">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -430,8 +449,11 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
           </tbody>
         </table>
       </div>
+      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        {tab === 'data' && (
+        <>
         <SmallButton
           onClick={() =>
             update((d) => {
@@ -447,6 +469,8 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
         <SmallButton onClick={() => setPasteOpen((v) => !v)} active={pasteOpen}>
           <ClipboardPaste size={13} /> Paste from spreadsheet
         </SmallButton>
+        </>
+        )}
         <span className="ml-auto text-xs opacity-40">{mod}+Enter to save · Esc to cancel</span>
         <button type="button" onClick={onCancel} className="flex items-center gap-1 rounded-md px-2.5 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/10">
           <X size={14} /> Cancel
@@ -456,7 +480,7 @@ function ChartEditor({ draft, setDraft, theme, onSave, onCancel }: ChartEditorPr
         </button>
       </div>
 
-      {pasteOpen && (
+      {tab === 'data' && pasteOpen && (
         <div className="mt-2">
           <textarea
             autoFocus
