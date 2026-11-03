@@ -33,7 +33,11 @@ export function extractLinks(content: unknown): string[] {
   }
   const c = content as { type?: string; scene?: unknown } | null
   if (c?.type === 'whiteboard') scanScene(c.scene as never)
-  else if (c?.type === 'slides') for (const s of (c as { slides?: Array<{ content?: JSONContent }> }).slides ?? []) visit(s.content)
+  else if (c?.type === 'slides')
+    for (const s of (c as { slides?: Array<{ content?: JSONContent; boxes?: Array<{ content?: JSONContent }> }> }).slides ?? []) {
+      visit(s.content)
+      for (const b of s.boxes ?? []) visit(b.content)
+    }
   else visit(c as JSONContent)
   return [...out]
 }

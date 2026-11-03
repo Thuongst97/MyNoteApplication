@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { JSONContent, Editor as TiptapEditor } from '@tiptap/react'
+import type { JSONContent } from '@tiptap/react'
 import { Check, ChevronDown, Copy, Eraser, Highlighter, LayoutTemplate, Loader2, Paintbrush, PenLine, Play, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
-import { Editor } from '@/components/Editor/Editor'
-import { InSlideContext } from '@/components/Editor/BlockEditPanel'
-import { HIGHLIGHT_COLORS, INK_COLORS, buildSteps, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
+import { HIGHLIGHT_COLORS, INK_COLORS, MIN_BOX_W, cloneBox, newBox, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
 import { cn } from '@/lib/utils'
-import { PAD_X, PAD_Y, SlideFrame, SlideView, useAutoFit } from './SlideCanvas'
+import { SLIDE_W, SlideFrame, SlideView } from './SlideCanvas'
+import { SlideEditSurface, requestInsert, type ActiveEditor, type SlideSelection } from './SlideObjects'
+import { InsertMenu } from './InsertMenu'
+import { blockAtCursor } from './AnimationPanel'
 import { PresentMode, type ShowInk } from './PresentMode'
 import { InkLayer, PEN_WIDTHS, type InkTool } from './InkLayer'
 import { AnimationPanel } from './AnimationPanel'
@@ -35,7 +36,8 @@ export function PresentationPage({ pageId }: { pageId: string }) {
   const [draw, setDraw] = useState<DrawState | null>(null)
   const lastDraw = useRef<DrawState>({ tool: 'pen', penColor: INK_COLORS[1], hlColor: HIGHLIGHT_COLORS[0], width: PEN_WIDTHS[0] })
   const [panel, setPanel] = useState(false)
-  const [slideEditor, setSlideEditor] = useState<TiptapEditor | null>(null)
+  const [active, setActive] = useState<ActiveEditor | null>(null)
+  const [selected, setSelected] = useState<SlideSelection>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +106,69 @@ export function PresentationPage({ pageId }: { pageId: string }) {
     [commit],
   )
 
+  // Objects on the slide: insert, detach, arrange.
+  // Another slide: nothing selected (reset while rendering, before the new slide's editors report in).
+  const [shownSlide, setShownSlide] = useState(currentId)
+  if (shownSlide !== currentId) {
+    setShownSlide(currentId)
+    setSelected(null)
+    setActive(null)
+  }
+  const deleteBox = (id: string) => {
+    update(currentId!, (s) => ({ boxes: s.boxes?.filter((b) => b.id !== id), animations: s.animations?.filter((a) => a.blockId !== id) }))
+    setSelected(null)
+    setActive((a) => (a?.boxId === id ? null : a))
+  }
+  const insertBox = (title: string, width: number) => {
+    if (!current) return
+    const n = current.boxes?.length ?? 0
+    const box = newBox({ w: width, x: Math.round((SLIDE_W - width) / 2) + (n % 5) * 24, y: 140 + (n % 5) * 24 })
+    requestInsert(box.id, title)
+    update(current.id, (s) => ({ boxes: [...(s.boxes ?? []), box] }))
+    setSelected(box.id)
+  }
+  /** Moves the block with the cursor into its own box, where it is now on the slide. */
+  const detachBlock = () => {
+    const ed = active?.editor
+    if (!ed || ed.isDestroyed || !current) return
+    const hit = blockAtCursor(ed)
+    if (!hit) return
+    const dom = ed.view.nodeDOM(hit.pos) as HTMLElement | null
+    const surface = dom?.closest('.slide-surface') as HTMLElement | null
+    const sr = surface?.getBoundingClientRect()
+    const r = dom?.getBoundingClientRect?.()
+    const scale = sr && sr.width ? sr.width / SLIDE_W : 1
+    const at = sr && r ? { x: Math.round((r.left - sr.left) / scale), y: Math.round((r.top - sr.top) / scale), w: Math.max(MIN_BOX_W, Math.round(r.width / scale)) } : {}
+    const json = hit.node.toJSON()
+    const box = newBox(at, { type: 'doc', content: [json] })
+    // An animated block keeps its animation as an animated box.
+    if (typeof json.attrs?.blockId === 'string' && current.animations?.some((a) => a.blockId === json.attrs.blockId)) box.id = json.attrs.blockId
+    const tr = ed.state.doc.childCount === 1 ? ed.state.tr.replaceWith(0, ed.state.doc.content.size, ed.schema.nodes.paragraph.create()) : ed.state.tr.delete(hit.pos, hit.pos + hit.node.nodeSize)
+    ed.view.dispatch(tr)
+    update(current.id, (s) => ({ boxes: [...(s.boxes ?? []), box] }))
+    setSelected(box.id)
+    setActive(null)
+  }
+  const arrange = (dir: 1 | -1) => {
+    const id = selected
+    if (!id || id === 'main' || !current) return
+    update(current.id, (s) => {
+      const list = [...(s.boxes ?? [])]
+      const i = list.findIndex((b) => b.id === id)
+      const j = Math.max(0, Math.min(list.length - 1, i + dir))
+      if (i < 0 || i === j) return {}
+      ;[list[i], list[j]] = [list[j], list[i]]
+      return { boxes: list }
+    })
+  }
+  const duplicateBox = () => {
+    const b = current?.boxes?.find((x) => x.id === selected)
+    if (!b || !current) return
+    const copy = cloneBox(b)
+    update(current.id, (s) => ({ boxes: [...(s.boxes ?? []), copy] }))
+    setSelected(copy.id)
+  }
+
   /** After a show: ink the presenter chose to keep is added to the slides. */
   const endShow = (at: number, keep?: ShowInk) => {
     setPresenting(null)
@@ -153,6 +218,18 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         onBackground={(background) => update(current.id, { background })}
         onApplyBackgroundToAll={() => commit(slidesRef.current.map((s) => ({ ...s, background: current.background })))}
         onPresent={(fromCurrent) => setPresenting(fromCurrent ? index : 0)}
+        objects={
+          <InsertMenu
+            onInsert={insertBox}
+            canDetach={!!active && !active.editor.isDestroyed}
+            onDetach={detachBlock}
+            boxSelected={!!selected && selected !== 'main'}
+            onForward={() => arrange(1)}
+            onBackward={() => arrange(-1)}
+            onDuplicateBox={duplicateBox}
+            onDeleteBox={() => selected && selected !== 'main' && deleteBox(selected)}
+          />
+        }
         drawing={!!draw}
         onToggleDraw={() => setDrawing(draw ? null : lastDraw.current)}
         animating={panel}
@@ -181,7 +258,19 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         <Stage>
           {(width) => (
             <SlideFrame slide={current} font={meta.font} width={width} className="rounded-sm shadow-[0_2px_16px_rgba(0,0,0,0.12)] ring-1 ring-black/10 dark:ring-white/10">
-              <EditableSlide key={current.id} pageId={pageId} slide={current} onEdit={onEdit} onEditor={setSlideEditor} />
+              <SlideEditSurface
+                key={current.id}
+                pageId={pageId}
+                slide={current}
+                selected={selected}
+                onSelect={setSelected}
+                onEditMain={(json) => onEdit(current.id, json)}
+                onEditBox={(id, json) => commit(slidesRef.current.map((s) => (s.id === current.id ? { ...s, boxes: s.boxes?.map((b) => (b.id === id ? { ...b, content: json } : b)) } : s)), true)}
+                onFrame={(frame) => update(current.id, { frame })}
+                onBox={(id, patch) => update(current.id, (s) => ({ boxes: s.boxes?.map((b) => (b.id === id ? { ...b, ...patch } : b)) }))}
+                onActive={setActive}
+                onDeleteBox={deleteBox}
+              />
               <InkLayer
                 strokes={current.ink ?? []}
                 tool={draw?.tool ?? null}
@@ -196,7 +285,8 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         {panel && (
           <AnimationPanel
             slide={current}
-            editor={slideEditor}
+            editor={active?.editor ?? null}
+            boxId={active?.boxId ?? (selected && selected !== 'main' ? selected : null)}
             onChange={(patch) => update(current.id, patch)}
             onTransitionToAll={() => commit(slidesRef.current.map((s) => clean({ ...s, transition: current.transition })))}
             onPreview={() => setPresenting(index)}
@@ -205,42 +295,6 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         )}
       </div>
       {presenting !== null && <PresentMode slides={slidesRef.current} font={meta.font} start={presenting} onClose={endShow} />}
-    </div>
-  )
-}
-
-/** The editor of the current slide (its blocks shrink to fit like the read-only views). */
-function EditableSlide({
-  pageId,
-  slide,
-  onEdit,
-  onEditor,
-}: {
-  pageId: string
-  slide: SlideData
-  onEdit: (id: string, content: JSONContent) => void
-  onEditor: (editor: TiptapEditor | null) => void
-}) {
-  const [version, setVersion] = useState(0)
-  const { innerRef, zoom } = useAutoFit([version], 0.6)
-  useEffect(() => () => onEditor(null), [onEditor])
-  return (
-    <div className="slide-body overflow-y-auto" style={{ padding: `${PAD_Y}px ${PAD_X}px` }}>
-      <style>{animationBadges(slide)}</style>
-      <div ref={innerRef} className="slide-content slide-editing" style={{ zoom }}>
-        <InSlideContext.Provider value>
-        <Editor
-          pageId={pageId}
-          variant="slide"
-          onReady={onEditor}
-          initialContent={slide.content}
-          onChange={(json) => {
-            onEdit(slide.id, json)
-            setVersion((v) => v + 1)
-          }}
-        />
-        </InSlideContext.Provider>
-      </div>
     </div>
   )
 }
@@ -425,6 +479,7 @@ function Toolbar({
   onBackground,
   onApplyBackgroundToAll,
   onPresent,
+  objects,
   drawing,
   onToggleDraw,
   animating,
@@ -436,6 +491,7 @@ function Toolbar({
   onBackground: (bg: SlideBackground) => void
   onApplyBackgroundToAll: () => void
   onPresent: (fromCurrent: boolean) => void
+  objects: React.ReactNode
   drawing: boolean
   onToggleDraw: () => void
   animating: boolean
@@ -512,6 +568,8 @@ function Toolbar({
           </Menu>
         )}
       </div>
+      <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
+      {objects}
       <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
       <button type="button" className={cn(btn, drawing && 'bg-blue-500/15 text-blue-700 dark:text-blue-300')} aria-pressed={drawing} onClick={onToggleDraw} title="Draw on the slide (pen, highlighter)">
         <PenLine size={15} className="opacity-70" /> Draw
@@ -622,24 +680,10 @@ function LayoutIcon({ layout }: { layout: SlideLayout }) {
 function clean(s: SlideData): SlideData {
   const out = { ...s }
   if (!out.ink?.length) delete out.ink
+  if (!out.boxes?.length) delete out.boxes
   if (!out.animations?.length) delete out.animations
   if (!out.transition || out.transition === 'none') delete out.transition
   return out
-}
-
-/** Numbered badges next to the blocks that animate on click (in the slide editor). */
-function animationBadges(slide: SlideData): string {
-  const seen = new Map<number, number>()
-  buildSteps({ ...slide, animations: slide.animations?.map((a) => ({ ...a, byItem: false })) }).forEach((st, i) => {
-    if (!seen.has(st.block)) seen.set(st.block, i + 1)
-  })
-  return [...seen]
-    .map(
-      ([block, n]) =>
-        `.slide-editing .ProseMirror > :nth-child(${block + 1}) { position: relative; }
-.slide-editing .ProseMirror > :nth-child(${block + 1})::after { content: "${n}"; position: absolute; left: -46px; top: 0.25em; width: 26px; height: 26px; border-radius: 6px; background: #2383e2; color: #fff; font: 600 15px/26px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; }`,
-    )
-    .join('\n')
 }
 
 /** Drawing tools under the toolbar: pen, highlighter, eraser, colors, thickness, clear. */

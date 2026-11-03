@@ -273,6 +273,46 @@ describe('PresentationPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Mermaid diagram' })).toBeNull())
   })
 
+
+  it('boxes: insert a text box, select it, nudge with arrows, delete with Delete', async () => {
+    const id = await setup()
+    fireEvent.click(screen.getByRole('button', { name: /^Insert/ }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Text box' }))
+    let c = await saved(id)
+    expect(c.slides[0].boxes).toHaveLength(1)
+    const box = c.slides[0].boxes![0]
+    expect(document.querySelector(`[data-object-id="${box.id}"]`)).not.toBeNull()
+    // Selected: arrange buttons are shown; arrows move it (Shift: 10 px).
+    expect(screen.getByRole('button', { name: 'Bring forward' })).toBeInTheDocument()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    fireEvent.keyDown(document.body, { key: 'ArrowRight', shiftKey: true })
+    fireEvent.keyDown(document.body, { key: 'ArrowDown' })
+    c = await saved(id)
+    expect([c.slides[0].boxes![0].x, c.slides[0].boxes![0].y]).toEqual([box.x + 10, box.y + 1])
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate box' }))
+    expect((await saved(id)).slides[0].boxes).toHaveLength(2)
+    fireEvent.keyDown(document.body, { key: 'Delete' })
+    c = await saved(id)
+    expect(c.slides[0].boxes).toHaveLength(1)
+    // Click a box to select it again.
+    fireEvent.mouseDown(document.querySelector(`[data-object-id="${c.slides[0].boxes![0].id}"]`)!)
+    fireEvent.click(screen.getByRole('button', { name: 'Delete box' }))
+    expect((await saved(id)).slides[0].boxes).toBeUndefined()
+  })
+
+  it('detach: the block with the cursor moves into its own box', async () => {
+    const id = await setup()
+    fireEvent.mouseDown(thumbs()[1])
+    const el = document.querySelector('[data-testid="slide-edit-surface"] .slide-main .ProseMirror') as HTMLElement & { editor: import('@tiptap/react').Editor }
+    await waitFor(() => expect(screen.getByRole('button', { name: /Detach block/ })).toBeEnabled())
+    act(() => void el.editor.commands.setTextSelection(el.editor.state.doc.firstChild!.nodeSize + 3)) // in the list
+    fireEvent.click(screen.getByRole('button', { name: /Detach block/ }))
+    const c = await saved(id)
+    expect(c.slides[1].content.content!.map((b) => b.type)).not.toContain('bulletList')
+    expect(c.slides[1].boxes).toHaveLength(1)
+    expect(c.slides[1].boxes![0].content.content![0].type).toBe('bulletList')
+  })
+
 })
 
 function cleanupAndRender(id: string) {

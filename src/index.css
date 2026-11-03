@@ -985,13 +985,18 @@ body.block-dragging .prosemirror-dropcursor-inline {
 .slide-surface { overflow: hidden; }
 .slide-light { color: #2f2e2b; }
 .slide-dark { color: #f3f4f6; }
-.slide-body {
-  position: absolute;
-  inset: 0;
+.slide-main {
   display: flex;
   flex-direction: column;
 }
-.slide-layout-title .slide-body { justify-content: center; }
+.slide-layout-title .slide-main { justify-content: center; }
+/* Boxes: objects placed anywhere on the slide (height follows their content). */
+.slide-box .slide-content .notion-editor > :first-child { margin-top: 0 !important; }
+.slide-box .slide-content .notion-editor > :last-child { margin-bottom: 0 !important; }
+/* The empty line kept after a box's last block (to type below it) takes no room outside editing. */
+.slide-box .notion-editor:not(.ProseMirror-focused) > p:last-child:not(:first-child):has(> br.ProseMirror-trailingBreak:only-child),
+.slide-box .notion-editor:not(.ProseMirror-focused) > p:last-child:not(:first-child):empty { display: none; }
+.slide-surface .notion-editor[contenteditable='false'] .ProseMirror-selectednode { outline: none; }
 .slide-content .notion-editor {
   font-size: 28px;
   line-height: 1.45;
@@ -1010,14 +1015,14 @@ body.block-dragging .prosemirror-dropcursor-inline {
   margin: 0.4em 0 0.45em;
 }
 .slide-content .notion-editor li { margin: 0.18em 0; }
-.slide-layout-title .slide-content .notion-editor { text-align: center; }
-.slide-layout-title .slide-content .notion-editor h1 { font-size: 2.6em; }
-.slide-layout-title .slide-content .notion-editor p { font-size: 1.1em; opacity: 0.75; }
+.slide-layout-title .slide-main .slide-content .notion-editor { text-align: center; }
+.slide-layout-title .slide-main .slide-content .notion-editor h1 { font-size: 2.6em; }
+.slide-layout-title .slide-main .slide-content .notion-editor p { font-size: 1.1em; opacity: 0.75; }
 /* Placeholders on light/dark slide backgrounds follow the slide's text color. */
 .slide-light .notion-editor .is-empty::before,
 .slide-dark .notion-editor .is-empty::before { color: currentColor; opacity: 0.35; }
 .slide-content .notion-editor .is-empty::before { width: 100%; }
-.slide-layout-title .slide-content .notion-editor .is-empty::before { text-align: center; }
+.slide-layout-title .slide-main .slide-content .notion-editor .is-empty::before { text-align: center; }
 /* Every empty block shows its prompt in the slide editor, focused or not. */
 .slide-editing .notion-editor:not(.ProseMirror-focused) p.is-empty:not(.is-editor-empty)::before { content: attr(data-placeholder); }
 

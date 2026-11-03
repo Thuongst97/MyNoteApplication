@@ -8,7 +8,11 @@ export function docToText(node: JSONContent | null | undefined): string {
   if (!node) return ''
   if (node.type === 'text') return node.text ?? ''
   if (node.type === 'whiteboard') return drawingText({ scene: (node as { scene?: never }).scene })
-  if (node.type === 'slides') return ((node as { slides?: Array<{ content?: JSONContent }> }).slides ?? []).map((s) => docToText(s.content)).join('\n')
+  if (node.type === 'slides')
+    return ((node as { slides?: Array<{ content?: JSONContent; boxes?: Array<{ content?: JSONContent }> }> }).slides ?? [])
+      .flatMap((s) => [s.content, ...(s.boxes ?? []).map((b) => b.content)].map(docToText))
+      .filter(Boolean)
+      .join('\n')
   if (node.type === 'mention') return String(node.attrs?.label ?? '')
   if (node.type === 'mermaid') return String(node.attrs?.code ?? '')
   if (node.type === 'markdown') return String(node.attrs?.source ?? '')

@@ -2,16 +2,13 @@ import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, typ
 import { EditorContent, useEditor, type JSONContent } from '@tiptap/react'
 import { createEditorExtensions } from '@/components/Editor/extensions'
 import { StaticBlocksContext } from '@/components/Editor/staticBlocks'
-import { SLIDE_BACKGROUNDS, buildCss, buildSteps, type SlideData } from '@/lib/presentation'
+import { MAIN_FRAME, PAD_X, PAD_Y, SLIDE_BACKGROUNDS, SLIDE_H, SLIDE_W, buildCss, buildSteps, type Rect, type SlideBox, type SlideData } from '@/lib/presentation'
 import { InkLayer } from './InkLayer'
 import { fontStyle } from '@/lib/pageFont'
 import { cn } from '@/lib/utils'
 
-/** Slides are laid out on a fixed 16:9 canvas and zoomed to whatever box shows them. */
-export const SLIDE_W = 1280
-export const SLIDE_H = 720
-export const PAD_X = 88
-export const PAD_Y = 64
+/** Slides are laid out on a fixed 16:9 canvas (SLIDE_W×SLIDE_H) and zoomed to whatever box shows them. */
+export { SLIDE_W, SLIDE_H, PAD_X, PAD_Y }
 
 /** Inline style + classes for a slide's background (dark ones get light text). */
 export function slideLook(slide: Pick<SlideData, 'background' | 'layout'>) {
@@ -70,7 +67,7 @@ export function SlideFrame({
  * Keeps a slide's blocks inside the slide: when there's too much, they shrink (down to
  * `min`), like PowerPoint's autofit. Returns the ref for the content box and the zoom.
  */
-export function useAutoFit(deps: unknown[], min = 0.5) {
+export function useAutoFit(deps: unknown[], min = 0.5, avail = SLIDE_H - PAD_Y * 2) {
   const innerRef = useRef<HTMLDivElement>(null)
   const [zoom, setZoom] = useState(1)
   const zoomRef = useRef(1)
@@ -79,7 +76,6 @@ export function useAutoFit(deps: unknown[], min = 0.5) {
     if (!el) return
     const fit = () => {
       const natural = el.scrollHeight / zoomRef.current
-      const avail = SLIDE_H - PAD_Y * 2
       const next = Math.max(min, Math.min(1, avail / Math.max(1, natural)))
       if (Math.abs(next - zoomRef.current) > 0.01) {
         zoomRef.current = next
@@ -95,19 +91,48 @@ export function useAutoFit(deps: unknown[], min = 0.5) {
   return { innerRef, zoom }
 }
 
-/** A slide's blocks, read-only, rendered by the real editor so every block looks as on a page. */
-export const SlideBody = memo(function SlideBody({ content }: { content: JSONContent }) {
+/** Blocks rendered read-only by the real editor (so every block looks as on a page). */
+function useReadOnlyEditor(content: JSONContent) {
   const extensions = useMemo(() => createEditorExtensions(), [])
   const editor = useEditor({ editable: false, extensions, content, immediatelyRender: true, editorProps: { attributes: { class: 'notion-editor' } } })
   // Follow edits without re-creating the editor.
   useEffect(() => {
-    if (editor && !editor.isDestroyed && content !== undefined) editor.commands.setContent(content, { emitUpdate: false })
+    if (!editor || editor.isDestroyed || content === undefined) return
+    editor.commands.setContent(content, { emitUpdate: false })
+    // Nothing looks selected in a picture of the slide (a chart first in a box would be).
+    editor.commands.setTextSelection(editor.state.doc.content.size)
   }, [editor, content])
-  const { innerRef, zoom } = useAutoFit([editor, content])
+  return editor
+}
 
+/** Position style of a rectangle on the slide. */
+export const rectStyle = (r: Pick<Rect, 'x' | 'y' | 'w'> & { h?: number }): React.CSSProperties => ({
+  position: 'absolute',
+  left: r.x,
+  top: r.y,
+  width: r.w,
+  ...(r.h !== undefined && { height: r.h }),
+})
+
+/** The slide's main text area, read-only, at its frame; too much content shrinks to fit. */
+export const SlideBody = memo(function SlideBody({ content, frame = MAIN_FRAME }: { content: JSONContent; frame?: Rect }) {
+  const editor = useReadOnlyEditor(content)
+  const { innerRef, zoom } = useAutoFit([editor, content, frame.h], 0.5, frame.h)
   return (
-    <div className="slide-body" style={{ padding: `${PAD_Y}px ${PAD_X}px` }}>
+    <div className="slide-main" style={rectStyle(frame)}>
       <div ref={innerRef} className="slide-content" style={{ zoom }}>
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  )
+})
+
+/** A box (chart, code, text…) read-only at its place. */
+export const SlideBoxView = memo(function SlideBoxView({ box }: { box: SlideBox }) {
+  const editor = useReadOnlyEditor(box.content)
+  return (
+    <div className="slide-box" data-box-id={box.id} style={rectStyle(box)}>
+      <div className="slide-content">
         <EditorContent editor={editor} />
       </div>
     </div>
@@ -146,7 +171,8 @@ export const SlideView = memo(function SlideView({
     <SlideFrame slide={slide} font={font} width={width} className={cn(scope, className)}>
       {css && <style>{css}</style>}
       <StaticBlocksContext.Provider value={!!still}>
-        <SlideBody content={slide.content} />
+        <SlideBody content={slide.content} frame={slide.frame} />
+        {slide.boxes?.map((b) => <SlideBoxView key={b.id} box={b} />)}
       </StaticBlocksContext.Provider>
       {children ?? (slide.ink?.length ? <InkLayer strokes={slide.ink} /> : null)}
     </SlideFrame>

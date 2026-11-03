@@ -145,11 +145,11 @@ describe('click animations', () => {
   it('CSS hides what is not revealed yet and animates the last revealed step', () => {
     const steps = buildSteps(slideWith([{ blockId: 'h', effect: 'zoom' }, { blockId: 'l', effect: 'fade', byItem: true }]))
     const css = buildCss('.x', steps, 2)
-    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(1) { animation: pn-build-fade')
-    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(2) { visibility: hidden; }')
-    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(3) { visibility: hidden; }')
+    expect(css).toContain('.x .slide-main .ProseMirror > :nth-child(2) > :nth-child(1) { animation: pn-build-fade')
+    expect(css).toContain('.x .slide-main .ProseMirror > :nth-child(2) > :nth-child(2) { visibility: hidden; }')
+    expect(css).toContain('.x .slide-main .ProseMirror > :nth-child(2) > :nth-child(3) { visibility: hidden; }')
     expect(css).not.toContain('pn-build-zoom') // already shown, not replayed
-    expect(buildCss('.x', steps, 0)).toContain('.x .ProseMirror > :nth-child(1) { visibility: hidden; }')
+    expect(buildCss('.x', steps, 0)).toContain('.x .slide-main .ProseMirror > :nth-child(1) { visibility: hidden; }')
     expect(buildCss('.x', steps, 4)).not.toContain('hidden')
     expect(buildCss('.x', [{ block: 0, effect: 'appear' }], 1)).toBe('')
   })

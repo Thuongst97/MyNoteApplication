@@ -54,6 +54,13 @@ const TYPE_LABEL: Record<string, string> = {
 
 /** "Text: First words…" for an animated block. */
 export function blockLabel(slide: SlideData, blockId: string): string | null {
+  const box = slide.boxes?.find((x) => x.id === blockId)
+  if (box) {
+    const first = box.content.content?.find((x) => x.type !== 'paragraph' || textOf(x).trim()) ?? box.content.content?.[0]
+    const kind = TYPE_LABEL[first?.type ?? ''] ?? 'Box'
+    const t = textOf(box.content).replace(/\s+/g, ' ').trim()
+    return `${kind} box${t ? `: ${t.length > 28 ? `${t.slice(0, 28)}…` : t}` : ''}`
+  }
   const b = (slide.content.content ?? []).find((x) => x.attrs?.blockId === blockId)
   if (!b) return null
   const kind = TYPE_LABEL[b.type ?? ''] ?? 'Block'
@@ -68,6 +75,7 @@ export function blockLabel(slide: SlideData, blockId: string): string | null {
 export function AnimationPanel({
   slide,
   editor,
+  boxId,
   onChange,
   onTransitionToAll,
   onPreview,
@@ -75,6 +83,8 @@ export function AnimationPanel({
 }: {
   slide: SlideData
   editor: TiptapEditor | null
+  /** The box the editor belongs to: its whole box gets the animation. */
+  boxId?: string | null
   onChange: (patch: Partial<SlideData>) => void
   onTransitionToAll: () => void
   onPreview: () => void
@@ -84,6 +94,10 @@ export function AnimationPanel({
   const set = (next: SlideAnimation[]) => onChange({ animations: next.length ? next : undefined })
 
   const add = () => {
+    if (boxId) {
+      if (!anims.some((a) => a.blockId === boxId)) set([...anims, { blockId: boxId, effect: 'fade' }])
+      return
+    }
     if (!editor || editor.isDestroyed) return
     const hit = blockAtCursor(editor)
     if (!hit) return
@@ -188,11 +202,11 @@ export function AnimationPanel({
         <button
           type="button"
           onClick={add}
-          disabled={!editor}
+          disabled={!editor && !boxId}
           onMouseDown={(e) => e.preventDefault() /* keep the cursor where it is in the slide */}
           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-black/15 py-1.5 text-xs hover:bg-black/[0.03] disabled:opacity-40 dark:border-white/15 dark:hover:bg-white/[0.05]"
         >
-          <Plus size={13} /> Animate block at cursor
+          <Plus size={13} /> {boxId ? 'Animate selected box' : 'Animate block at cursor'}
         </button>
         <button type="button" onClick={onPreview} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs text-blue-600 hover:bg-blue-500/10 dark:text-blue-400">
           <Play size={12} fill="currentColor" /> Preview this slide (Shift+F5)

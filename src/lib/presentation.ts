@@ -25,11 +25,46 @@ export interface InkStroke {
   points: number[]
 }
 
+/** A rectangle on the slide, in slide coordinates (1280×720). */
+export interface Rect {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+/**
+ * A movable object on a slide (PowerPoint "shape"): its own blocks (text, chart, code,
+ * diagram…) at a position. Its height follows its content.
+ */
+export interface SlideBox {
+  id: string
+  x: number
+  y: number
+  w: number
+  content: JSONContent
+}
+
+export const SLIDE_W = 1280
+export const SLIDE_H = 720
+export const PAD_X = 88
+export const PAD_Y = 64
+/** Where a slide's main text area is unless moved. */
+export const MAIN_FRAME: Rect = { x: PAD_X, y: PAD_Y, w: SLIDE_W - PAD_X * 2, h: SLIDE_H - PAD_Y * 2 }
+export const MIN_BOX_W = 80
+export const MIN_BOX_H = 60
+const MAX_BOXES = 100
+
 export interface SlideData {
   id: string
   layout: SlideLayout
   background: SlideBackground
+  /** The main text area (title, bullets…). */
   content: JSONContent
+  /** Position of the main text area (default MAIN_FRAME). */
+  frame?: Rect
+  /** Other objects on the slide, back to front. */
+  boxes?: SlideBox[]
   transition?: SlideTransition
   animations?: SlideAnimation[]
   ink?: InkStroke[]
@@ -123,6 +158,10 @@ export function normalizePresentation(raw: unknown): PresentationContent {
     if (anims.length) slide.animations = anims
     const ink = normalizeInk(s.ink)
     if (ink.length) slide.ink = ink
+    const frame = normalizeRect(s.frame)
+    if (frame) slide.frame = frame
+    const boxes = normalizeBoxes(s.boxes, seen)
+    if (boxes.length) slide.boxes = boxes
     slides.push(slide)
   }
   return { type: 'slides', slides: slides.length ? slides : newPresentation().slides }
@@ -165,6 +204,12 @@ export function duplicateSlide(slides: SlideData[], id: string): { slides: Slide
   const map = new Map<string, string>()
   const src = slides[i]
   const copy: SlideData = { ...structuredClone(src), id: rid(), content: withNewBlockIds(structuredClone(src.content), map) }
+  if (src.boxes)
+    copy.boxes = src.boxes.map((b) => {
+      const id = rid()
+      map.set(b.id, id)
+      return { ...b, id, content: withNewBlockIds(structuredClone(b.content), map) }
+    })
   if (src.animations) copy.animations = src.animations.flatMap((a) => (map.has(a.blockId) ? [{ ...a, blockId: map.get(a.blockId)! }] : []))
   return { slides: [...slides.slice(0, i + 1), copy, ...slides.slice(i + 1)], id: copy.id }
 }
@@ -211,8 +256,10 @@ export function normalizeInk(raw: unknown): InkStroke[] {
 
 /** One click while presenting: reveal a block (or one item of a list block). */
 export interface BuildStep {
-  /** Index of the block among the slide's top-level blocks. */
+  /** Index of the block among the main text area's top-level blocks (-1 for a whole box). */
   block: number
+  /** A whole box that appears (its id). */
+  box?: string
   /** Index of the list item (when a list appears item by item). */
   item?: number
   effect: AnimEffect
@@ -222,7 +269,12 @@ export interface BuildStep {
 export function buildSteps(slide: SlideData): BuildStep[] {
   const blocks = slide.content.content ?? []
   const steps: BuildStep[] = []
+  const boxIds = new Set((slide.boxes ?? []).map((b) => b.id))
   for (const a of slide.animations ?? []) {
+    if (boxIds.has(a.blockId)) {
+      steps.push({ block: -1, box: a.blockId, effect: a.effect })
+      continue
+    }
     const block = blocks.findIndex((b) => b.attrs?.blockId === a.blockId)
     if (block < 0) continue
     const items = blocks[block].content?.length ?? 0
@@ -238,7 +290,10 @@ export function buildSteps(slide: SlideData): BuildStep[] {
  * the last revealed one plays its effect. Selectors are scoped under `scope`.
  */
 export function buildCss(scope: string, steps: BuildStep[], shown: number, animate = true): string {
-  const sel = (s: BuildStep) => `${scope} .ProseMirror > :nth-child(${s.block + 1})${s.item !== undefined ? ` > :nth-child(${s.item + 1})` : ''}`
+  const sel = (s: BuildStep) =>
+    s.box
+      ? `${scope} [data-box-id="${s.box}"]`
+      : `${scope} .slide-main .ProseMirror > :nth-child(${s.block + 1})${s.item !== undefined ? ` > :nth-child(${s.item + 1})` : ''}`
   const rules: string[] = []
   steps.forEach((s, i) => {
     if (i >= shown) rules.push(`${sel(s)} { visibility: hidden; }`)
@@ -292,4 +347,84 @@ export function strokeHit(s: InkStroke, x: number, y: number, r: number): boolea
     if (cx * cx + cy * cy <= reach * reach) return true
   }
   return false
+}
+
+const clampNum = (v: unknown, lo: number, hi: number): number | null => {
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.round(Math.max(lo, Math.min(hi, n))) : null
+}
+
+/** A well-formed rectangle that stays (mostly) on the slide, or null. */
+export function normalizeRect(raw: unknown): Rect | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Partial<Rect>
+  const w = clampNum(r.w, MIN_BOX_W, SLIDE_W)
+  const h = clampNum(r.h, MIN_BOX_H, SLIDE_H)
+  const x = clampNum(r.x, -SLIDE_W / 2, SLIDE_W - 20)
+  const y = clampNum(r.y, -SLIDE_H / 2, SLIDE_H - 20)
+  return w === null || h === null || x === null || y === null ? null : { x, y, w, h }
+}
+
+function normalizeBoxes(raw: unknown, seen: Set<string>): SlideBox[] {
+  if (!Array.isArray(raw)) return []
+  const out: SlideBox[] = []
+  for (const b of raw as Array<Partial<SlideBox>>) {
+    if (!b || typeof b !== 'object') continue
+    const rect = normalizeRect({ x: b.x, y: b.y, w: b.w, h: MIN_BOX_H })
+    if (!rect) continue
+    let id = typeof b.id === 'string' && ID.test(b.id) ? b.id : rid()
+    if (seen.has(id)) id = rid()
+    seen.add(id)
+    const content = b.content && typeof b.content === 'object' && (b.content as JSONContent).type === 'doc' ? (b.content as JSONContent) : { type: 'doc', content: [paragraph()] }
+    out.push({ id, x: rect.x, y: rect.y, w: rect.w, content })
+    if (out.length >= MAX_BOXES) break
+  }
+  return out
+}
+
+/** Every block document of a slide: the main text area, then the boxes. */
+export function slideDocs(slide: Pick<SlideData, 'content' | 'boxes'>): JSONContent[] {
+  return [slide.content, ...(slide.boxes ?? []).map((b) => b.content)]
+}
+
+/** A new box (default: a text box in the middle of the slide). */
+export function newBox(at: Partial<Pick<SlideBox, 'x' | 'y' | 'w'>> = {}, content?: JSONContent): SlideBox {
+  const w = at.w ?? 560
+  return { id: rid(), x: at.x ?? Math.round((SLIDE_W - w) / 2), y: at.y ?? 260, w, content: content ?? { type: 'doc', content: [paragraph()] } }
+}
+
+/** Snap distance (slide px) for moving boxes. */
+export const SNAP = 8
+
+/**
+ * Snaps a box being moved to the slide's center lines and edges and to other boxes' edges and
+ * centers. Returns the snapped position and the guide lines to draw.
+ */
+export function snapBox(
+  box: Rect,
+  others: Rect[],
+): { x: number; y: number; guides: Array<{ axis: 'x' | 'y'; at: number }> } {
+  const xs = [0, SLIDE_W / 2, SLIDE_W, PAD_X, SLIDE_W - PAD_X, ...others.flatMap((o) => [o.x, o.x + o.w / 2, o.x + o.w])]
+  const ys = [0, SLIDE_H / 2, SLIDE_H, PAD_Y, SLIDE_H - PAD_Y, ...others.flatMap((o) => [o.y, o.y + o.h / 2, o.y + o.h])]
+  const pick = (pos: number, size: number, lines: number[]) => {
+    let best: { d: number; to: number; at: number } | null = null
+    for (const edge of [0, size / 2, size]) {
+      for (const l of lines) {
+        const d = Math.abs(pos + edge - l)
+        if (d <= SNAP && (!best || d < best.d)) best = { d, to: l - edge, at: l }
+      }
+    }
+    return best
+  }
+  const gx = pick(box.x, box.w, xs)
+  const gy = pick(box.y, box.h, ys)
+  const guides: Array<{ axis: 'x' | 'y'; at: number }> = []
+  if (gx) guides.push({ axis: 'x', at: gx.at })
+  if (gy) guides.push({ axis: 'y', at: gy.at })
+  return { x: Math.round(gx ? gx.to : box.x), y: Math.round(gy ? gy.to : box.y), guides }
+}
+
+/** A copy of a box (new id and block ids), shifted a little so both are visible. */
+export function cloneBox(box: SlideBox, offset = 24): SlideBox {
+  return { ...box, id: rid(), x: box.x + offset, y: box.y + offset, content: withNewBlockIds(structuredClone(box.content), new Map()) }
 }
