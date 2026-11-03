@@ -1,8 +1,8 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { mergeAttributes, Node, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { ListTree, PenLine, Square, Trash2 } from 'lucide-react'
-import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { insertBlockAtCursor, placeCursorAfter } from '../mermaid/MermaidNode'
 import { countNodes, layoutMindMap, mindMapToList, newMindMap, normalizeMindMap, type MindMap } from './mindmapModel'
@@ -78,7 +78,7 @@ export const MindMapNode = Node.create({
 const SafeMindMapView = withBlockBoundary(MindMapView)
 
 function MindMapView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const map = useMemo(() => normalizeMindMap(node.attrs.map), [node.attrs.map])
   const layout = useMemo(() => layoutMindMap(map), [map])
   const [open, setOpen] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)

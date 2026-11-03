@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { JSONContent } from '@tiptap/react'
-import { Check, ChevronDown, Copy, Eraser, Highlighter, LayoutTemplate, Loader2, Paintbrush, PenLine, Play, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, Eraser, Eye, EyeOff, Hash, Highlighter, LayoutTemplate, Loader2, Paintbrush, Palette, PenLine, Play, Plus, Sparkles, StickyNote, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
-import { HIGHLIGHT_COLORS, INK_COLORS, MIN_BOX_W, cloneBox, newBox, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
+import { HIGHLIGHT_COLORS, INK_COLORS, MAIN_FRAME, MIN_BOX_H, MIN_BOX_W, alignRect, type AlignHow, cloneBox, newBox, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type FooterSettings, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
+import { slideTheme, type ThemeId } from '@/lib/slideThemes'
+import { themedPresentation } from '@/lib/themeDecks'
+import { ThemeGallery } from './ThemeGallery'
 import { cn } from '@/lib/utils'
-import { SLIDE_W, SlideFrame, SlideView } from './SlideCanvas'
+import { DeckContext, SLIDE_W, SlideFrame, SlideView, type DeckInfo } from './SlideCanvas'
 import { SlideEditSurface, requestInsert, type ActiveEditor, type SlideSelection } from './SlideObjects'
 import { InsertMenu } from './InsertMenu'
 import { slidesFindProvider } from './slidesFind'
@@ -25,6 +28,14 @@ interface DrawState {
 
 const THUMB_W = 168
 
+/** Deck-wide settings saved with the slides. */
+interface DeckSettings {
+  theme?: ThemeId
+  footer?: FooterSettings
+}
+/** Only the settings that are set (keeps saved pages small). */
+const cleanDeck = (d: DeckSettings): DeckSettings => ({ ...(d.theme && { theme: d.theme }), ...(d.footer && { footer: d.footer }) })
+
 /**
  * A presentation page: slide thumbnails on the left, the current slide (editable) in the
  * middle, and a toolbar for new slides, layout, background and Present. Mount with key={pageId}.
@@ -40,6 +51,15 @@ export function PresentationPage({ pageId }: { pageId: string }) {
   const [panel, setPanel] = useState(false)
   const [active, setActive] = useState<ActiveEditor | null>(null)
   const [selected, setSelected] = useState<SlideSelection>(null)
+  /** Deck-wide settings: theme and footer. */
+  const [deckSettings, setDeckSettings] = useState<DeckSettings>({})
+  const deckRef = useRef<DeckSettings>({})
+  const [gallery, setGallery] = useState<null | { fresh: boolean }>(null)
+  // A presentation that was just created opens the theme gallery.
+  const justCreated = useRef(useAppStore.getState().focusTitleFor === pageId)
+  useEffect(() => {
+    if (justCreated.current) useAppStore.getState().clearFocusTitle()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -50,8 +70,11 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         if (cancelled) return
         const p = normalizePresentation(page?.content)
         slidesRef.current = p.slides
+        deckRef.current = { theme: p.theme, footer: p.footer }
+        setDeckSettings(deckRef.current)
         setSlides(p.slides)
         setCurrentId(p.slides[0].id)
+        if (justCreated.current && !p.theme) setGallery({ fresh: true })
       })
       .catch((err) => {
         console.error(err)
@@ -67,7 +90,7 @@ export function PresentationPage({ pageId }: { pageId: string }) {
   const commit = useCallback(
     (next: SlideData[], quiet = false) => {
       slidesRef.current = next
-      autoSaver.schedule({ id: pageId, content: { type: 'slides', slides: next } as never })
+      autoSaver.schedule({ id: pageId, content: { type: 'slides', slides: next, ...cleanDeck(deckRef.current) } as never })
       if (thumbTimer.current) clearTimeout(thumbTimer.current)
       if (quiet) thumbTimer.current = setTimeout(() => setSlides(slidesRef.current), 200)
       else setSlides(next)
@@ -109,6 +132,34 @@ export function PresentationPage({ pageId }: { pageId: string }) {
     (id: string, content: JSONContent) => commit(slidesRef.current.map((s) => (s.id === id ? { ...s, content } : s)), true),
     [commit],
   )
+
+  /** Changes the deck's theme / footer (saved with the slides). */
+  const updateDeck = (patch: DeckSettings) => {
+    deckRef.current = { ...deckRef.current, ...patch }
+    setDeckSettings(deckRef.current)
+    commit(slidesRef.current)
+  }
+  const pickTheme = (id: ThemeId | null, withSamples: boolean) => {
+    setGallery(null)
+    const theme = slideTheme(id)
+    if (theme && withSamples) {
+      const deck = themedPresentation(theme)
+      deckRef.current = { theme: deck.theme, footer: deck.footer }
+      setDeckSettings(deckRef.current)
+      commit(deck.slides)
+      setCurrentId(deck.slides[0].id)
+    } else updateDeck({ theme: theme?.id })
+  }
+  const deckInfo: DeckInfo = useMemo(() => {
+    const ids = (slides ?? []).map((s) => s.id)
+    return {
+      theme: slideTheme(deckSettings.theme),
+      footer: deckSettings.footer ?? null,
+      title: meta?.title ?? '',
+      total: ids.length,
+      numberOf: (id) => ids.indexOf(id) + 1,
+    }
+  }, [deckSettings, slides, meta?.title])
 
   // Objects on the slide: insert, detach, arrange.
   // Another slide: nothing selected (reset while rendering, before the new slide's editors report in).
@@ -164,6 +215,19 @@ export function PresentationPage({ pageId }: { pageId: string }) {
       ;[list[i], list[j]] = [list[j], list[i]]
       return { boxes: list }
     })
+  }
+  /** Lines the selected box (or the text area) up with the slide's margins or center. */
+  const alignSelected = (how: AlignHow) => {
+    if (!current || !selected) return
+    const el = document.querySelector<HTMLElement>(`[data-testid="slide-edit-surface"] [data-object-id="${selected}"]`)
+    const rect = selected === 'main' ? (current.frame ?? MAIN_FRAME) : (() => {
+      const b = current.boxes?.find((x) => x.id === selected)
+      return b ? { x: b.x, y: b.y, w: b.w, h: el?.offsetHeight ?? MIN_BOX_H } : null
+    })()
+    if (!rect) return
+    const to = alignRect(rect, how)
+    if (selected === 'main') update(current.id, { frame: { ...(current.frame ?? MAIN_FRAME), x: to.x, y: to.y } })
+    else update(current.id, (s) => ({ boxes: s.boxes?.map((b) => (b.id === selected ? { ...b, x: to.x, y: to.y } : b)) }))
   }
   const duplicateBox = () => {
     const b = current?.boxes?.find((x) => x.id === selected)
@@ -225,7 +289,12 @@ export function PresentationPage({ pageId }: { pageId: string }) {
     )
   }
 
+  // Presenting skips hidden slides.
+  const shown = slidesRef.current.filter((s) => !s.hidden)
+  const showStart = presenting === null ? 0 : Math.max(0, shown.findIndex((s) => slidesRef.current.indexOf(s) >= presenting))
+
   return (
+    <DeckContext.Provider value={deckInfo}>
     <div className="flex h-full flex-col" data-testid="presentation-page">
       <Toolbar
         slide={current}
@@ -234,6 +303,14 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         onBackground={(background) => update(current.id, { background })}
         onApplyBackgroundToAll={() => commit(slidesRef.current.map((s) => ({ ...s, background: current.background })))}
         onPresent={(fromCurrent) => setPresenting(fromCurrent ? index : 0)}
+        deckTools={
+          <>
+            <button type="button" className="flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/10" onClick={() => setGallery({ fresh: false })} title="Presentation theme">
+              <Palette size={15} className="opacity-70" /> Theme
+            </button>
+            <FooterMenu footer={deckSettings.footer} title={meta.title} onChange={(footer) => updateDeck({ footer: footer ?? undefined })} />
+          </>
+        }
         objects={
           <InsertMenu
             onInsert={insertBox}
@@ -244,6 +321,8 @@ export function PresentationPage({ pageId }: { pageId: string }) {
             onBackward={() => arrange(-1)}
             onDuplicateBox={duplicateBox}
             onDeleteBox={() => selected && selected !== 'main' && deleteBox(selected)}
+            canAlign={!!selected}
+            onAlign={alignSelected}
           />
         }
         drawing={!!draw}
@@ -270,7 +349,9 @@ export function PresentationPage({ pageId }: { pageId: string }) {
           onDuplicate={duplicate}
           onDelete={remove}
           onAdd={() => addSlide()}
+          onToggleHidden={(id) => update(id, (s) => ({ hidden: s.hidden ? undefined : true }))}
         />
+        <div className="flex min-w-0 flex-1 flex-col">
         <Stage>
           {(width) => (
             <SlideFrame slide={current} font={meta.font} width={width} className="rounded-sm shadow-[0_2px_16px_rgba(0,0,0,0.12)] ring-1 ring-black/10 dark:ring-white/10">
@@ -298,6 +379,8 @@ export function PresentationPage({ pageId }: { pageId: string }) {
             </SlideFrame>
           )}
         </Stage>
+        <NotesPanel key={current.id} value={current.notes ?? ''} onChange={(notes) => commit(slidesRef.current.map((s) => (s.id === current.id ? { ...s, notes: notes || undefined } : s)), true)} />
+        </div>
         {panel && (
           <AnimationPanel
             slide={current}
@@ -310,8 +393,12 @@ export function PresentationPage({ pageId }: { pageId: string }) {
           />
         )}
       </div>
-      {presenting !== null && <PresentMode slides={slidesRef.current} font={meta.font} start={presenting} onClose={endShow} />}
+      {presenting !== null && shown.length > 0 && (
+        <PresentMode slides={shown} font={meta.font} start={showStart} onClose={(at, keep) => endShow(slidesRef.current.indexOf(shown[at]), keep)} />
+      )}
+      {gallery && <ThemeGallery current={deckSettings.theme ?? null} fresh={gallery.fresh} onPick={pickTheme} onClose={() => setGallery(null)} />}
     </div>
+    </DeckContext.Provider>
   )
 }
 
@@ -349,6 +436,7 @@ function Thumbnails({
   onDuplicate,
   onDelete,
   onAdd,
+  onToggleHidden,
 }: {
   slides: SlideData[]
   currentId: string
@@ -358,6 +446,7 @@ function Thumbnails({
   onDuplicate: (id: string) => void
   onDelete: (id: string) => void
   onAdd: () => void
+  onToggleHidden: (id: string) => void
 }) {
   const [drag, setDrag] = useState<{ id: string; over: number } | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -399,7 +488,7 @@ function Thumbnails({
           data-slide-id={s.id}
           role="option"
           aria-selected={s.id === currentId}
-          aria-label={`Slide ${i + 1}: ${slideTitle(s, i)}`}
+          aria-label={`Slide ${i + 1}: ${slideTitle(s, i)}${s.hidden ? ' (hidden)' : ''}`}
           draggable
           onDragStart={(e) => {
             e.dataTransfer.effectAllowed = 'move'
@@ -434,15 +523,23 @@ function Thumbnails({
             )}
           >
             {/* Thumbnails are pictures: clicks select the slide, never edit it. */}
-            <div className="pointer-events-none">
+            <div className={cn('pointer-events-none', s.hidden && 'opacity-35')}>
               <SlideView slide={s} font={font} width={THUMB_W} still />
             </div>
+            {s.hidden && (
+              <span className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium text-white" data-testid="hidden-badge">
+                <EyeOff size={11} /> Hidden
+              </span>
+            )}
             {(!!s.transition || !!s.animations?.length) && (
               <span className="pointer-events-none absolute bottom-1 left-1 flex h-4 w-4 items-center justify-center rounded bg-black/55 text-white" title="Has animations" aria-hidden>
                 <Sparkles size={10} />
               </span>
             )}
             <div className="absolute right-1 top-1 hidden gap-0.5 group-hover:flex">
+              <ThumbButton label={s.hidden ? 'Show slide' : 'Hide slide'} onClick={() => onToggleHidden(s.id)}>
+                {s.hidden ? <Eye size={12} /> : <EyeOff size={12} />}
+              </ThumbButton>
               <ThumbButton label="Duplicate slide" onClick={() => onDuplicate(s.id)}>
                 <Copy size={12} />
               </ThumbButton>
@@ -495,6 +592,7 @@ function Toolbar({
   onBackground,
   onApplyBackgroundToAll,
   onPresent,
+  deckTools,
   objects,
   drawing,
   onToggleDraw,
@@ -507,6 +605,7 @@ function Toolbar({
   onBackground: (bg: SlideBackground) => void
   onApplyBackgroundToAll: () => void
   onPresent: (fromCurrent: boolean) => void
+  deckTools: React.ReactNode
   objects: React.ReactNode
   drawing: boolean
   onToggleDraw: () => void
@@ -584,6 +683,7 @@ function Toolbar({
           </Menu>
         )}
       </div>
+      {deckTools}
       <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
       {objects}
       <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
@@ -765,6 +865,82 @@ function DrawBar({ draw, onChange, canClear, onClear, onDone }: { draw: DrawStat
       <button type="button" onClick={onDone} className="ml-1 flex h-7 items-center gap-1 rounded-md bg-[#2383e2] px-2.5 text-xs font-medium text-white hover:bg-[#1f75cb]">
         <Check size={13} /> Done
       </button>
+    </div>
+  )
+}
+
+/** Speaker notes for the current slide (under the slide, like PowerPoint). */
+function NotesPanel({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(() => !!value)
+  const [text, setText] = useState(value)
+  return (
+    <div className="shrink-0 border-t border-black/[0.07] dark:border-white/[0.07]">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex h-8 w-full items-center gap-1.5 px-4 text-xs font-medium opacity-60 hover:opacity-100">
+        <StickyNote size={13} /> Speaker notes {!open && value && <span className="truncate font-normal opacity-70">— {value.split('\n')[0]}</span>}
+        <ChevronDown size={13} className={cn('ml-auto transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <textarea
+          aria-label="Speaker notes"
+          value={text}
+          placeholder="Click to add notes for this slide…"
+          onChange={(e) => {
+            setText(e.target.value)
+            onChange(e.target.value)
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+          className="block h-24 w-full resize-none bg-transparent px-4 pb-3 text-sm leading-relaxed outline-none"
+        />
+      )}
+    </div>
+  )
+}
+
+/** Slide numbers and footer text / date for the whole deck. */
+function FooterMenu({ footer, title, onChange }: { footer: FooterSettings | undefined; title: string; onChange: (f: FooterSettings | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
+    window.addEventListener('mousedown', onDown)
+    return () => window.removeEventListener('mousedown', onDown)
+  }, [open])
+  const f: FooterSettings = footer ?? { slideNumbers: false }
+  const set = (patch: Partial<FooterSettings>) => {
+    const next = { ...f, ...patch }
+    onChange(next.slideNumbers || next.text || next.date ? next : null)
+  }
+  const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" className={cn('flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/10', open && 'bg-black/5 dark:bg-white/10')} onClick={() => setOpen((o) => !o)} title="Slide numbers & footer">
+        <Hash size={15} className="opacity-70" /> Footer
+      </button>
+      {open && (
+        <div role="dialog" aria-label="Slide numbers and footer" className="absolute left-0 top-full z-50 mt-1 w-[300px] animate-pop-in rounded-lg border border-black/10 bg-white p-3 text-sm shadow-lg dark:border-white/10 dark:bg-[#252525]">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide opacity-50">On every slide</div>
+          <label className="flex cursor-pointer items-center gap-2 py-1">
+            <input type="checkbox" checked={f.slideNumbers} onChange={(e) => set({ slideNumbers: e.target.checked })} className="accent-[#2383e2]" /> Slide numbers <span className="ml-auto text-xs opacity-45">03 / 12</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 py-1">
+            <input type="checkbox" checked={!!f.text} onChange={(e) => set({ text: e.target.checked ? title || 'Presentation' : undefined })} className="accent-[#2383e2]" /> Footer text
+          </label>
+          {!!f.text && (
+            <input aria-label="Text in footer" value={f.text} onChange={(e) => set({ text: e.target.value || ' ' })} className="mb-1 ml-6 w-[calc(100%-1.5rem)] rounded border border-black/10 bg-transparent px-2 py-1 text-sm outline-none focus:border-[#2383e2] dark:border-white/15" />
+          )}
+          <label className="flex cursor-pointer items-center gap-2 py-1">
+            <input type="checkbox" checked={!!f.date} onChange={(e) => set({ date: e.target.checked ? today : undefined })} className="accent-[#2383e2]" /> Date
+          </label>
+          {!!f.date && (
+            <input aria-label="Date in footer" value={f.date} onChange={(e) => set({ date: e.target.value || ' ' })} className="mb-1 ml-6 w-[calc(100%-1.5rem)] rounded border border-black/10 bg-transparent px-2 py-1 text-sm outline-none focus:border-[#2383e2] dark:border-white/15" />
+          )}
+          <div className="my-2 h-px bg-black/5 dark:bg-white/10" />
+          <label className="flex cursor-pointer items-center gap-2 py-1">
+            <input type="checkbox" checked={f.hideOnTitle !== false} onChange={(e) => set({ hideOnTitle: e.target.checked ? undefined : false })} className="accent-[#2383e2]" /> Don’t show on title slides
+          </label>
+        </div>
+      )}
     </div>
   )
 }

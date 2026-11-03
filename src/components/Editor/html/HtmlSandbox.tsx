@@ -1,5 +1,5 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useEffect, useRef, useState } from 'react'
-import { useAppStore } from '@/stores/useAppStore'
 
 export const SANDBOX_ORIGIN = 'pn-sandbox://frame'
 /** Window event: Esc was pressed inside an interactive block. */
@@ -54,7 +54,7 @@ export function clampHeight(v: unknown): number | null {
  */
 export function HtmlSandbox({ source, allowNetwork, fill }: { source: string; allowNetwork?: boolean; fill?: boolean }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const [height, setHeight] = useState(120)
   const src = `${SANDBOX_ORIGIN}/${allowNetwork ? 'online' : 'offline'}`
 

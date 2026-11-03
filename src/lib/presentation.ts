@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/react'
+import { slideTheme, type ThemeId } from './slideThemes'
 
 /**
  * Presentation pages (PowerPoint-like): a list of slides, each a small rich-text document
@@ -65,14 +66,33 @@ export interface SlideData {
   frame?: Rect
   /** Other objects on the slide, back to front. */
   boxes?: SlideBox[]
+  /** Skipped when presenting. */
+  hidden?: boolean
+  /** Speaker notes. */
+  notes?: string
   transition?: SlideTransition
   animations?: SlideAnimation[]
   ink?: InkStroke[]
 }
 
+/** Footer shown on every slide (PowerPoint's "Header & Footer"). */
+export interface FooterSettings {
+  /** "03 / 12" at the bottom right. */
+  slideNumbers: boolean
+  /** Text at the bottom left (e.g. the deck title or a company name). */
+  text?: string
+  /** Date shown next to the text. */
+  date?: string
+  /** Not on title slides (default on). */
+  hideOnTitle?: boolean
+}
+
 export interface PresentationContent {
   type: 'slides'
   slides: SlideData[]
+  /** Look of the whole deck (see slideThemes.ts); none = plain. */
+  theme?: ThemeId
+  footer?: FooterSettings
 }
 
 export const LAYOUTS: Array<{ id: SlideLayout; label: string }> = [
@@ -162,9 +182,16 @@ export function normalizePresentation(raw: unknown): PresentationContent {
     if (frame) slide.frame = frame
     const boxes = normalizeBoxes(s.boxes, seen)
     if (boxes.length) slide.boxes = boxes
+    if (s.hidden === true) slide.hidden = true
+    if (typeof s.notes === 'string' && s.notes) slide.notes = s.notes.slice(0, 20000)
     slides.push(slide)
   }
-  return { type: 'slides', slides: slides.length ? slides : newPresentation().slides }
+  const out: PresentationContent = { type: 'slides', slides: slides.length ? slides : newPresentation().slides }
+  const theme = slideTheme((r as { theme?: unknown } | null)?.theme)
+  if (theme) out.theme = theme.id
+  const footer = normalizeFooter((r as { footer?: unknown } | null)?.footer)
+  if (footer) out.footer = footer
+  return out
 }
 
 function textOf(n: JSONContent | undefined): string {
@@ -427,4 +454,41 @@ export function snapBox(
 /** A copy of a box (new id and block ids), shifted a little so both are visible. */
 export function cloneBox(box: SlideBox, offset = 24): SlideBox {
   return { ...box, id: rid(), x: box.x + offset, y: box.y + offset, content: withNewBlockIds(structuredClone(box.content), new Map()) }
+}
+
+/** A stored footer setting with unknown values dropped (null: no footer). */
+export function normalizeFooter(raw: unknown): FooterSettings | null {
+  if (!raw || typeof raw !== 'object') return null
+  const f = raw as Partial<FooterSettings>
+  const out: FooterSettings = { slideNumbers: f.slideNumbers === true }
+  if (typeof f.text === 'string' && f.text.trim()) out.text = f.text.slice(0, 120)
+  if (typeof f.date === 'string' && f.date.trim()) out.date = f.date.slice(0, 60)
+  if (f.hideOnTitle === false) out.hideOnTitle = false
+  return out.slideNumbers || out.text || out.date ? out : null
+}
+
+/** Does the footer show on this slide? */
+export function footerShown(footer: FooterSettings | undefined | null, slide: Pick<SlideData, 'layout'>): boolean {
+  if (!footer || !(footer.slideNumbers || footer.text || footer.date)) return false
+  return !(slide.layout === 'title' && footer.hideOnTitle !== false)
+}
+
+export type AlignHow = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom'
+
+/** Where a rectangle goes when aligned to the slide (margins for edges, the middle for centers). */
+export function alignRect(r: Rect, how: AlignHow): { x: number; y: number } {
+  switch (how) {
+    case 'left':
+      return { x: PAD_X, y: r.y }
+    case 'center':
+      return { x: Math.round((SLIDE_W - r.w) / 2), y: r.y }
+    case 'right':
+      return { x: SLIDE_W - PAD_X - r.w, y: r.y }
+    case 'top':
+      return { x: r.x, y: PAD_Y }
+    case 'middle':
+      return { x: r.x, y: Math.round((SLIDE_H - r.h) / 2) }
+    case 'bottom':
+      return { x: r.x, y: SLIDE_H - PAD_Y - r.h }
+  }
 }

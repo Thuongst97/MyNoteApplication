@@ -1,15 +1,15 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useRef, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { Check, Palette } from 'lucide-react'
 import { Popover } from '@/components/ui/Popover'
-import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { EMOJIS } from '../pickerData'
 import { BLOCK_COLORS, BLOCK_COLOR_IDS, blockBackground, normalizeBlockColor } from './blockColors'
 
 /** Callout: icon + colored box around editable blocks. Hover for color/icon options. */
 export function CalloutView({ node, updateAttributes, editor }: NodeViewProps) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const color = normalizeBlockColor(node.attrs.color)
   const icon: string | null = node.attrs.icon || null
   const [iconOpen, setIconOpen] = useState(false)

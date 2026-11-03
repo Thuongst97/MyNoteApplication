@@ -15,6 +15,8 @@ beforeEach(() => {
 async function setup(title = 'Deck') {
   let id = ''
   await act(async () => void (id = await useAppStore.getState().createPage(null, { kind: 'slides', title })))
+  // An existing presentation (a brand-new one opens the theme gallery first — tested separately).
+  act(() => useAppStore.getState().clearFocusTitle())
   render(<PresentationPage pageId={id} />)
   await screen.findByRole('listbox', { name: 'Slides' })
   return id

@@ -1,3 +1,4 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
@@ -19,7 +20,6 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react'
-import { useAppStore } from '@/stores/useAppStore'
 import { cn, isMacLike } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
 import {
@@ -51,7 +51,7 @@ const TYPE_ICONS: Record<ChartType, LucideIcon> = {
 }
 
 export function ChartView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const spec = useMemo(() => normalizeSpec(node.attrs.spec), [node.attrs.spec])
   const [editing, setEditing] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)
   const [draft, setDraft] = useState<ChartSpec>(spec)

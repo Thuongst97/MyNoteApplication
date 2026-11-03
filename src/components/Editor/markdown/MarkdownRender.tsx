@@ -1,5 +1,5 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useEffect, useMemo, useRef } from 'react'
-import { useAppStore } from '@/stores/useAppStore'
 import { markdownToHtml } from '@/lib/markdown'
 import { lowlight, detectLanguage } from '../code/codeHighlight'
 import { renderMermaid } from '../mermaid/renderMermaid'
@@ -17,7 +17,7 @@ function hastToDom(node: HastNode, doc: Document): Node {
 
 /** Rendered Markdown: sanitized HTML with highlighted code fences and Mermaid diagrams. */
 export function MarkdownRender({ source, className }: { source: string; className?: string }) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const html = useMemo(() => markdownToHtml(source), [source])
   const ref = useRef<HTMLDivElement>(null)
 

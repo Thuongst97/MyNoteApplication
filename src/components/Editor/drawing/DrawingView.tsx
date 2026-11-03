@@ -1,9 +1,9 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { Loader2, PenLine, Shapes, Square, Trash2 } from 'lucide-react'
 import { blockFrameClass } from '../blockBorder'
-import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
 import { normalizeDrawing, type DrawingData } from './drawingModel'
@@ -12,7 +12,7 @@ import { sanitizeSvg } from '@/lib/sanitize'
 const DrawingEditor = lazy(() => import('./DrawingEditor'))
 
 export function DrawingView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const data = useMemo(() => normalizeDrawing(node.attrs.data), [node.attrs.data])
   const [open, setOpen] = useState<boolean>(!!node.attrs.isNew && editor.isEditable)
   const align = node.attrs.align as string

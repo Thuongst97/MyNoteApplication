@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -38,6 +38,7 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   const stacked = !!f?.stacked && (spec.type === 'bar' || spec.type === 'hbar')
   const curve = f?.smooth ? 'monotone' : 'linear'
   const fmt = (v: unknown) => (typeof v === 'number' ? formatValue(v, f) : '')
+  const gradId = `area${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   const rows = useMemo(
     () =>
       spec.labels.map((label, i) => {
@@ -133,6 +134,15 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   } else if (spec.type === 'area') {
     chart = (
       <AreaChart data={rows} margin={margin}>
+        {/* Each area fades from its color to transparent. */}
+        <defs>
+          {spec.series.map((_, j) => (
+            <linearGradient key={j} id={`${gradId}-${j}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={colors[j]} stopOpacity={0.38} />
+              <stop offset="1" stopColor={colors[j]} stopOpacity={0.02} />
+            </linearGradient>
+          ))}
+        </defs>
         {grid}
         <XAxis dataKey="label" {...axisCommon} label={xLabel} />
         <YAxis {...valueAxis} label={yLabel} />
@@ -146,8 +156,8 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
             stackId="stack"
             stroke={colors[j]}
             strokeWidth={2}
-            fill={colors[j]}
-            fillOpacity={0.28}
+            fill={`url(#${gradId}-${j})`}
+            fillOpacity={1}
             activeDot={{
               r: 5,
               fill: colors[j],

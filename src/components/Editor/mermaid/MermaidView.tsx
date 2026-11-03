@@ -1,10 +1,10 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useEffect, useRef, useState } from 'react'
 import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { AlertTriangle, AlignCenter, AlignLeft, AlignRight, Check, Code2, Loader2, Maximize2, Square, Trash2, Workflow, X } from 'lucide-react'
 import { blockFrameClass } from '../blockBorder'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
-import { useAppStore } from '@/stores/useAppStore'
 import { cn, isMacLike } from '@/lib/utils'
 import { MERMAID_TEMPLATE, renderMermaid, type MermaidResult } from './renderMermaid'
 import { placeCursorAfter } from './MermaidNode'
@@ -12,7 +12,7 @@ import { placeCursorAfter } from './MermaidNode'
 /** Shows a rendered mermaid diagram; double-click (or Edit) to change the code. */
 export function MermaidView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
   const code: string = node.attrs.code ?? ''
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const [editing, setEditing] = useState(code.trim() === '' && editor.isEditable)
   const [draft, setDraft] = useState(code)
   const [saved, setSaved] = useState<MermaidResult | null>(null)

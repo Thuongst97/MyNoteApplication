@@ -149,6 +149,10 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop, v
       },
     },
     onUpdate: ({ editor }) => onChangeRef.current(editor.getJSON()),
+    // A slide box that starts with a chart / diagram shouldn't open with that block selected.
+    onCreate: ({ editor }) => {
+      if (variant === 'slide') editor.commands.setTextSelection(editor.state.doc.content.size)
+    },
   })
 
   editorRef.current = editor

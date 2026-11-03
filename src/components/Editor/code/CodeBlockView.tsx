@@ -1,8 +1,8 @@
+import { useDocTheme } from '@/components/Editor/docTheme'
 import { useEffect, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { AlertTriangle, Check, ChevronDown, Copy, Eye, EyeOff, Loader2, Maximize2 } from 'lucide-react'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
-import { useAppStore } from '@/stores/useAppStore'
 import { renderMermaid, type MermaidResult } from '../mermaid/renderMermaid'
 import { CODE_LANGUAGES, detectLanguage, languageFromFileName, languageLabel } from './codeHighlight'
 
@@ -141,7 +141,7 @@ function lineNumbers(n: number): string {
 
 /** Live diagram under a Mermaid code block (re-rendered shortly after typing stops). */
 function MermaidPreview({ code }: { code: string }) {
-  const theme = useAppStore((s) => s.theme)
+  const theme = useDocTheme()
   const [result, setResult] = useState<MermaidResult | null>(null)
   const [pending, setPending] = useState(true)
   const [expanded, setExpanded] = useState(false)

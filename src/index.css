@@ -1067,3 +1067,101 @@ body.block-dragging .prosemirror-dropcursor-inline {
 .notion-editor .find-current { background: #f59e0b; color: #111; box-shadow: 0 0 0 1px #f59e0b; }
 .dark .notion-editor .find-match { background: rgba(250, 204, 21, 0.28); }
 .dark .notion-editor .find-current { background: #f5a623; color: #111; }
+
+/* ---------- Themed presentations (see slideThemes.ts) ---------- */
+.slide-surface { -webkit-font-smoothing: antialiased; }
+.slide-themed .slide-content .notion-editor { color: var(--st-text); font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+.slide-themed .slide-content .notion-editor :is(h1, h2, h3) {
+  font-family: var(--st-title-font);
+  font-weight: var(--st-title-weight);
+  letter-spacing: var(--st-title-tracking);
+  color: var(--st-text);
+}
+.slide-themed .slide-content .notion-editor h1 { font-size: 3em; line-height: 1.02; margin: 0 0 0.35em; }
+.slide-themed .slide-content .notion-editor h2 { font-size: 1.85em; line-height: 1.06; margin: 0.1em 0 0.6em; }
+.slide-themed .slide-content .notion-editor h3 { font-size: 1.2em; line-height: 1.2; margin: 0.4em 0 0.4em; }
+/* Heading 4 = eyebrow label above a title. */
+.slide-themed .slide-content .notion-editor h4 {
+  font: 600 13px/1.4 var(--st-label-font);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--st-accent-text);
+  margin: 0 0 1.4em;
+}
+.slide-themed .slide-content .notion-editor > p { color: var(--st-muted); font-size: 0.86em; line-height: 1.6; }
+.slide-themed .slide-content .notion-editor strong { color: var(--st-text); font-weight: 600; }
+.slide-themed .slide-content .notion-editor a { color: var(--st-accent-text); }
+.slide-themed .slide-content .notion-editor ul > li::marker { color: var(--st-accent); }
+.slide-themed .slide-content .notion-editor li { margin: 0.3em 0; }
+/* Numbered list = agenda: big rows between hairlines, mono numbers. */
+.slide-themed .slide-content .notion-editor ol { list-style: none; padding: 0; margin: 0.2em 0; counter-reset: pn-agenda; }
+.slide-themed .slide-content .notion-editor ol > li {
+  counter-increment: pn-agenda;
+  display: flex;
+  align-items: baseline;
+  gap: 1.1em;
+  margin: 0;
+  padding: 0.55em 0;
+  border-top: 1px solid var(--st-hair);
+  font-family: var(--st-title-font);
+  font-weight: var(--st-title-weight);
+  font-size: 1.15em;
+  letter-spacing: -0.01em;
+}
+.slide-themed .slide-content .notion-editor ol > li:last-child { border-bottom: 1px solid var(--st-hair); }
+.slide-themed .slide-content .notion-editor ol > li::before {
+  content: counter(pn-agenda, decimal-leading-zero);
+  font: 500 15px var(--st-label-font);
+  color: var(--st-muted);
+  min-width: 2.2em;
+}
+.slide-themed .slide-content .notion-editor ol > li > p { margin: 0; }
+/* Columns = cards (key numbers). */
+.slide-themed .slide-content .notion-editor [data-type='columns'] { gap: 24px; margin-top: 1.5em; }
+.slide-themed .slide-content .notion-editor [data-type='column'] {
+  background: var(--st-card);
+  border: 1px solid var(--st-card-border);
+  border-radius: var(--st-card-radius);
+  padding: 26px 28px 22px;
+}
+.theme-platinum .slide-content .notion-editor [data-type='column'] { box-shadow: 0 10px 30px rgba(11, 18, 32, 0.06); }
+.slide-themed .slide-content .notion-editor [data-type='column'] h1 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 2.6em;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  margin: 0 0 0.35em;
+  background: var(--st-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.slide-themed .slide-content .notion-editor [data-type='column'] p { color: var(--st-text); font-size: 0.7em; margin: 0; }
+.slide-themed .slide-content .notion-editor [data-type='column'] h4 { margin: 0.5em 0 0; letter-spacing: 0.06em; text-transform: none; font-size: 14px; }
+/* Title slides: left-aligned, subtitle in the muted color. */
+.slide-themed.slide-layout-title .slide-main .slide-content .notion-editor { text-align: left; }
+.slide-themed.slide-layout-title .slide-main .slide-content .notion-editor h1 { font-size: 3em; }
+.slide-themed.slide-layout-title .slide-main .slide-content .notion-editor p { opacity: 1; color: var(--st-muted); font-size: 0.86em; }
+.slide-themed .slide-content .notion-editor .is-empty::before { color: var(--st-muted); opacity: 0.6; }
+.slide-themed .notion-editor [data-type='callout'] { background: var(--st-card) !important; border: 1px solid var(--st-card-border); }
+
+/* Footer (slide numbers, text, date) */
+.slide-footer {
+  position: absolute;
+  left: 96px;
+  right: 96px;
+  bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--st-hair, rgba(127, 127, 127, 0.25));
+  font: 500 13px var(--st-label-font, 'Inter', sans-serif);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-muted, currentColor);
+  opacity: 1;
+  pointer-events: none;
+  z-index: 1;
+}
+.slide-surface:not(.slide-themed) .slide-footer { opacity: 0.55; }

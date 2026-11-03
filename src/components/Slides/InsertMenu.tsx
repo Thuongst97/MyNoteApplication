@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Editor as TiptapEditor } from '@tiptap/react'
-import { ArrowDownToLine, ArrowUpToLine, ChevronDown, Copy, Plus, SquareDashedMousePointer, Trash2, Type } from 'lucide-react'
+import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignStartHorizontal, AlignStartVertical, ArrowDownToLine, ArrowUpToLine, ChevronDown, Copy, Plus, SquareDashedMousePointer, Trash2, Type } from 'lucide-react'
+import type { AlignHow } from '@/lib/presentation'
 import { SLASH_COMMANDS } from '@/components/Editor/slashCommands'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,15 @@ export const INSERTABLE: Array<{ title: string; label?: string; width: number }>
   { title: 'Callout', width: 560 },
   { title: 'HTML', width: 640 },
   { title: 'Interactive HTML', width: 640 },
+]
+
+const ALIGNS: Array<[AlignHow, string, typeof Type]> = [
+  ['left', 'Align left', AlignStartVertical],
+  ['center', 'Align center', AlignCenterVertical],
+  ['right', 'Align right', AlignEndVertical],
+  ['top', 'Align top', AlignStartHorizontal],
+  ['middle', 'Align middle', AlignCenterHorizontal],
+  ['bottom', 'Align bottom', AlignEndHorizontal],
 ]
 
 /** Fills a new box's empty editor with the block of a slash command (e.g. a chart). */
@@ -47,6 +57,8 @@ export function InsertMenu({
   onBackward,
   onDuplicateBox,
   onDeleteBox,
+  canAlign,
+  onAlign,
 }: {
   onInsert: (title: string, width: number) => void
   canDetach: boolean
@@ -56,7 +68,17 @@ export function InsertMenu({
   onBackward: () => void
   onDuplicateBox: () => void
   onDeleteBox: () => void
+  canAlign?: boolean
+  onAlign?: (how: AlignHow) => void
 }) {
+  const [alignOpen, setAlignOpen] = useState(false)
+  const alignRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!alignOpen) return
+    const onDown = (e: MouseEvent) => !alignRef.current?.contains(e.target as Node) && setAlignOpen(false)
+    window.addEventListener('mousedown', onDown)
+    return () => window.removeEventListener('mousedown', onDown)
+  }, [alignOpen])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -107,6 +129,34 @@ export function InsertMenu({
       >
         <SquareDashedMousePointer size={15} className="opacity-70" /> Detach block
       </button>
+      {canAlign && onAlign && (
+        <div ref={alignRef} className="relative">
+          <button type="button" className={icon} title="Align on slide" aria-label="Align on slide" aria-expanded={alignOpen} onMouseDown={(e) => e.preventDefault()} onClick={() => setAlignOpen((o) => !o)}>
+            <AlignCenterVertical size={15} />
+          </button>
+          {alignOpen && (
+            <div role="menu" aria-label="Align" className="absolute left-0 top-full z-50 mt-1 grid w-[200px] animate-pop-in grid-cols-3 gap-0.5 rounded-lg border border-black/10 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#252525]">
+              {ALIGNS.map(([how, label, Icon]) => (
+                <button
+                  key={how}
+                  type="button"
+                  role="menuitem"
+                  title={label}
+                  aria-label={label}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onAlign(how)
+                    setAlignOpen(false)
+                  }}
+                  className="flex h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[10px] hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  <Icon size={16} /> {label.replace('Align ', '')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {boxSelected && (
         <div className="flex items-center" role="group" aria-label="Arrange box">
           <button type="button" className={icon} title="Bring forward" aria-label="Bring forward" onClick={onForward}>
