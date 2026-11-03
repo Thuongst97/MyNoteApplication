@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
+import { SANDBOX_SCHEME, isAllowedFrameUrl, sandboxResponse } from './sandbox'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { PageStorage } from './storage'
@@ -72,6 +73,11 @@ app.on('web-contents-created', (_e, contents) => {
   contents.on('will-navigate', (ev, url) => {
     if (!isApp(url) && contents !== browseWin?.webContents) ev.preventDefault()
   })
+  // Frames inside the app (interactive HTML blocks) may only show the sandbox shell: a block
+  // can't turn its frame into a web page (location = …, <meta refresh>, links).
+  contents.on('will-frame-navigate', (details) => {
+    if (!details.isMainFrame && !isAllowedFrameUrl(details.url)) details.preventDefault()
+  })
 })
 
 // Allow overriding the data folder (useful for testing / portable setups).
@@ -99,6 +105,8 @@ protocol.registerSchemesAsPrivileged([
   // Excalidraw fetch()es its fonts, which doesn't work for file:// URLs; the bundled fonts are
   // served read-only from here instead (otherwise it falls back to a CDN the CSP blocks).
   { scheme: FONT_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+  // Sandboxed frames of interactive HTML blocks (see sandbox.ts).
+  { scheme: SANDBOX_SCHEME, privileges: { standard: true, secure: true } },
 ])
 
 // Kept from the app's former name so installs upgrade in place and notifications keep working.
@@ -670,6 +678,11 @@ void app.whenReady().then(() => {
   })
 
   // Serve stored images. Only files inside the assets folder with names we generated are reachable.
+  protocol.handle(SANDBOX_SCHEME, (request) => {
+    const res = sandboxResponse(request.url)
+    return res ? new Response(res.body, { status: 200, headers: res.headers }) : new Response('Not found', { status: 404 })
+  })
+
   protocol.handle(ASSET_SCHEME, async (request) => {
     const hit = assets.resolve(request.url)
     if (!hit) return new Response('Not found', { status: 404 })

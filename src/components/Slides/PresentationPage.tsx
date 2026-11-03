@@ -1,14 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { JSONContent } from '@tiptap/react'
-import { ChevronDown, Copy, LayoutTemplate, Loader2, Paintbrush, Play, Plus, Trash2 } from 'lucide-react'
+import type { JSONContent, Editor as TiptapEditor } from '@tiptap/react'
+import { Check, ChevronDown, Copy, Eraser, Highlighter, LayoutTemplate, Loader2, Paintbrush, PenLine, Play, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
 import { Editor } from '@/components/Editor/Editor'
-import { LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
+import { HIGHLIGHT_COLORS, INK_COLORS, buildSteps, LAYOUTS, SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newSlide, normalizePresentation, slideTitle, type SlideBackground, type SlideData, type SlideLayout } from '@/lib/presentation'
 import { cn } from '@/lib/utils'
 import { PAD_X, PAD_Y, SlideFrame, SlideView, useAutoFit } from './SlideCanvas'
-import { PresentMode } from './PresentMode'
+import { PresentMode, type ShowInk } from './PresentMode'
+import { InkLayer, PEN_WIDTHS, type InkTool } from './InkLayer'
+import { AnimationPanel } from './AnimationPanel'
+
+interface DrawState {
+  tool: InkTool
+  penColor: string
+  hlColor: string
+  width: number
+}
 
 const THUMB_W = 168
 
@@ -22,6 +31,10 @@ export function PresentationPage({ pageId }: { pageId: string }) {
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [presenting, setPresenting] = useState<number | null>(null)
   const slidesRef = useRef<SlideData[]>([])
+  const [draw, setDraw] = useState<DrawState | null>(null)
+  const lastDraw = useRef<DrawState>({ tool: 'pen', penColor: INK_COLORS[1], hlColor: HIGHLIGHT_COLORS[0], width: PEN_WIDTHS[0] })
+  const [panel, setPanel] = useState(false)
+  const [slideEditor, setSlideEditor] = useState<TiptapEditor | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -62,7 +75,9 @@ export function PresentationPage({ pageId }: { pageId: string }) {
   const index = Math.max(0, list.findIndex((s) => s.id === currentId))
   const current = list[index]
 
-  const update = (id: string, patch: Partial<SlideData>) => commit(slidesRef.current.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+  /** Changes one slide (`patch` may be computed from the slide's latest state). */
+  const update = (id: string, patch: Partial<SlideData> | ((s: SlideData) => Partial<SlideData>)) =>
+    commit(slidesRef.current.map((s) => (s.id === id ? clean({ ...s, ...(typeof patch === 'function' ? patch(s) : patch) }) : s)))
   const addSlide = (layout: SlideLayout = 'content') => {
     const s = newSlide(layout)
     if (current) s.background = current.background
@@ -87,6 +102,26 @@ export function PresentationPage({ pageId }: { pageId: string }) {
     (id: string, content: JSONContent) => commit(slidesRef.current.map((s) => (s.id === id ? { ...s, content } : s)), true),
     [commit],
   )
+
+  /** After a show: ink the presenter chose to keep is added to the slides. */
+  const endShow = (at: number, keep?: ShowInk) => {
+    setPresenting(null)
+    if (keep) commit(slidesRef.current.map((s) => (keep[s.id]?.length ? { ...s, ink: [...(s.ink ?? []), ...keep[s.id]] } : s)))
+    const s = slidesRef.current[at]
+    if (s) setCurrentId(s.id)
+  }
+  const setDrawing = (next: DrawState | null) => {
+    if (next) lastDraw.current = next
+    setDraw(next)
+  }
+
+  // Esc leaves drawing mode.
+  useEffect(() => {
+    if (!draw) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDraw(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [draw])
 
   // F5 presents from the first slide, Shift+F5 from the current one.
   useEffect(() => {
@@ -117,7 +152,20 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         onBackground={(background) => update(current.id, { background })}
         onApplyBackgroundToAll={() => commit(slidesRef.current.map((s) => ({ ...s, background: current.background })))}
         onPresent={(fromCurrent) => setPresenting(fromCurrent ? index : 0)}
+        drawing={!!draw}
+        onToggleDraw={() => setDrawing(draw ? null : lastDraw.current)}
+        animating={panel}
+        onToggleAnimations={() => setPanel((p) => !p)}
       />
+      {draw && (
+        <DrawBar
+          draw={draw}
+          onChange={setDrawing}
+          canClear={!!current.ink?.length}
+          onClear={() => update(current.id, { ink: undefined })}
+          onDone={() => setDraw(null)}
+        />
+      )}
       <div className="flex min-h-0 flex-1">
         <Thumbnails
           slides={slides}
@@ -132,30 +180,57 @@ export function PresentationPage({ pageId }: { pageId: string }) {
         <Stage>
           {(width) => (
             <SlideFrame slide={current} font={meta.font} width={width} className="rounded-sm shadow-[0_2px_16px_rgba(0,0,0,0.12)] ring-1 ring-black/10 dark:ring-white/10">
-              <EditableSlide key={current.id} pageId={pageId} slide={current} onEdit={onEdit} />
+              <EditableSlide key={current.id} pageId={pageId} slide={current} onEdit={onEdit} onEditor={setSlideEditor} />
+              <InkLayer
+                strokes={current.ink ?? []}
+                tool={draw?.tool ?? null}
+                color={draw?.tool === 'highlighter' ? draw.hlColor : draw?.penColor}
+                width={draw?.width}
+                onAdd={(st) => update(current.id, (s) => ({ ink: [...(s.ink ?? []), st] }))}
+                onErase={(keep) => update(current.id, { ink: keep })}
+              />
             </SlideFrame>
           )}
         </Stage>
+        {panel && (
+          <AnimationPanel
+            slide={current}
+            editor={slideEditor}
+            onChange={(patch) => update(current.id, patch)}
+            onTransitionToAll={() => commit(slidesRef.current.map((s) => clean({ ...s, transition: current.transition })))}
+            onPreview={() => setPresenting(index)}
+            onClose={() => setPanel(false)}
+          />
+        )}
       </div>
-      {presenting !== null && <PresentMode slides={slidesRef.current} font={meta.font} start={presenting} onClose={(at) => {
-        setPresenting(null)
-        const s = slidesRef.current[at]
-        if (s) setCurrentId(s.id)
-      }} />}
+      {presenting !== null && <PresentMode slides={slidesRef.current} font={meta.font} start={presenting} onClose={endShow} />}
     </div>
   )
 }
 
 /** The editor of the current slide (its blocks shrink to fit like the read-only views). */
-function EditableSlide({ pageId, slide, onEdit }: { pageId: string; slide: SlideData; onEdit: (id: string, content: JSONContent) => void }) {
+function EditableSlide({
+  pageId,
+  slide,
+  onEdit,
+  onEditor,
+}: {
+  pageId: string
+  slide: SlideData
+  onEdit: (id: string, content: JSONContent) => void
+  onEditor: (editor: TiptapEditor | null) => void
+}) {
   const [version, setVersion] = useState(0)
   const { innerRef, zoom } = useAutoFit([version], 0.6)
+  useEffect(() => () => onEditor(null), [onEditor])
   return (
     <div className="slide-body overflow-y-auto" style={{ padding: `${PAD_Y}px ${PAD_X}px` }}>
+      <style>{animationBadges(slide)}</style>
       <div ref={innerRef} className="slide-content slide-editing" style={{ zoom }}>
         <Editor
           pageId={pageId}
           variant="slide"
+          onReady={onEditor}
           initialContent={slide.content}
           onChange={(json) => {
             onEdit(slide.id, json)
@@ -287,8 +362,13 @@ function Thumbnails({
           >
             {/* Thumbnails are pictures: clicks select the slide, never edit it. */}
             <div className="pointer-events-none">
-              <SlideView slide={s} font={font} width={THUMB_W} />
+              <SlideView slide={s} font={font} width={THUMB_W} still />
             </div>
+            {(!!s.transition || !!s.animations?.length) && (
+              <span className="pointer-events-none absolute bottom-1 left-1 flex h-4 w-4 items-center justify-center rounded bg-black/55 text-white" title="Has animations" aria-hidden>
+                <Sparkles size={10} />
+              </span>
+            )}
             <div className="absolute right-1 top-1 hidden gap-0.5 group-hover:flex">
               <ThumbButton label="Duplicate slide" onClick={() => onDuplicate(s.id)}>
                 <Copy size={12} />
@@ -342,6 +422,10 @@ function Toolbar({
   onBackground,
   onApplyBackgroundToAll,
   onPresent,
+  drawing,
+  onToggleDraw,
+  animating,
+  onToggleAnimations,
 }: {
   slide: SlideData
   onAdd: (layout: SlideLayout) => void
@@ -349,6 +433,10 @@ function Toolbar({
   onBackground: (bg: SlideBackground) => void
   onApplyBackgroundToAll: () => void
   onPresent: (fromCurrent: boolean) => void
+  drawing: boolean
+  onToggleDraw: () => void
+  animating: boolean
+  onToggleAnimations: () => void
 }) {
   const [menu, setMenu] = useState<'add' | 'layout' | 'background' | 'present' | null>(null)
   const btn = 'flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/10'
@@ -421,6 +509,13 @@ function Toolbar({
           </Menu>
         )}
       </div>
+      <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
+      <button type="button" className={cn(btn, drawing && 'bg-blue-500/15 text-blue-700 dark:text-blue-300')} aria-pressed={drawing} onClick={onToggleDraw} title="Draw on the slide (pen, highlighter)">
+        <PenLine size={15} className="opacity-70" /> Draw
+      </button>
+      <button type="button" className={cn(btn, animating && 'bg-blue-500/15 text-blue-700 dark:text-blue-300')} aria-pressed={animating} onClick={onToggleAnimations} title="Transitions and click animations">
+        <Sparkles size={15} className="opacity-70" /> Animations
+      </button>
       <div className="flex-1" />
       <div className="relative flex items-center">
         <button
@@ -517,5 +612,96 @@ function LayoutIcon({ layout }: { layout: SlideLayout }) {
         </>
       )}
     </svg>
+  )
+}
+
+/** Drops empty optional parts so saved slides stay small. */
+function clean(s: SlideData): SlideData {
+  const out = { ...s }
+  if (!out.ink?.length) delete out.ink
+  if (!out.animations?.length) delete out.animations
+  if (!out.transition || out.transition === 'none') delete out.transition
+  return out
+}
+
+/** Numbered badges next to the blocks that animate on click (in the slide editor). */
+function animationBadges(slide: SlideData): string {
+  const seen = new Map<number, number>()
+  buildSteps({ ...slide, animations: slide.animations?.map((a) => ({ ...a, byItem: false })) }).forEach((st, i) => {
+    if (!seen.has(st.block)) seen.set(st.block, i + 1)
+  })
+  return [...seen]
+    .map(
+      ([block, n]) =>
+        `.slide-editing .ProseMirror > :nth-child(${block + 1}) { position: relative; }
+.slide-editing .ProseMirror > :nth-child(${block + 1})::after { content: "${n}"; position: absolute; left: -46px; top: 0.25em; width: 26px; height: 26px; border-radius: 6px; background: #2383e2; color: #fff; font: 600 15px/26px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; }`,
+    )
+    .join('\n')
+}
+
+/** Drawing tools under the toolbar: pen, highlighter, eraser, colors, thickness, clear. */
+function DrawBar({ draw, onChange, canClear, onClear, onDone }: { draw: DrawState; onChange: (d: DrawState) => void; canClear: boolean; onClear: () => void; onDone: () => void }) {
+  const tool = (t: InkTool, label: string, icon: React.ReactNode) => (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-pressed={draw.tool === t}
+      onClick={() => onChange({ ...draw, tool: t })}
+      className={cn('flex h-7 items-center gap-1 rounded-md px-2 text-xs', draw.tool === t ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300' : 'hover:bg-black/5 dark:hover:bg-white/10')}
+    >
+      {icon} {label}
+    </button>
+  )
+  const colors = draw.tool === 'highlighter' ? HIGHLIGHT_COLORS : INK_COLORS
+  const color = draw.tool === 'highlighter' ? draw.hlColor : draw.penColor
+  return (
+    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-black/[0.07] bg-blue-500/[0.04] px-3 dark:border-white/[0.07]" role="toolbar" aria-label="Drawing tools">
+      {tool('pen', 'Pen', <PenLine size={14} />)}
+      {tool('highlighter', 'Highlighter', <Highlighter size={14} />)}
+      {tool('eraser', 'Eraser', <Eraser size={14} />)}
+      {draw.tool !== 'eraser' && (
+        <>
+          <div className="mx-2 h-5 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-1" role="radiogroup" aria-label="Ink color">
+            {colors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={color === c}
+                aria-label={`Color ${c}`}
+                onClick={() => onChange(draw.tool === 'highlighter' ? { ...draw, hlColor: c } : { ...draw, penColor: c })}
+                className={cn('h-5 w-5 rounded-full ring-1 ring-black/15 dark:ring-white/20', color === c && 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-[#191919]')}
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+          <div className="mx-2 h-5 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Thickness">
+            {PEN_WIDTHS.map((w) => (
+              <button
+                key={w}
+                type="button"
+                role="radio"
+                aria-checked={draw.width === w}
+                aria-label={`Thickness ${w}`}
+                onClick={() => onChange({ ...draw, width: w })}
+                className={cn('flex h-7 w-7 items-center justify-center rounded-md', draw.width === w ? 'bg-blue-500/15' : 'hover:bg-black/5 dark:hover:bg-white/10')}
+              >
+                <span className="rounded-full bg-current" style={{ width: Math.min(16, w + 2), height: Math.min(16, w + 2) }} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="flex-1" />
+      <button type="button" disabled={!canClear} onClick={onClear} className="flex h-7 items-center gap-1 rounded-md px-2 text-xs hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10">
+        <Trash2 size={13} /> Clear slide ink
+      </button>
+      <button type="button" onClick={onDone} className="ml-1 flex h-7 items-center gap-1 rounded-md bg-[#2383e2] px-2.5 text-xs font-medium text-white hover:bg-[#1f75cb]">
+        <Check size={13} /> Done
+      </button>
+    </div>
   )
 }

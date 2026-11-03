@@ -1,4 +1,5 @@
 import type { Editor, Range } from '@tiptap/react'
+import { INTERACTIVE_TEMPLATE } from './html/HtmlView'
 import { pickAndInsertImages } from '@/lib/images'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver } from '@/lib/autoSave'
@@ -36,6 +37,7 @@ import {
   Minus,
   Quote,
   Type,
+  Zap,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -268,6 +270,13 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
     icon: CodeXml,
     keywords: ['html', 'css', 'web', 'embed', 'custom', 'code', 'layout'],
     run: (e, r) => e.chain().focus().deleteRange(r).insertHtmlBlock().run(),
+  },
+  {
+    title: 'Interactive HTML',
+    description: 'HTML with JavaScript: buttons, calculators, games, live demos (runs sandboxed).',
+    icon: Zap,
+    keywords: ['javascript', 'js', 'script', 'interactive', 'html', 'button', 'widget', 'demo', 'app', 'canvas'],
+    run: (e, r) => e.chain().focus().deleteRange(r).insertHtmlBlock(INTERACTIVE_TEMPLATE, { interactive: true }).run(),
   },
   {
     title: 'Table',

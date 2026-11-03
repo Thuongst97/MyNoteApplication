@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { untrustScripts } from '../src/lib/untrust'
 import { normalizeKind } from '../src/lib/pageMeta'
 import type { Page, PageMeta, PageUpdate } from '../src/types'
 
@@ -150,7 +151,8 @@ export async function importPages(storage: Storage, assets: Assets, bundle: Page
       font: p.font ?? null,
       parentId: mappedParent,
       order: isRoot ? now : Number.isFinite(p.order) ? p.order : now + count,
-      content: (remap(p.content) as Page['content']) ?? null,
+      // Scripts in interactive HTML blocks from someone else's page wait for Run.
+      content: (untrustScripts(remap(p.content)) as Page['content']) ?? null,
     })
     if (saved) count++
   }

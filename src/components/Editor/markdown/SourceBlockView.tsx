@@ -16,15 +16,28 @@ export interface SourceKind {
   help: { url: string; label: string }
   template: string
   /** Renders the source (read-only, selectable). */
-  Render: (props: { source: string; className?: string }) => React.ReactElement
+  Render: (props: SourceRenderProps) => React.ReactElement
   /** HTML to replace the block with when turning it into editable blocks (none: no button). */
   toBlocksHtml?: (source: string) => string
   /** Diagram blocks: offer a full-window viewer (zoom & pan) for the rendered SVG. */
   expandable?: boolean
   /** Has a frame (on by default, `border` attribute) with a Border toggle, like drawings. */
   borderToggle?: boolean
-  /** Extra controls under the editor (e.g. the PlantUML server). */
-  EditorFooter?: () => React.ReactElement
+  /** Extra controls under the editor (e.g. the PlantUML server, the HTML block's scripts switch). */
+  EditorFooter?: (props: { attrs: Record<string, unknown>; setAttrs: (patch: Record<string, unknown>) => void }) => React.ReactElement
+  /** Attributes edited together with the source (kept as a draft until Save). */
+  draftAttrs?: string[]
+  /** Attributes to store on Save, given the draft ones (e.g. trust scripts the user just saved). */
+  onSaveAttrs?: (draft: Record<string, unknown>) => Record<string, unknown>
+}
+
+export interface SourceRenderProps {
+  source: string
+  className?: string
+  /** The block's attributes (for kinds with options). */
+  attrs?: Record<string, unknown>
+  /** Changes attributes (missing where nothing can be saved, e.g. read-only views). */
+  setAttrs?: (patch: Record<string, unknown>) => void
 }
 
 /**
@@ -61,6 +74,8 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
   const source: string = node.attrs.source ?? ''
   const [editing, setEditing] = useState(source.trim() === '')
   const [draft, setDraft] = useState(source)
+  const pickDraftAttrs = () => Object.fromEntries((kind.draftAttrs ?? []).map((k) => [k, node.attrs[k]]))
+  const [draftAttrs, setDraftAttrs] = useState<Record<string, unknown>>(pickDraftAttrs)
   const [preview, setPreview] = useState(source)
   const [copied, setCopied] = useState(false)
   const [expandedSvg, setExpandedSvg] = useState<string | null>(null)
@@ -91,6 +106,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
     if (!editor.isEditable) return
     setDraft(source)
     setPreview(source)
+    setDraftAttrs(pickDraftAttrs())
     setEditing(true)
   }
 
@@ -106,7 +122,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
       deleteNode()
       return
     }
-    updateAttributes({ source: next })
+    updateAttributes({ source: next, ...(kind.onSaveAttrs ? kind.onSaveAttrs(draftAttrs) : draftAttrs) })
     setEditing(false)
     leave()
   }
@@ -179,10 +195,12 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
               className="block max-h-[70vh] min-h-[220px] w-full resize-y rounded-md border border-black/10 bg-white p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-blue-400 dark:border-white/10 dark:bg-[#191919]"
             />
             <div className="max-h-[70vh] min-h-[220px] overflow-auto rounded-md border border-black/5 bg-white px-4 py-2 dark:border-white/5 dark:bg-[#191919]">
-              {preview.trim() ? <Render source={preview} className="markdown-body" /> : <div className="py-2 text-sm opacity-40">Preview</div>}
+              {preview.trim() ? (
+                <Render source={preview} className="markdown-body" attrs={{ ...node.attrs, ...draftAttrs }} setAttrs={(p) => setDraftAttrs((d) => ({ ...d, ...p }))} />
+              ) : <div className="py-2 text-sm opacity-40">Preview</div>}
             </div>
           </div>
-          {kind.EditorFooter && <kind.EditorFooter />}
+          {kind.EditorFooter && <kind.EditorFooter attrs={draftAttrs} setAttrs={(p) => setDraftAttrs((d) => ({ ...d, ...p }))} />}
           <div className="mt-2 flex items-center gap-2">
             {!draft.trim() && (
               <button
@@ -205,7 +223,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
       ) : (
         <div ref={renderedRef} contentEditable={false} className="relative px-1 py-1">
           {/* Selectable, copyable text: double-click selects a word; use Edit to change the source. */}
-          <Render source={source} className="markdown-body selectable-text" />
+          <Render source={source} className="markdown-body selectable-text" attrs={node.attrs} setAttrs={editor.isEditable ? updateAttributes : undefined} />
           {editor.isEditable && (
             <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover/md:opacity-100">
               {kind.expandable && (

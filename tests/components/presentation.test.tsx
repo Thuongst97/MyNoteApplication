@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver } from '@/lib/autoSave'
 import { api } from '@/lib/api'
@@ -143,4 +143,125 @@ describe('PresentationPage', () => {
     expect(screen.getByTestId('present-counter')).toHaveTextContent('1 / 2')
     fireEvent.keyDown(window, { key: 'Escape' })
   })
+
+  it('draws on the slide with the pen and erases with the eraser', async () => {
+    const id = await setup()
+    fireEvent.click(screen.getByRole('button', { name: /^Draw$/ }))
+    expect(screen.getByRole('toolbar', { name: 'Drawing tools' })).toBeInTheDocument()
+    const layer = document.querySelectorAll('[data-testid="ink-layer"]')[0] as SVGSVGElement
+    layer.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1280, height: 720, right: 1280, bottom: 720, x: 0, y: 0, toJSON: () => ({}) })
+    const stroke = (pts: Array<[number, number]>) => {
+      fireEvent.pointerDown(layer, { button: 0, clientX: pts[0][0], clientY: pts[0][1], pointerId: 1 })
+      for (const [x, y] of pts.slice(1)) fireEvent.pointerMove(window, { clientX: x, clientY: y })
+      fireEvent.pointerUp(window)
+    }
+    layer.setPointerCapture = () => {}
+    stroke([[100, 100], [150, 120], [200, 140]])
+    let c = await saved(id)
+    expect(c.slides[0].ink).toHaveLength(1)
+    expect(c.slides[0].ink![0]).toMatchObject({ tool: 'pen', points: [100, 100, 150, 120, 200, 140] })
+    fireEvent.click(screen.getByRole('button', { name: 'Highlighter' }))
+    stroke([[100, 400], [300, 400]])
+    c = await saved(id)
+    expect(c.slides[0].ink![1]).toMatchObject({ tool: 'highlighter', color: '#fde047' })
+    fireEvent.click(screen.getByRole('button', { name: 'Eraser' }))
+    stroke([[150, 122]])
+    c = await saved(id)
+    expect(c.slides[0].ink!.map((s) => s.tool)).toEqual(['highlighter'])
+    fireEvent.click(screen.getByRole('button', { name: /Clear slide ink/ }))
+    expect((await saved(id)).slides[0].ink).toBeUndefined()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('toolbar', { name: 'Drawing tools' })).toBeNull()
+  })
+
+  it('animations panel: transition, and click animations for the block at the cursor', async () => {
+    const id = await setup()
+    fireEvent.mouseDown(thumbs()[1]) // title & bullets slide
+    fireEvent.click(screen.getByRole('button', { name: /^Animations$/ }))
+    const panel = screen.getByRole('region', { name: 'Animations' })
+    fireEvent.click(within(panel).getByRole('radio', { name: 'Fade' }))
+    expect((await saved(id)).slides[1].transition).toBe('fade')
+    const el = document.querySelector('.ProseMirror[contenteditable="true"]') as HTMLElement & { editor: import('@tiptap/react').Editor }
+    await waitFor(() => expect(within(panel).getByRole('button', { name: /Animate block at cursor/ })).toBeEnabled())
+    // Cursor in the list (2nd block).
+    act(() => void el.editor.commands.setTextSelection(el.editor.state.doc.firstChild!.nodeSize + 3))
+    fireEvent.click(within(panel).getByRole('button', { name: /Animate block at cursor/ }))
+    act(() => void el.editor.commands.setTextSelection(1))
+    fireEvent.click(within(panel).getByRole('button', { name: /Animate block at cursor/ }))
+    const items = within(panel).getAllByTestId('animation-item')
+    expect(items).toHaveLength(2)
+    expect(items[0]).toHaveTextContent('List')
+    expect(within(items[0]).getByRole('checkbox', { name: /By item/ })).toBeChecked()
+    fireEvent.change(within(items[1]).getByLabelText('Effect'), { target: { value: 'zoom' } })
+    fireEvent.click(within(items[1]).getByRole('button', { name: 'Move up' }))
+    const c = await saved(id)
+    const anims = c.slides[1].animations!
+    expect(anims.map((a) => a.effect)).toEqual(['zoom', 'fade'])
+    const blocks = c.slides[1].content.content!
+    expect(anims[0].blockId).toBe(blocks[0].attrs!.blockId) // the heading, now first
+    expect(anims[1]).toMatchObject({ blockId: blocks[1].attrs!.blockId, byItem: true })
+    fireEvent.click(within(within(panel).getAllByTestId('animation-item')[0]).getByRole('button', { name: 'Remove animation' }))
+    expect((await saved(id)).slides[1].animations).toHaveLength(1)
+  })
+
+  it('present mode steps through click animations before the next slide', async () => {
+    const id = await setup()
+    const c = await saved(id)
+    const s1 = c.slides[1]
+    s1.content.content![0].attrs = { ...s1.content.content![0].attrs, blockId: 'title1' }
+    await api.savePage({ id, content: { type: 'slides', slides: [c.slides[0], { ...s1, animations: [{ blockId: 'title1', effect: 'fade' }] }] } as never })
+    cleanupAndRender(id)
+    await screen.findByRole('listbox', { name: 'Slides' })
+    fireEvent.keyDown(window, { key: 'F5' })
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(screen.getByTestId('present-counter')).toHaveTextContent('2 / 2')
+    expect(document.querySelector('[data-testid="present-slide"] style')!.textContent).toContain('visibility: hidden')
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(document.querySelector('[data-testid="present-slide"] style')!.textContent).toContain('pn-build-fade')
+    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+    expect(document.querySelector('[data-testid="present-slide"] style')!.textContent).toContain('visibility: hidden')
+    fireEvent.keyDown(window, { key: 'Escape' })
+  })
+
+  it('pen in present mode: Esc puts it away, ending asks to keep the ink', async () => {
+    const id = await setup()
+    fireEvent.keyDown(window, { key: 'F5' })
+    fireEvent.keyDown(window, { key: 'p', ctrlKey: true })
+    expect(screen.getByRole('button', { name: /^Pen/ })).toHaveAttribute('aria-pressed', 'true')
+    const layers = document.querySelectorAll('[data-testid="present-slide"] [data-testid="ink-layer"]')
+    const layer = layers[layers.length - 1] as SVGSVGElement
+    layer.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1280, height: 720, right: 1280, bottom: 720, x: 0, y: 0, toJSON: () => ({}) })
+    layer.setPointerCapture = () => {}
+    fireEvent.pointerDown(layer, { button: 0, clientX: 10, clientY: 10, pointerId: 1 })
+    fireEvent.pointerMove(window, { clientX: 60, clientY: 60 })
+    fireEvent.pointerUp(window)
+    // Drawing doesn't change slides.
+    expect(screen.getByTestId('present-counter')).toHaveTextContent('1 / 2')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.getByRole('button', { name: /^Arrow/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('present-mode')).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Keep' }))
+    expect(screen.queryByTestId('present-mode')).toBeNull()
+    const c = await saved(id)
+    expect(c.slides[0].ink).toHaveLength(1)
+    expect(c.slides[0].ink![0].points).toEqual([10, 10, 60, 60])
+  })
+
+  it('laser pointer and erase-all keys', async () => {
+    await setup()
+    fireEvent.keyDown(window, { key: 'F5' })
+    fireEvent.keyDown(window, { key: 'l', ctrlKey: true })
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 200 })
+    await waitFor(() => expect(screen.getByTestId('laser')).toBeInTheDocument())
+    fireEvent.keyDown(window, { key: 'l', ctrlKey: true })
+    expect(screen.queryByTestId('laser')).toBeNull()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByTestId('present-mode')).toBeNull() // no ink: no question
+  })
 })
+
+function cleanupAndRender(id: string) {
+  cleanup()
+  render(<PresentationPage pageId={id} />)
+}

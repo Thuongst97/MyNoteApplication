@@ -1,7 +1,9 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { EditorContent, useEditor, type JSONContent } from '@tiptap/react'
 import { createEditorExtensions } from '@/components/Editor/extensions'
-import { SLIDE_BACKGROUNDS, type SlideData } from '@/lib/presentation'
+import { StaticBlocksContext } from '@/components/Editor/staticBlocks'
+import { SLIDE_BACKGROUNDS, buildCss, buildSteps, type SlideData } from '@/lib/presentation'
+import { InkLayer } from './InkLayer'
 import { fontStyle } from '@/lib/pageFont'
 import { cn } from '@/lib/utils'
 
@@ -113,10 +115,40 @@ export const SlideBody = memo(function SlideBody({ content }: { content: JSONCon
 })
 
 /** A whole read-only slide (thumbnails, present mode). */
-export const SlideView = memo(function SlideView({ slide, font, width, className }: { slide: SlideData; font?: string | null; width?: number; className?: string }) {
+/**
+ * A whole read-only slide (thumbnails, present mode). `step`: how many of its click
+ * animations are revealed (default: all); `animate` plays the last revealed one.
+ * `children` go over the slide (e.g. a drawing layer).
+ */
+export const SlideView = memo(function SlideView({
+  slide,
+  font,
+  width,
+  className,
+  still,
+  step,
+  animate,
+  children,
+}: {
+  slide: SlideData
+  font?: string | null
+  width?: number
+  className?: string
+  still?: boolean
+  step?: number
+  animate?: boolean
+  children?: ReactNode
+}) {
+  const scope = `pn-s${useId().replace(/[^a-zA-Z0-9]/g, '')}`
+  const steps = useMemo(() => buildSteps(slide), [slide])
+  const css = step === undefined || !steps.length ? '' : buildCss(`.${scope}`, steps, step, animate)
   return (
-    <SlideFrame slide={slide} font={font} width={width} className={className}>
-      <SlideBody content={slide.content} />
+    <SlideFrame slide={slide} font={font} width={width} className={cn(scope, className)}>
+      {css && <style>{css}</style>}
+      <StaticBlocksContext.Provider value={!!still}>
+        <SlideBody content={slide.content} />
+      </StaticBlocksContext.Provider>
+      {children ?? (slide.ink?.length ? <InkLayer strokes={slide.ink} /> : null)}
     </SlideFrame>
   )
 })

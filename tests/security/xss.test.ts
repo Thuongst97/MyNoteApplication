@@ -108,7 +108,8 @@ describe('Content Security Policy (blocks scripts even if markup slipped through
   })
   it('forbids plugins, frames, <base> changes and form posts', () => {
     expect(directive('object-src')).toBe("object-src 'none'")
-    expect(directive('frame-src')).toBe("frame-src 'none'")
+    // Frames: only the sandbox of interactive HTML blocks (see the sandbox tests).
+    expect(directive('frame-src')).toBe('frame-src pn-sandbox:')
     expect(directive('base-uri')).toBe("base-uri 'none'")
     expect(directive('form-action')).toBe("form-action 'none'")
   })

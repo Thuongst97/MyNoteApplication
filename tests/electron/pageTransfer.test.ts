@@ -96,6 +96,24 @@ describe('page files', () => {
     expect(again.rootId).not.toBe(r.rootId)
   })
 
+  it('imported interactive HTML blocks wait for Run (their scripts are not trusted)', async () => {
+    const storage = new PageStorage(a)
+    const assets = new AssetStorage(a)
+    const id = randomUUID()
+    const html = { type: 'htmlBlock', attrs: { source: '<script>1</script>', interactive: true, trusted: true } }
+    await storage.save({ id, title: 'Widgets', content: { type: 'doc', content: [html, { type: 'columns', content: [{ type: 'column', content: [html] }] }] } })
+    await storage.save({ id: randomUUID(), title: 'Deck', kind: 'slides', parentId: id, content: { type: 'slides', slides: [{ id: 's', layout: 'blank', background: 'default', content: { type: 'doc', content: [html] } }] } })
+    const text = JSON.stringify(await exportPages(storage, assets, id, true))
+    const to = new PageStorage(b)
+    const r = await importPages(to, new AssetStorage(b), parseBundle(text), null)
+    const all = await Promise.all((await to.getTree()).map((p) => to.read(p.id)))
+    const json = JSON.stringify(all)
+    expect(r.count).toBe(2)
+    expect(json).not.toContain('"trusted":true')
+    expect(json.match(/"trusted":false/g)).toHaveLength(3)
+    expect(json).toContain('"interactive":true')
+  })
+
   it('rejects files that are not page files or are damaged', () => {
     expect(() => parseBundle('not json')).toThrow(/not a PremiumNote page file/)
     expect(() => parseBundle(JSON.stringify({ format: 'other' }))).toThrow(/not a PremiumNote page file/)

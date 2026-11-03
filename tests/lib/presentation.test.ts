@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SLIDE_BACKGROUNDS, duplicateSlide, moveSlide, newPresentation, newSlide, normalizePresentation, slideTitle, type SlideData } from '@/lib/presentation'
+import { SLIDE_BACKGROUNDS, buildCss, buildSteps, duplicateSlide, moveSlide, newPresentation, newSlide, normalizePresentation, showStep, slideTitle, strokeHit, strokePath, type SlideData } from '@/lib/presentation'
 import { normalizeKind } from '@/lib/pageMeta'
 import { docToText } from '@/lib/docText'
 import { extractLinks } from '@/lib/links'
@@ -60,14 +60,14 @@ describe('presentation model', () => {
     expect(slideTitle(s([{ type: 'paragraph' }]), 4)).toBe('Slide 5')
   })
 
-  it('duplicates a slide right after it, with a new id and without block ids', () => {
+  it('duplicates a slide right after it, with a new id and new block ids', () => {
     const a = newSlide('content', 'A')
     a.content.content![0].attrs = { level: 2, blockId: 'blk1' }
     const b = newSlide('blank')
     const { slides, id } = duplicateSlide([a, b], a.id)
     expect(slides.map((s) => s.id)).toEqual([a.id, id, b.id])
     expect(id).not.toBe(a.id)
-    expect(slides[1].content.content![0].attrs).toEqual({ level: 2 })
+    expect(slides[1].content.content![0].attrs!.blockId).toMatch(/./); expect(slides[1].content.content![0].attrs!.blockId).not.toBe('blk1')
     expect(a.content.content![0].attrs!.blockId).toBe('blk1') // original untouched
     expect(duplicateSlide([a], 'missing')).toEqual({ slides: [a], id: null })
   })
@@ -102,13 +102,125 @@ describe('presentations elsewhere in the app', () => {
 })
 
 describe('present mode keys', () => {
-  it('moves forward, back and to the ends, staying in range', () => {
-    for (const k of ['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter', 'n']) expect(presentKey(k, 1, 5)).toBe(2)
-    for (const k of ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p']) expect(presentKey(k, 1, 5)).toBe(0)
-    expect(presentKey('ArrowRight', 4, 5)).toBe(4)
-    expect(presentKey('ArrowLeft', 0, 5)).toBe(0)
-    expect(presentKey('Home', 3, 5)).toBe(0)
-    expect(presentKey('End', 0, 5)).toBe(4)
-    expect(presentKey('x', 2, 5)).toBeNull()
+  it('maps keys to moves', () => {
+    for (const k of ['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter', 'n']) expect(presentKey(k)).toBe('next')
+    for (const k of ['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace', 'p']) expect(presentKey(k)).toBe('prev')
+    expect(presentKey('Home')).toBe('first')
+    expect(presentKey('End')).toBe('last')
+    expect(presentKey('x')).toBeNull()
+  })
+})
+
+describe('click animations', () => {
+  const slideWith = (anims: SlideData['animations']): SlideData => ({
+    id: 's1',
+    layout: 'content',
+    background: 'default',
+    content: {
+      type: 'doc',
+      content: [
+        { type: 'heading', attrs: { level: 2, blockId: 'h' }, content: [text('Title')] },
+        { type: 'bulletList', attrs: { blockId: 'l' }, content: [{ type: 'listItem' }, { type: 'listItem' }, { type: 'listItem' }] },
+        { type: 'paragraph', attrs: { blockId: 'p' }, content: [text('End')] },
+      ],
+    },
+    animations: anims,
+  })
+
+  it('turns animations into click steps (lists item by item), skipping deleted blocks', () => {
+    const s = slideWith([
+      { blockId: 'p', effect: 'fade' },
+      { blockId: 'l', effect: 'fly-up', byItem: true },
+      { blockId: 'gone', effect: 'zoom' },
+    ])
+    expect(buildSteps(s)).toEqual([
+      { block: 2, effect: 'fade' },
+      { block: 1, item: 0, effect: 'fly-up' },
+      { block: 1, item: 1, effect: 'fly-up' },
+      { block: 1, item: 2, effect: 'fly-up' },
+    ])
+    expect(buildSteps(slideWith([{ blockId: 'l', effect: 'fade' }]))).toEqual([{ block: 1, effect: 'fade' }])
+  })
+
+  it('CSS hides what is not revealed yet and animates the last revealed step', () => {
+    const steps = buildSteps(slideWith([{ blockId: 'h', effect: 'zoom' }, { blockId: 'l', effect: 'fade', byItem: true }]))
+    const css = buildCss('.x', steps, 2)
+    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(1) { animation: pn-build-fade')
+    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(2) { visibility: hidden; }')
+    expect(css).toContain('.x .ProseMirror > :nth-child(2) > :nth-child(3) { visibility: hidden; }')
+    expect(css).not.toContain('pn-build-zoom') // already shown, not replayed
+    expect(buildCss('.x', steps, 0)).toContain('.x .ProseMirror > :nth-child(1) { visibility: hidden; }')
+    expect(buildCss('.x', steps, 4)).not.toContain('hidden')
+    expect(buildCss('.x', [{ block: 0, effect: 'appear' }], 1)).toBe('')
+  })
+
+  it('moves through animations before moving to the next slide, and back', () => {
+    const a = slideWith([{ blockId: 'h', effect: 'fade' }, { blockId: 'p', effect: 'fade' }])
+    const b = { ...slideWith(undefined), id: 's2' }
+    const slides = [a, b]
+    let pos = { slide: 0, step: 0 }
+    const seq: string[] = []
+    for (let i = 0; i < 4; i++) {
+      pos = showStep(slides, pos, 1)
+      seq.push(`${pos.slide}.${pos.step}`)
+    }
+    expect(seq).toEqual(['0.1', '0.2', '1.0', '1.0'])
+    pos = showStep(slides, pos, -1)
+    expect(pos).toEqual({ slide: 0, step: 2 }) // back shows the previous slide complete
+    expect(showStep(slides, { slide: 0, step: 0 }, -1)).toEqual({ slide: 0, step: 0 })
+  })
+
+  it('keeps animations, transitions and ink through normalizing; drops bad ones', () => {
+    const p = normalizePresentation({
+      type: 'slides',
+      slides: [
+        {
+          id: 'a',
+          layout: 'content',
+          content: { type: 'doc', content: [] },
+          transition: 'push',
+          animations: [{ blockId: 'b1', effect: 'fade', byItem: true }, { blockId: 'b1', effect: 'zoom' }, { blockId: 'x', effect: 'explode' }, { blockId: '<x>', effect: 'fade' }],
+          ink: [
+            { tool: 'pen', color: '#E03E3E', width: 3, points: [1, 2, 3, 4] },
+            { tool: 'pen', color: 'red; x', width: 3, points: [1, 2] },
+            { tool: 'marker', color: '#000000', width: 3, points: [1, 2] },
+            { tool: 'pen', color: '#000000', width: 3, points: [1, 2, 3] },
+            { tool: 'highlighter', color: '#fde047', width: 999, points: [0, 0, 'x', 1] },
+            { tool: 'highlighter', color: '#fde047', width: 999, points: [0, 0, 5, 5] },
+          ],
+        },
+        { id: 'b', layout: 'content', content: { type: 'doc' }, transition: 'spin', ink: 'nope' },
+      ],
+    })
+    expect(p.slides[0].transition).toBe('push')
+    expect(p.slides[0].animations).toEqual([{ blockId: 'b1', effect: 'fade', byItem: true }])
+    expect(p.slides[0].ink).toEqual([
+      { tool: 'pen', color: '#e03e3e', width: 3, points: [1, 2, 3, 4] },
+      { tool: 'highlighter', color: '#fde047', width: 80, points: [0, 0, 5, 5] },
+    ])
+    expect(p.slides[1].transition).toBeUndefined()
+    expect(p.slides[1].ink).toBeUndefined()
+  })
+
+  it('duplicated slides keep their animations on the copied blocks', () => {
+    const s = slideWith([{ blockId: 'h', effect: 'zoom' }])
+    const { slides } = duplicateSlide([s], s.id)
+    const copy = slides[1]
+    const newH = copy.content.content![0].attrs!.blockId
+    expect(newH).not.toBe('h')
+    expect(copy.animations).toEqual([{ blockId: newH, effect: 'zoom' }])
+    expect(buildSteps(copy)).toEqual([{ block: 0, effect: 'zoom' }])
+  })
+})
+
+describe('ink', () => {
+  it('builds smooth paths and finds strokes under the eraser', () => {
+    expect(strokePath([])).toBe('')
+    expect(strokePath([1, 2, 3, 4])).toBe('M1 2 L3 4')
+    expect(strokePath([0, 0, 10, 0, 20, 10])).toBe('M0 0 Q10 0 15 5 L20 10')
+    const s = { tool: 'pen' as const, color: '#000000', width: 4, points: [0, 0, 100, 0] }
+    expect(strokeHit(s, 50, 5, 4)).toBe(true)
+    expect(strokeHit(s, 50, 30, 4)).toBe(false)
+    expect(strokeHit(s, 110, 0, 4)).toBe(false)
   })
 })

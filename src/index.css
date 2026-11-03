@@ -1000,3 +1000,32 @@ body.block-dragging .prosemirror-dropcursor-inline {
 .slide-layout-title .slide-content .notion-editor .is-empty::before { text-align: center; }
 /* Every empty block shows its prompt in the slide editor, focused or not. */
 .slide-editing .notion-editor:not(.ProseMirror-focused) p.is-empty:not(.is-editor-empty)::before { content: attr(data-placeholder); }
+
+/* Click animations ("builds") of slide blocks */
+@keyframes pn-build-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pn-build-fly-up { from { opacity: 0; transform: translateY(80px); } to { opacity: 1; transform: none; } }
+@keyframes pn-build-fly-left { from { opacity: 0; transform: translateX(-120px); } to { opacity: 1; transform: none; } }
+@keyframes pn-build-zoom { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+
+/* Slide transitions in present mode (in = entering slide, out = leaving slide) */
+@keyframes pn-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pn-from-right { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes pn-from-left { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes pn-to-left { from { transform: none; } to { transform: translateX(-100%); } }
+@keyframes pn-to-right { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes pn-wipe-fwd { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes pn-wipe-back { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes pn-zoom-in { from { opacity: 0; transform: scale(0.82); } to { opacity: 1; transform: none; } }
+@keyframes pn-zoom-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(1.15); } }
+.pn-in-fade-fwd, .pn-in-fade-back { animation: pn-fade-in 600ms ease both; }
+.pn-in-push-fwd { animation: pn-from-right 600ms cubic-bezier(.3,.7,.2,1) both; }
+.pn-in-push-back { animation: pn-from-left 600ms cubic-bezier(.3,.7,.2,1) both; }
+.pn-out-push-fwd { animation: pn-to-left 600ms cubic-bezier(.3,.7,.2,1) both; }
+.pn-out-push-back { animation: pn-to-right 600ms cubic-bezier(.3,.7,.2,1) both; }
+.pn-in-wipe-fwd { animation: pn-wipe-fwd 600ms ease-in-out both; }
+.pn-in-wipe-back { animation: pn-wipe-back 600ms ease-in-out both; }
+.pn-in-zoom-fwd, .pn-in-zoom-back { animation: pn-zoom-in 600ms cubic-bezier(.2,.7,.2,1) both; }
+.pn-out-zoom-fwd, .pn-out-zoom-back { animation: pn-zoom-out 600ms ease both; }
+@media (prefers-reduced-motion: reduce) {
+  [class*='pn-in-'], [class*='pn-out-'] { animation-duration: 1ms !important; }
+}

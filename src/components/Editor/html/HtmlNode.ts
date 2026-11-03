@@ -7,7 +7,7 @@ declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     htmlBlock: {
       /** Inserts an HTML block. With no source it opens in edit mode. */
-      insertHtmlBlock: (source?: string) => ReturnType
+      insertHtmlBlock: (source?: string, opts?: { interactive?: boolean }) => ReturnType
     }
   }
 }
@@ -28,6 +28,27 @@ export const HtmlNode = Node.create({
         default: '',
         parseHTML: (el) => el.getAttribute('data-source') ?? '',
         renderHTML: (attrs) => ({ 'data-source': attrs.source }),
+      },
+      /** Run the block's JavaScript (in a sandboxed frame). */
+      interactive: {
+        default: false,
+        parseHTML: (el) => el.getAttribute('data-interactive') === 'true',
+        renderHTML: (attrs) => (attrs.interactive ? { 'data-interactive': 'true' } : {}),
+      },
+      /** Let the block's scripts load from and talk to the web (https only). */
+      allowNetwork: {
+        default: false,
+        parseHTML: (el) => el.getAttribute('data-allow-network') === 'true',
+        renderHTML: (attrs) => (attrs.allowNetwork ? { 'data-allow-network': 'true' } : {}),
+      },
+      /**
+       * The user ran (or wrote) this block's scripts. Never read from HTML (pasted content)
+       * and cleared on import, so scripts from elsewhere wait for a click on Run.
+       */
+      trusted: {
+        default: false,
+        parseHTML: () => false,
+        renderHTML: () => ({}),
       },
     }
   },
@@ -56,9 +77,11 @@ export const HtmlNode = Node.create({
   addCommands() {
     return {
       insertHtmlBlock:
-        (source = '') =>
+        (source = '', opts = {}) =>
         ({ tr, dispatch, state }) => {
-          if (dispatch) insertBlockAtCursor(tr, state, this.type.create({ source: String(source) }))
+          // Inserted by the user: their own scripts may run.
+          const attrs = opts.interactive ? { interactive: true, trusted: true } : {}
+          if (dispatch) insertBlockAtCursor(tr, state, this.type.create({ source: String(source), ...attrs }))
           return true
         },
     }
