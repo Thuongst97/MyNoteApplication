@@ -37,6 +37,14 @@ describe('right-click menu', () => {
     expect(a.addToDictionary).toHaveBeenCalledWith('teh')
   })
 
+  it('offers to turn spell check off from a misspelled word (when the app supports it)', () => {
+    const a = { ...actions(), disableSpellcheck: vi.fn() }
+    const t = contextMenuTemplate({ ...base, isEditable: true, misspelledWord: 'teh', dictionarySuggestions: ['the'] }, a)
+    expect(names(t).slice(0, 4)).toEqual(['the', 'Add to dictionary', 'Turn off spell check', 'separator'])
+    ;(t[2].click as () => void)()
+    expect(a.disableSpellcheck).toHaveBeenCalled()
+  })
+
   it('adds link actions for web links only', () => {
     const a = actions()
     const t = contextMenuTemplate({ ...base, linkURL: 'https://example.com/x', selectionText: 'example' }, a)

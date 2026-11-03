@@ -47,6 +47,14 @@ const api: ElectronAPI = {
       return () => ipcRenderer.removeListener('tasks:changed', listener)
     },
   },
+  spellcheck: {
+    set: (on: boolean) => ipcRenderer.send('spellcheck:set', on === true),
+    onTurnedOff: (cb) => {
+      const listener = () => cb()
+      ipcRenderer.on('spellcheck:turned-off', listener)
+      return () => ipcRenderer.removeListener('spellcheck:turned-off', listener)
+    },
+  },
   zoom: {
     get: () => webFrame.getZoomFactor(),
     set: (factor: number) => {

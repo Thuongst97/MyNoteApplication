@@ -105,6 +105,12 @@ export interface ElectronAPI {
     export: (id: string, includeChildren: boolean) => Promise<{ ok: false } | { ok: true; path: string; pages: number; images: number }>
     import: (parentId: string | null) => Promise<PageImportResult | null>
   }
+  /** Spell check (red underlines). Off: the dictionary isn't loaded either. */
+  spellcheck: {
+    set: (on: boolean) => void
+    /** "Turn off spell check" was chosen in the right-click menu. */
+    onTurnedOff: (cb: () => void) => () => void
+  }
   /** Page zoom (1 = 100%). */
   zoom: {
     get: () => number

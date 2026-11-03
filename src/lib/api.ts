@@ -99,6 +99,7 @@ function createBrowserApi(): ElectronAPI {
         throw new Error('Importing pages is available in the desktop app.')
       },
     },
+    spellcheck: { set: () => {}, onTurnedOff: () => () => {} },
     zoom: {
       // Plain browser: CSS zoom on the root element.
       get: () => Number(document.documentElement.style.zoom) || 1,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileUp, MoreHorizontal, MoveHorizontal, Type } from 'lucide-react'
+import { FileUp, MoreHorizontal, MoveHorizontal, SpellCheck, Type } from 'lucide-react'
 import { PAGE_FONTS, pageFont } from '@/lib/pageFont'
 import { exportPageToFile } from '@/components/Editor/pageFiles'
 import { Popover } from '@/components/ui/Popover'
@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils'
 export function PageOptions({ pageId }: { pageId: string }) {
   const page = useAppStore((s) => s.pages.find((p) => p.id === pageId))
   const updatePageMeta = useAppStore((s) => s.updatePageMeta)
+  const spellcheck = useAppStore((s) => s.spellcheck)
+  const setSpellcheck = useAppStore((s) => s.setSpellcheck)
   const [open, setOpen] = useState(false)
   if (!page) return null
   const width = page.width ?? null
@@ -99,6 +101,11 @@ export function PageOptions({ pageId }: { pageId: string }) {
           </>
         )}
         <div className="-mx-3 my-3 h-px bg-black/5 dark:bg-white/10" />
+        <label className="-mx-1 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10" title="Red underlines under misspelled words (all pages)">
+          <SpellCheck size={15} className="opacity-60" /> Spell check
+          <span className="ml-auto text-[11px] opacity-45">all pages</span>
+          <Switch checked={spellcheck} onChange={setSpellcheck} label="Spell check" />
+        </label>
         <button
           type="button"
           onClick={() => {
@@ -112,5 +119,24 @@ export function PageOptions({ pageId }: { pageId: string }) {
         </button>
       </Popover>
     </div>
+  )
+}
+
+/** A small on/off switch. */
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={(e) => {
+        e.preventDefault()
+        onChange(!checked)
+      }}
+      className={cn('relative h-[18px] w-8 shrink-0 rounded-full transition-colors', checked ? 'bg-[#2383e2]' : 'bg-black/20 dark:bg-white/20')}
+    >
+      <span className={cn('absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-all', checked ? 'left-[16px]' : 'left-[2px]')} />
+    </button>
   )
 }

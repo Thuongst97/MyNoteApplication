@@ -60,10 +60,11 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop, v
     extensions: createEditorExtensions(variant === 'slide' ? { placeholder: slidePlaceholder, placeholderEverywhere: true } : {}),
     content: initialContent ?? '',
     editorProps: {
-      attributes: {
+      // Read on every view update, so turning spell check off applies right away.
+      attributes: () => ({
         class: 'notion-editor focus:outline-none',
-        spellcheck: 'true',
-      },
+        spellcheck: String(useAppStore.getState().spellcheck),
+      }),
       // Pasted image files (screenshots, copied images) are stored and inserted as image blocks.
       handlePaste: (view, event) => {
         // A copied page/block link (notionclone://page/…) becomes a page link / block reference.
@@ -151,6 +152,12 @@ export function Editor({ pageId, initialContent, onChange, onReady, onExitTop, v
   })
 
   editorRef.current = editor
+
+  // Spell check switched on/off: redraw the editor's attributes.
+  const spellcheck = useAppStore((s) => s.spellcheck)
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) editor.view.updateState(editor.view.state)
+  }, [editor, spellcheck])
 
   useEffect(() => {
     if (editor) onReady?.(editor)

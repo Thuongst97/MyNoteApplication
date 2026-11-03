@@ -19,6 +19,7 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleRef, columnStyle }: PageHeaderProps) {
+  const spellcheck = useAppStore((s) => s.spellcheck)
   const [iconOpen, setIconOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
   const [coverUrl, setCoverUrl] = useState('')
@@ -197,7 +198,7 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
           value={page.title}
           rows={1}
           placeholder="Untitled"
-          spellCheck
+          spellCheck={spellcheck}
           onChange={(e) => onChange({ title: e.target.value.replace(/\n/g, '') })}
           onKeyDown={(e) => {
             const el = e.currentTarget

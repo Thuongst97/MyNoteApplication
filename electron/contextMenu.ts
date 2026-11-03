@@ -8,6 +8,8 @@ export interface ContextMenuActions {
   copyImage: () => void
   copyText: (text: string) => void
   openExternal: (url: string) => void
+  /** Turns spell checking off everywhere (optional: menus without it don't offer it). */
+  disableSpellcheck?: () => void
 }
 
 type Params = Pick<
@@ -33,6 +35,7 @@ export function contextMenuTemplate(p: Params, a: ContextMenuActions): MenuItemC
       .map((s) => ({ label: s, click: () => a.replaceMisspelling(s) }))
     if (!fixes.length) fixes.push({ label: 'No suggestions', enabled: false })
     fixes.push({ label: 'Add to dictionary', click: () => a.addToDictionary(p.misspelledWord) })
+    if (a.disableSpellcheck) fixes.push({ label: 'Turn off spell check', click: () => a.disableSpellcheck?.() })
     groups.push(fixes)
   }
 

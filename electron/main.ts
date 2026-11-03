@@ -402,6 +402,10 @@ function createWindow() {
       openExternal: (url) => {
         if (isSafeExternalUrl(url)) void shell.openExternal(url)
       },
+      disableSpellcheck: () => {
+        contents.session.setSpellCheckerEnabled(false)
+        contents.send('spellcheck:turned-off')
+      },
     })
     if (template.length) Menu.buildFromTemplate(template).popup({ window: win ?? undefined })
   })
@@ -488,6 +492,10 @@ function createWindow() {
 
 function registerIpc() {
   // ---- Page CRUD -------------------------------------------------------
+  // Spell check on/off (the app remembers the choice and tells us at startup).
+  ipcMain.on('spellcheck:set', (e, on: unknown) => {
+    if (trusted(e)) e.sender.session.setSpellCheckerEnabled(on === true)
+  })
   handle('get-page-tree', () => storage.getTree())
   handle('read-page', (_e, id: string) => storage.read(id))
   handle('save-page', (_e, update: PageUpdate) => storage.save(update))

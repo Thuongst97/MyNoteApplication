@@ -38,6 +38,12 @@ export default function App() {
     return api.tasks.onOpenTask((id) => useAppStore.getState().openTasks(id))
   }, [loadPages])
 
+  // Spell check: tell the app shell (it loads the dictionary only when on); the right-click
+  // menu's "Turn off spell check" comes back here.
+  const spellcheck = useAppStore((s) => s.spellcheck)
+  useEffect(() => api.spellcheck.set(spellcheck), [spellcheck])
+  useEffect(() => api.spellcheck.onTurnedOff(() => useAppStore.getState().setSpellcheck(false)), [])
+
   // Apply theme class to <html>.
   useEffect(() => {
     const root = document.documentElement

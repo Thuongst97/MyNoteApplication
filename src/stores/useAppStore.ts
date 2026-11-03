@@ -16,6 +16,8 @@ export type View = 'page' | 'tasks' | 'graph' | 'home'
 interface Prefs {
   view: View
   theme: Theme
+  /** Red underlines for misspelled words (on unless turned off). */
+  spellcheck: boolean
   isSidebarOpen: boolean
   sidebarWidth: number
   expanded: Record<string, boolean>
@@ -26,13 +28,15 @@ function loadPrefs(): Prefs {
   const fallback: Prefs = {
     theme: window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark',
     view: 'page',
+    spellcheck: true,
     isSidebarOpen: true,
     sidebarWidth: 260,
     expanded: {},
     activePageId: null,
   }
   try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }
+    const p = { ...fallback, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }
+    return { ...p, spellcheck: p.spellcheck !== false }
   } catch {
     return fallback
   }
@@ -71,6 +75,7 @@ interface AppState extends Prefs {
   setSidebarWidth: (w: number) => void
   setTheme: (t: Theme) => void
   toggleTheme: () => void
+  setSpellcheck: (on: boolean) => void
   setSearchOpen: (open: boolean) => void
   clearFocusTitle: () => void
 }
@@ -204,6 +209,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSidebarWidth: (w) => set({ sidebarWidth: Math.round(Math.min(480, Math.max(200, w))) }),
   setTheme: (theme) => set({ theme }),
   toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+  setSpellcheck: (on) => set({ spellcheck: on }),
   setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
   clearFocusTitle: () => set({ focusTitleFor: null }),
 }))
@@ -222,6 +228,7 @@ useAppStore.subscribe((s) => {
   const p: Prefs = {
     view: s.view,
     theme: s.theme,
+    spellcheck: s.spellcheck,
     isSidebarOpen: s.isSidebarOpen,
     sidebarWidth: s.sidebarWidth,
     expanded: s.expanded,
