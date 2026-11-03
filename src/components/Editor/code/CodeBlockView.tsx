@@ -80,7 +80,7 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
         )}
         <label className="code-block-lang" title="Language">
           <span>{language ? languageLabel(language) : autoLabel}</span>
-          <ChevronDown size={12} strokeWidth={2.5} aria-hidden="true" />
+          <ChevronDown size={11} strokeWidth={2.5} aria-hidden="true" />
           <select
             value={language ?? ''}
             disabled={!editable}
@@ -104,12 +104,12 @@ export function CodeBlockView({ node, updateAttributes, editor, getPos }: NodeVi
             title={preview ? 'Hide diagram' : 'Show diagram'}
             aria-pressed={preview}
           >
-            {preview ? <EyeOff size={13} /> : <Eye size={13} />}
+            {preview ? <EyeOff size={12} /> : <Eye size={12} />}
             <span>{preview ? 'Hide diagram' : 'Show diagram'}</span>
           </button>
         )}
         <button type="button" className="code-block-btn" onClick={copy} title="Copy code" aria-label="Copy code">
-          {copied ? <Check size={13} /> : <Copy size={13} />}
+          {copied ? <Check size={12} /> : <Copy size={12} />}
           <span>{copied ? 'Copied' : 'Copy'}</span>
         </button>
       </div>
