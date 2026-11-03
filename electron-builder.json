@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.thuong.notionclone",
+  "appId": "premium.note",
   "productName": "PremiumNote",
   "directories": {
     "output": "dist_electron",
@@ -27,6 +27,7 @@
     "icon": "resources/icon.ico"
   },
   "nsis": {
+    "guid": "4598ad81-301c-5bf1-ac88-508f9699df5b",
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "installerIcon": "resources/icon.ico",

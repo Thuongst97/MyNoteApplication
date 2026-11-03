@@ -109,8 +109,9 @@ protocol.registerSchemesAsPrivileged([
   { scheme: SANDBOX_SCHEME, privileges: { standard: true, secure: true } },
 ])
 
-// Kept from the app's former name so installs upgrade in place and notifications keep working.
-const APP_ID = 'com.thuong.notionclone'
+// Windows app id (taskbar grouping, notifications). The installer keeps its former GUID
+// (nsis.guid in electron-builder.json) so new versions still install over old ones.
+const APP_ID = 'premium.note'
 const REMINDER_CHECK_MS = 15_000
 
 let win: BrowserWindow | null = null
