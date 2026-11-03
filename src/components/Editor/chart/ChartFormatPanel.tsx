@@ -1,6 +1,6 @@
 import { AlignCenterHorizontal, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, ArrowUpToLine, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { CURRENCIES, NUMBER_FORMATS, type ChartFormat, type ChartHeight, type ChartSpec, type LegendPosition, type NumberFormat, type PieLabel } from './chartModel'
+import { CURRENCIES, NUMBER_FORMATS, labelPositionOf, labelPositions, type LabelPosition, type ChartFormat, type ChartHeight, type ChartSpec, type LegendPosition, type NumberFormat, type PieLabel } from './chartModel'
 
 const LEGEND_OPTIONS: Array<{ id: LegendPosition; label: string; icon: typeof EyeOff }> = [
   { id: 'top', label: 'Top', icon: ArrowUpToLine },
@@ -45,6 +45,15 @@ export function ChartFormatPanel({ draft, onChange }: { draft: ChartSpec; onChan
       <Field label="Data labels">
         <div className="flex flex-wrap items-center gap-2">
           <Toggle checked={dataLabels} onChange={(v) => set({ dataLabels: v })} label="Show values on the chart" />
+          {dataLabels && draft.type !== 'parts' && (
+            <select aria-label="Label position" value={labelPositionOf(draft)} onChange={(e) => set({ labelPosition: e.target.value as LabelPosition })} className={select}>
+              {labelPositions(draft.type).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          )}
           {draft.type === 'pie' && dataLabels && (
             <select aria-label="Slice labels show" value={f.pieLabel ?? 'percent'} onChange={(e) => set({ pieLabel: e.target.value as PieLabel })} className={select}>
               <option value="percent">Percent</option>

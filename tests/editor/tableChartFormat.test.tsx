@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { clampRowHeight, ROW_MAX, ROW_MIN } from '@/components/Editor/table/rowResize'
-import { formatTick, formatValue, normalizeFormat, normalizeSpec, DEFAULT_CHART, type ChartSpec } from '@/components/Editor/chart/chartModel'
+import { formatTick, formatValue, labelPositionOf, labelPositions, rechartsLabelPosition, normalizeFormat, normalizeSpec, DEFAULT_CHART, type ChartSpec } from '@/components/Editor/chart/chartModel'
 import ChartRender from '@/components/Editor/chart/ChartRender'
 import { ChartFormatPanel } from '@/components/Editor/chart/ChartFormatPanel'
 import { makeEditor } from './helpers'
@@ -114,5 +114,31 @@ describe('chart format', () => {
     expect(screen.queryByLabelText('Vertical axis title')).toBeNull()
     fireEvent.change(screen.getByLabelText('Slice labels show'), { target: { value: 'value' } })
     expect(f).toMatchObject({ pieLabel: 'value' })
+  })
+
+  it('data labels can sit outside, inside the end, centered or at the base', () => {
+    expect(labelPositions('bar').map((p) => p.id)).toEqual(['outside', 'inside-end', 'center', 'inside-base'])
+    expect(labelPositions('line').map((p) => p.label)).toEqual(['Above', 'On the point', 'Below'])
+    expect(rechartsLabelPosition('bar', 'outside')).toBe('top')
+    expect(rechartsLabelPosition('bar', 'inside-end')).toBe('insideTop')
+    expect(rechartsLabelPosition('bar', 'inside-base')).toBe('insideBottom')
+    expect(rechartsLabelPosition('hbar', 'outside')).toBe('right')
+    expect(rechartsLabelPosition('hbar', 'inside-end')).toBe('insideRight')
+    expect(rechartsLabelPosition('hbar', 'inside-base')).toBe('insideLeft')
+    expect(rechartsLabelPosition('line', 'inside-base')).toBe('bottom')
+    // Defaults: outside; stacked bars and pies in the middle; options that don't fit the type fall back.
+    expect(labelPositionOf({ type: 'bar' })).toBe('outside')
+    expect(labelPositionOf({ type: 'bar', format: { stacked: true } })).toBe('center')
+    expect(labelPositionOf({ type: 'pie' })).toBe('center')
+    expect(labelPositionOf({ type: 'line', format: { labelPosition: 'inside-end' } })).toBe('outside')
+    expect(normalizeFormat({ labelPosition: 'inside-base' })).toEqual({ labelPosition: 'inside-base' })
+    expect(normalizeFormat({ labelPosition: 'somewhere' })).toBeUndefined()
+  })
+
+  it('format panel: label position choice follows the chart type', () => {
+    let f: ChartSpec['format'] = { dataLabels: true }
+    render(<ChartFormatPanel draft={spec(f)} onChange={(x) => (f = x)} />)
+    fireEvent.change(screen.getByLabelText('Label position'), { target: { value: 'inside-end' } })
+    expect(f).toMatchObject({ dataLabels: true, labelPosition: 'inside-end' })
   })
 })

@@ -20,7 +20,7 @@ import {
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import type { Theme } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
-import { CHART_HEIGHTS, CHART_TOKENS, formatTick, formatValue, partColor, partsOf, seriesColor, textOn, type ChartSpec, type LegendPosition } from './chartModel'
+import { CHART_HEIGHTS, CHART_TOKENS, formatTick, formatValue, labelPositionOf, rechartsLabelPosition, partColor, partsOf, seriesColor, textOn, type ChartSpec, type LegendPosition } from './chartModel'
 
 /** Renders a chart spec. Loaded lazily (recharts is large). */
 export default function ChartRender({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
@@ -65,15 +65,19 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   const xLabel = f?.xTitle ? { value: f.xTitle, position: 'insideBottom' as const, offset: -2, ...titleStyle } : undefined
   const yLabel = f?.yTitle ? { value: f.yTitle, angle: -90, position: 'insideLeft' as const, style: { textAnchor: 'middle' as const }, ...titleStyle } : undefined
   /** Values written on the bars / points. */
+  const labelPos = labelPositionOf(spec)
+  // Inside a bar the label takes a color that reads on the bar; outside, the text color.
+  const onBar = (spec.type === 'bar' || spec.type === 'hbar') && labelPos !== 'outside'
   const dataLabels = (j: number) =>
     f?.dataLabels ? (
       <LabelList
         dataKey={`s${j}`}
-        position={stacked ? 'center' : spec.type === 'hbar' ? 'right' : 'top'}
+        position={rechartsLabelPosition(spec.type, labelPos) as never}
+        offset={labelPos === 'outside' || !onBar ? 6 : 8}
         formatter={fmt as never}
-        fill={stacked ? textOn(colors[j]) : t.textSecondary}
+        fill={onBar ? textOn(colors[j]) : t.textSecondary}
         fontSize={11}
-        fontWeight={stacked ? 600 : 500}
+        fontWeight={onBar ? 600 : 500}
       />
     ) : null
   const tooltip = (
@@ -86,9 +90,9 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   // Direct end-labels for line charts with up to 4 series (legend stays too).
   const endLabels = spec.type === 'line' && spec.series.length <= 4 && multi
   const margin = {
-    top: f?.dataLabels ? 20 : 8,
-    right: endLabels ? 84 : f?.dataLabels && spec.type === 'hbar' ? 48 : 12,
-    bottom: f?.xTitle ? 18 : 4,
+    top: f?.dataLabels && labelPos === 'outside' ? 20 : 8,
+    right: endLabels ? 84 : f?.dataLabels && spec.type === 'hbar' && labelPos === 'outside' ? 56 : 12,
+    bottom: (f?.xTitle ? 18 : 4) + (f?.dataLabels && labelPos === 'inside-base' && (spec.type === 'line' || spec.type === 'area') ? 14 : 0),
     left: f?.yTitle ? 14 : 0,
   }
 
@@ -180,7 +184,7 @@ function CartesianChart({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
             dataKey={`s${j}`}
             name={s.name}
             fill={colors[j]}
-            maxBarSize={stacked ? 36 : 24}
+            maxBarSize={stacked ? 36 : f?.dataLabels && onBar && !horizontal ? 46 : 24}
             stackId={stacked ? 'stack' : undefined}
             // 4px rounded data-end, square at the baseline (stacks: only the top segment).
             radius={stacked && j < spec.series.length - 1 ? 0 : horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
@@ -343,6 +347,7 @@ function PieView({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
   const fmtPct = (v: number) => `${pct(v) < 10 ? pct(v).toFixed(1) : Math.round(pct(v))}%`
   const shown = hover !== null ? parts[hover] : null
   const pieLegend = spec.format?.legend ?? 'right'
+  const pieLabelPos = labelPositionOf(spec)
   return (
     <div className="w-full">
       <div
@@ -362,7 +367,7 @@ function PieView({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
                 nameKey="label"
                 cx="50%"
                 cy="50%"
-                outerRadius="78%"
+                outerRadius={pieLabelPos === 'outside' && spec.format?.dataLabels !== false ? '64%' : '78%'}
                 innerRadius={spec.donut ? '50%' : 0}
                 startAngle={90}
                 endAngle={-270}
@@ -376,15 +381,18 @@ function PieView({ spec, theme }: { spec: ChartSpec; theme: Theme }) {
                   if (pct(value) < 4 || spec.format?.dataLabels === false) return null
                   const what = spec.format?.pieLabel ?? 'percent'
                   const text = what === 'value' ? formatValue(value, spec.format) : what === 'both' ? `${formatValue(value, spec.format)} (${fmtPct(value)})` : fmtPct(value)
-                  const r = innerRadius + (outerRadius - innerRadius) * (spec.donut ? 0.5 : 0.62)
-                  const x = cx + r * Math.cos((-midAngle * Math.PI) / 180)
+                  const outside = pieLabelPos === 'outside'
+                  const share = { 'inside-end': 0.84, center: spec.donut ? 0.5 : 0.62, 'inside-base': spec.donut ? 0.2 : 0.35, outside: 1 }[pieLabelPos]
+                  const r = outside ? outerRadius + 14 : innerRadius + (outerRadius - innerRadius) * share
+                  const cos = Math.cos((-midAngle * Math.PI) / 180)
+                  const x = cx + r * cos
                   const y = cy + r * Math.sin((-midAngle * Math.PI) / 180)
                   return (
                     <text
                       x={x}
                       y={y}
-                      fill={textOn(colors[index])}
-                      textAnchor="middle"
+                      fill={outside ? t.textSecondary : textOn(colors[index])}
+                      textAnchor={outside ? (cos >= 0 ? 'start' : 'end') : 'middle'}
                       dominantBaseline="central"
                       fontSize={12}
                       fontWeight={600}

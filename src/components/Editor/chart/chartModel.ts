@@ -28,12 +28,56 @@ export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none'
 export type NumberFormat = 'number' | 'compact' | 'percent' | 'currency'
 export type PieLabel = 'percent' | 'value' | 'both'
 export type ChartHeight = 'small' | 'medium' | 'large'
+export type LabelPosition = 'outside' | 'inside-end' | 'center' | 'inside-base'
+
+/** Label positions offered for a chart type (lines/areas: above, on, below the point). */
+export function labelPositions(type: ChartType): Array<{ id: LabelPosition; label: string }> {
+  if (type === 'line' || type === 'area')
+    return [
+      { id: 'outside', label: 'Above' },
+      { id: 'center', label: 'On the point' },
+      { id: 'inside-base', label: 'Below' },
+    ]
+  return [
+    { id: 'outside', label: 'Outside end' },
+    { id: 'inside-end', label: 'Inside end' },
+    { id: 'center', label: 'Center' },
+    { id: 'inside-base', label: 'Inside base' },
+  ]
+}
+
+/** The effective label position for a chart. */
+export function labelPositionOf(spec: Pick<ChartSpec, 'type' | 'format'>): LabelPosition {
+  const p = spec.format?.labelPosition
+  const allowed = labelPositions(spec.type).map((x) => x.id)
+  if (p && allowed.includes(p)) return p
+  if (spec.type === 'pie') return 'center'
+  return spec.format?.stacked && (spec.type === 'bar' || spec.type === 'hbar') ? 'center' : 'outside'
+}
+
+/** Recharts LabelList position for bars / points. */
+export function rechartsLabelPosition(type: ChartType, p: LabelPosition): string {
+  const horizontal = type === 'hbar'
+  if (type === 'line' || type === 'area') return p === 'inside-base' ? 'bottom' : p === 'center' ? 'center' : 'top'
+  switch (p) {
+    case 'inside-end':
+      return horizontal ? 'insideRight' : 'insideTop'
+    case 'center':
+      return 'center'
+    case 'inside-base':
+      return horizontal ? 'insideLeft' : 'insideBottom'
+    default:
+      return horizontal ? 'right' : 'top'
+  }
+}
 
 export interface ChartFormat {
   /** Where the legend goes (default: on top, and only with several series). */
   legend?: LegendPosition
   /** Show each value on its bar / point / slice. */
   dataLabels?: boolean
+  /** Where data labels sit (default: outside end; stacked bars: center). */
+  labelPosition?: LabelPosition
   /** Pie: what slice labels show (default percent). */
   pieLabel?: PieLabel
   /** Horizontal (or vertical, for bars) gridlines (default on). */
@@ -69,6 +113,7 @@ export function normalizeFormat(raw: unknown): ChartFormat | undefined {
   const f: ChartFormat = {}
   if (LEGEND_POSITIONS.includes(r.legend as LegendPosition)) f.legend = r.legend as LegendPosition
   if (typeof r.dataLabels === 'boolean') f.dataLabels = r.dataLabels
+  if (r.labelPosition === 'outside' || r.labelPosition === 'inside-end' || r.labelPosition === 'center' || r.labelPosition === 'inside-base') f.labelPosition = r.labelPosition
   if (r.pieLabel === 'percent' || r.pieLabel === 'value' || r.pieLabel === 'both') f.pieLabel = r.pieLabel
   if (typeof r.gridlines === 'boolean') f.gridlines = r.gridlines
   if (typeof r.xTitle === 'string' && r.xTitle.trim()) f.xTitle = r.xTitle.slice(0, 80)
