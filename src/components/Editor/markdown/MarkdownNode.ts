@@ -29,6 +29,18 @@ export const MarkdownNode = Node.create({
         parseHTML: (el) => el.getAttribute('data-source') ?? '',
         renderHTML: (attrs) => ({ 'data-source': attrs.source }),
       },
+      /** Column widths of its tables (see markdownTables.ts). */
+      tableWidths: {
+        default: null,
+        parseHTML: (el) => {
+          try {
+            return JSON.parse(el.getAttribute('data-table-widths') ?? 'null')
+          } catch {
+            return null
+          }
+        },
+        renderHTML: (attrs) => (attrs.tableWidths ? { 'data-table-widths': JSON.stringify(attrs.tableWidths) } : {}),
+      },
     }
   },
 

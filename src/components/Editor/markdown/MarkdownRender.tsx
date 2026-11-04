@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import { markdownToHtml } from '@/lib/markdown'
 import { lowlight, detectLanguage } from '../code/codeHighlight'
 import { renderMermaid } from '../mermaid/renderMermaid'
+import type { SourceRenderProps } from './SourceBlockView'
+import { applyTableWidths, enableTableResize, normalizeTableWidths, type TableWidths } from './markdownTables'
 
 type HastNode = { type: string; value?: string; tagName?: string; properties?: { className?: string[] }; children?: HastNode[] }
 
@@ -16,15 +18,28 @@ function hastToDom(node: HastNode, doc: Document): Node {
 }
 
 /** Rendered Markdown: sanitized HTML with highlighted code fences and Mermaid diagrams. */
-export function MarkdownRender({ source, className }: { source: string; className?: string }) {
+export function MarkdownRender({ source, className, attrs, setAttrs }: SourceRenderProps) {
   const theme = useDocTheme()
   const html = useMemo(() => markdownToHtml(source), [source])
   const ref = useRef<HTMLDivElement>(null)
+  const widths = useMemo(() => normalizeTableWidths(attrs?.tableWidths), [attrs?.tableWidths])
+  const widthsRef = useRef<TableWidths | null>(widths)
+  widthsRef.current = widths
+  const saveRef = useRef(setAttrs)
+  saveRef.current = setAttrs
+
+  const canResize = !!setAttrs
+  useEffect(() => {
+    const root = ref.current
+    if (!root || !canResize) return
+    return enableTableResize(root, () => widthsRef.current, (next) => saveRef.current?.({ tableWidths: next }))
+  }, [canResize])
 
   useEffect(() => {
     const root = ref.current
     if (!root) return
     root.innerHTML = html
+    applyTableWidths(root, widthsRef.current)
     let cancelled = false
     for (const code of root.querySelectorAll<HTMLElement>('pre > code')) {
       const lang = /language-([\w+#-]+)/.exec(code.className)?.[1]?.toLowerCase() ?? null
@@ -57,6 +72,10 @@ export function MarkdownRender({ source, className }: { source: string; classNam
       cancelled = true
     }
   }, [html, theme])
+  // Table column widths (kept on the block) changed: apply them; drag borders to change.
+  useEffect(() => {
+    if (ref.current) applyTableWidths(ref.current, widths)
+  }, [widths])
 
   return (
     <div

@@ -605,6 +605,22 @@ body {
   display: block;
   overflow-x: auto;
 }
+/* Tables sit in a scroll box so they can keep a fixed layout (resizable columns). */
+.notion-editor .markdown-body .md-table-scroll {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.notion-editor .markdown-body .md-table-scroll table {
+  display: table;
+  margin: 0;
+}
+.notion-editor .markdown-body.md-col-edge td,
+.notion-editor .markdown-body.md-col-edge th,
+.notion-editor .markdown-body.md-resizing,
+.notion-editor .markdown-body.md-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
 .notion-editor .markdown-body td img,
 .notion-editor .markdown-body p img {
   max-width: 100%;
@@ -770,6 +786,11 @@ body {
 .notion-editor .mermaid-svg svg {
   max-width: 100%;
   height: auto;
+}
+/* A label slightly wider than its box (other fonts on this computer) spills instead of being cut. */
+.mermaid-svg foreignObject,
+.md-mermaid foreignObject {
+  overflow: visible;
 }
 .notion-editor [data-type='mermaid'].ProseMirror-selectednode {
   outline: none;

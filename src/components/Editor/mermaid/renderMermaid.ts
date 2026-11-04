@@ -174,6 +174,23 @@ export interface MermaidResult {
 }
 
 /**
+ * Where mermaid measures labels before drawing boxes around them. Diagrams are shown inside the
+ * page (`.notion-editor`, Markdown blocks), whose styles for bold text, inline `code` pills and
+ * line height differ from the bare page body; measuring with those same styles keeps labels from
+ * being cut off.
+ */
+let measureHost: HTMLElement | null = null
+function measuringHost(): HTMLElement {
+  if (measureHost?.isConnected) return measureHost
+  measureHost = document.createElement('div')
+  measureHost.className = 'notion-editor markdown-body mermaid-measure'
+  measureHost.setAttribute('aria-hidden', 'true')
+  Object.assign(measureHost.style, { position: 'fixed', left: '-100000px', top: '0', width: '4000px', visibility: 'hidden', pointerEvents: 'none' })
+  document.body.appendChild(measureHost)
+  return measureHost
+}
+
+/**
  * Renders mermaid code to an SVG string. Renders are run one at a time,
  * because mermaid keeps global state while rendering.
  */
@@ -191,7 +208,8 @@ export function renderMermaid(code: string, theme: Theme): Promise<MermaidResult
     const id = `mermaid-${Date.now().toString(36)}-${counter++}`
     try {
       await mermaid.parse(trimmed)
-      const { svg } = await mermaid.render(id, trimmed)
+      const host = measuringHost()
+      const { svg } = await mermaid.render(id, trimmed, host)
       return { svg }
     } catch (err) {
       // mermaid may leave a temporary element behind on errors.
