@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/react'
+import { countInMarkdown } from './findBlocks'
 
 /** What the find bar looks for. */
 export interface FindOptions {
@@ -37,6 +38,10 @@ export function countInJson(doc: JSONContent | null | undefined, opts: FindOptio
   if (!doc || !opts.query) return 0
   let n = 0
   const visit = (node: JSONContent) => {
+    if (node.type === 'markdown') {
+      n += countInMarkdown(String(node.attrs?.source ?? ''), opts)
+      return
+    }
     const kids = node.content ?? []
     if (kids.some((k) => k.type === 'text')) {
       n += findInText(kids.map((k) => (k.type === 'text' ? (k.text ?? '') : OBJECT_CHAR)).join(''), opts).length

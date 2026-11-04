@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/react'
-import { findKey, type FindMeta } from './findPlugin'
+import { currentBlockRange, findKey, type FindMeta } from './findPlugin'
 import type { FindOptions } from '@/lib/find'
 import type { FindProvider } from '@/stores/useFindStore'
 
@@ -16,7 +16,10 @@ export function scrollToCurrent(editor: Editor) {
   requestAnimationFrame(() => {
     if (editor.isDestroyed) return
     const el = editor.view.dom.querySelector('.find-current') as HTMLElement | null
-    el?.scrollIntoView({ block: 'center', inline: 'nearest' })
+    if (el) return el.scrollIntoView({ block: 'center', inline: 'nearest' })
+    // A match inside a rendered (Markdown) block.
+    const range = currentBlockRange(editor.view)
+    range?.startContainer.parentElement?.scrollIntoView({ block: 'center', inline: 'nearest' })
   })
 }
 
