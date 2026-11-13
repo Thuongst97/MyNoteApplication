@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { DiagramExportButton } from '@/components/Editor/DiagramExport'
 import { Maximize, Minus, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -162,6 +163,8 @@ export function DiagramViewer({ svg, title, onClose }: { svg: string; title?: st
         <button type="button" className={btn} aria-label="Fit to window" title="Fit to window (0)" onClick={fit}>
           <Maximize size={15} /> Fit
         </button>
+        <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
+        <DiagramExportButton getRoot={() => contentRef.current} name={title ?? 'Diagram'} />
         <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
         <button type="button" className={btn} aria-label="Close" title="Close (Esc)" onClick={onClose}>
           <X size={17} />

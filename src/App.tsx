@@ -123,7 +123,7 @@ export default function App() {
         <div
           key={toast.id}
           role="status"
-          className="fixed bottom-6 left-1/2 z-[300] -translate-x-1/2 animate-pop-in rounded-lg bg-[#2f2f2f] px-4 py-2 text-sm text-white shadow-xl dark:bg-[#ebebea] dark:text-[#191919]"
+          className="fixed bottom-6 left-1/2 z-[500] -translate-x-1/2 animate-pop-in rounded-lg bg-[#2f2f2f] px-4 py-2 text-sm text-white shadow-xl dark:bg-[#ebebea] dark:text-[#191919]"
         >
           {toast.message}
         </div>
