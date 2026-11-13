@@ -99,6 +99,14 @@ function createBrowserApi(): ElectronAPI {
         throw new Error('Importing pages is available in the desktop app.')
       },
     },
+    clipboard: {
+      writeRich: async (html, text) => {
+        await navigator.clipboard?.write?.([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })])
+      },
+      inlineImages: async () => {},
+    },
+    diagrams: { copyImage: async () => {}, toPngDataUrl: async () => '', save: async () => ({ ok: false }) },
+    pageMenu: { setOnPage: () => {}, onCopyPage: () => () => {} },
     spellcheck: { set: () => {}, onTurnedOff: () => () => {} },
     zoom: {
       // Plain browser: CSS zoom on the root element.

@@ -6,6 +6,7 @@ import { blockFrameClass } from '../blockBorder'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { cn, isMacLike } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
+import { DiagramExportButton } from '../DiagramExport'
 
 /** What makes a source block a Markdown block, an HTML block… */
 export interface SourceKind {
@@ -237,6 +238,7 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
                   <Maximize2 size={14} /> Expand
                 </ToolbarButton>
               )}
+              {kind.expandable && <DiagramExportButton getRoot={() => renderedRef.current} name={`${kind.name} diagram`} />}
               {kind.FullView && (
                 <ToolbarButton label={`Expand ${kind.name}`} onClick={() => setFullView(true)}>
                   <Maximize2 size={14} /> Expand

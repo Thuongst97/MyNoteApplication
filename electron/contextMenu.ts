@@ -10,6 +10,8 @@ export interface ContextMenuActions {
   openExternal: (url: string) => void
   /** Turns spell checking off everywhere (optional: menus without it don't offer it). */
   disableSpellcheck?: () => void
+  /** Copies the whole page the menu was opened on (only when it was opened on a page). */
+  copyPage?: (format: 'rich' | 'markdown' | 'text') => void
 }
 
 type Params = Pick<
@@ -60,6 +62,14 @@ export function contextMenuTemplate(p: Params, a: ContextMenuActions): MenuItemC
     groups.push([{ role: 'selectAll', enabled: p.editFlags.canSelectAll }])
   } else if (hasSelection) {
     groups.push([{ role: 'copy', enabled: p.editFlags.canCopy }, { role: 'selectAll' }])
+  }
+
+  if (a.copyPage) {
+    groups.push([
+      { label: 'Copy page', click: () => a.copyPage?.('rich') },
+      { label: 'Copy page as Markdown', click: () => a.copyPage?.('markdown') },
+      { label: 'Copy page as plain text', click: () => a.copyPage?.('text') },
+    ])
   }
 
   const out: MenuItemConstructorOptions[] = []

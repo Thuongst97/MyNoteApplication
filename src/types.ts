@@ -106,6 +106,25 @@ export interface ElectronAPI {
     import: (parentId: string | null) => Promise<PageImportResult | null>
   }
   /** Spell check (red underlines). Off: the dictionary isn't loaded either. */
+  clipboard: {
+    /** Puts HTML and text on the clipboard; stored images are embedded (a single one also as a picture). */
+    writeRich: (html: string, text: string) => Promise<void>
+    /** Embeds the stored images of what was just copied (so it pastes into other apps). */
+    inlineImages: () => Promise<void>
+  }
+  diagrams: {
+    /** Copies a diagram (its SVG) as a PNG picture. */
+    copyImage: (svg: string, background: string) => Promise<void>
+    /** The diagram as a PNG data: URL. */
+    toPngDataUrl: (svg: string, background: string) => Promise<string>
+    /** Asks where to save the diagram as PNG or SVG. */
+    save: (svg: string, background: string, name: string) => Promise<{ ok: boolean; path?: string }>
+  }
+  pageMenu: {
+    /** Tells the right-click menu whether it opens on a page (it then offers "Copy page"). */
+    setOnPage: (onPage: boolean) => void
+    onCopyPage: (cb: (format: 'rich' | 'markdown' | 'text') => void) => () => void
+  }
   spellcheck: {
     set: (on: boolean) => void
     /** "Turn off spell check" was chosen in the right-click menu. */

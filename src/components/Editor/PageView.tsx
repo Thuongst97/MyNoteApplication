@@ -12,11 +12,15 @@ import { widthStyle, type PageWidth } from '@/lib/pageWidth'
 import { fontStyle } from '@/lib/pageFont'
 import { setFindTarget, useFindStore } from '@/stores/useFindStore'
 import { editorFindProvider } from './find/editorFind'
+import { copyPage } from './pageCopy'
 
 /**
  * Loads a page's content and renders header + editor.
  * Mount with `key={pageId}` so each page gets a fresh editor instance.
  */
+/** The page the last right-click happened on (its menu's "Copy page" copies that page). */
+let lastContextPage: string | null = null
+
 export function PageView({ pageId }: { pageId: string }) {
   const meta = useAppStore((s) => s.pages.find((p) => p.id === pageId))
   const focusTitleFor = useAppStore((s) => s.focusTitleFor)
@@ -113,12 +117,34 @@ export function PageView({ pageId }: { pageId: string }) {
     if (autoFocusTitle) clearFocusTitle()
   }, [autoFocusTitle, clearFocusTitle])
 
+  // Right-click on the page: its menu offers "Copy page" (as rich text, Markdown or plain text).
+  const titleNow = useRef('')
+  titleNow.current = meta?.title ?? ''
+  useEffect(
+    () =>
+      api.pageMenu.onCopyPage((format) => {
+        const editor = editorRef.current
+        if (lastContextPage !== pageId || !editor || editor.isDestroyed) return
+        copyPage(editor, titleNow.current, format)
+          .then(() => useAppStore.getState().showToast(format === 'markdown' ? 'Page copied as Markdown' : format === 'text' ? 'Page copied as plain text' : 'Page copied'))
+          .catch((err) => useAppStore.getState().showToast(`Could not copy the page: ${String((err as Error)?.message ?? err)}`))
+      }),
+    [pageId],
+  )
+
   if (!meta) return null
   // While dragging a width handle, preview the new width before saving it.
   const columnStyle = { ...widthStyle(previewWidth !== undefined ? previewWidth : meta.width), ...fontStyle(meta.font) }
 
   return (
-    <div className="animate-fade-in">
+    <div
+      className="animate-fade-in"
+      onContextMenu={(e) => {
+        if (e.defaultPrevented) return
+        lastContextPage = pageId
+        api.pageMenu.setOnPage(true)
+      }}
+    >
       <PageHeader
         page={meta}
         titleRef={titleRef}

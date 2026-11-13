@@ -8,6 +8,16 @@ const actions = (): ContextMenuActions => ({ replaceMisspelling: vi.fn(), addToD
 const names = (t: ReturnType<typeof contextMenuTemplate>) => t.map((i) => i.role ?? i.label ?? i.type)
 
 describe('right-click menu', () => {
+  it('offers to copy the whole page when opened on a page', () => {
+    const a = { ...actions(), copyPage: vi.fn() }
+    const t = contextMenuTemplate({ ...base }, a)
+    expect(names(t)).toEqual(['Copy page', 'Copy page as Markdown', 'Copy page as plain text'])
+    ;(t[1].click as () => void)()
+    expect(a.copyPage).toHaveBeenCalledWith('markdown')
+    const inText = contextMenuTemplate({ ...base, isEditable: true }, a)
+    expect(names(inText).slice(-4)).toEqual(['separator', 'Copy page', 'Copy page as Markdown', 'Copy page as plain text'])
+  })
+
   it('shows nothing on plain, unselected content', () => {
     expect(contextMenuTemplate({ ...base }, actions())).toEqual([])
   })

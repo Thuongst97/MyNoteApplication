@@ -8,6 +8,7 @@ import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { cn, isMacLike } from '@/lib/utils'
 import { MERMAID_TEMPLATE, renderMermaid, type MermaidResult } from './renderMermaid'
 import { placeCursorAfter } from './MermaidNode'
+import { DiagramExportButton } from '../DiagramExport'
 
 /** Shows a rendered mermaid diagram; double-click (or Edit) to change the code. */
 export function MermaidView({ node, updateAttributes, deleteNode, selected, editor, getPos }: NodeViewProps) {
@@ -19,6 +20,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
   const [preview, setPreview] = useState<MermaidResult | null>(null)
   const [expanded, setExpanded] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const outputRef = useRef<HTMLDivElement>(null)
 
   // Render the saved code.
   useEffect(() => {
@@ -169,13 +171,14 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
         </div>
         </BlockEditPanel>
       ) : (
-        <div contentEditable={false} onDoubleClick={startEdit} className="relative px-2 py-3">
+        <div ref={outputRef} contentEditable={false} onDoubleClick={startEdit} className="relative px-2 py-3">
           <DiagramOutput result={shown} onFix={startEdit} align={node.attrs.align} />
           {shown?.svg && !editor.isEditable && (
             <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/mermaid:opacity-100">
               <ToolbarButton label="Expand diagram" onClick={() => setExpanded(true)}>
                 <Maximize2 size={14} />
               </ToolbarButton>
+              <DiagramExportButton getRoot={() => outputRef.current} name="Mermaid diagram" />
             </div>
           )}
           {editor.isEditable && (
@@ -185,6 +188,7 @@ export function MermaidView({ node, updateAttributes, deleteNode, selected, edit
                   <Maximize2 size={14} /> Expand
                 </ToolbarButton>
               )}
+              {shown?.svg && <DiagramExportButton getRoot={() => outputRef.current} name="Mermaid diagram" />}
               {(
                 [
                   ['left', AlignLeft],

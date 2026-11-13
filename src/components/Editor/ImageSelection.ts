@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/react'
 import { NodeSelection, Plugin, PluginKey, TextSelection } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
+import { api } from '@/lib/api'
 
 /**
  * Makes image blocks behave like Notion's:
@@ -47,7 +48,12 @@ export const ImageSelection = Extension.create({
             },
             // Copying a text selection made inside read-only rendered content copies that text
             // (the browser's default), not the editor's idea of the selection (the whole block).
+            cut(view) {
+              if (selectionHasImage(view)) embedImagesAfterCopy()
+              return false
+            },
             copy(view) {
+              if (selectionHasImage(view)) embedImagesAfterCopy()
               const sel = window.getSelection()
               const node = sel && !sel.isCollapsed ? sel.anchorNode : null
               let el = node ? (node instanceof Element ? node : node.parentElement) : null
@@ -88,3 +94,23 @@ export const ImageSelection = Extension.create({
     ]
   },
 })
+
+/** Whether the editor's selection includes a stored image. */
+function selectionHasImage(view: EditorView): boolean {
+  const { from, to } = view.state.selection
+  let found = false
+  view.state.doc.nodesBetween(from, to, (n) => {
+    if (n.type.name === 'image' && String(n.attrs.src ?? '').startsWith('notion-asset://')) found = true
+    return !found
+  })
+  return found
+}
+
+/**
+ * Copied images point at notion-asset:// files that other apps can't open: once the editor has
+ * written the clipboard, embed them (and put a single image on the clipboard as a picture), so
+ * they paste into Jira, Confluence, mail…
+ */
+function embedImagesAfterCopy() {
+  setTimeout(() => void api.clipboard.inlineImages().catch(() => {}), 0)
+}

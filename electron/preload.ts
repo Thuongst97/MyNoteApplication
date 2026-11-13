@@ -47,6 +47,25 @@ const api: ElectronAPI = {
       return () => ipcRenderer.removeListener('tasks:changed', listener)
     },
   },
+  clipboard: {
+    writeRich: (html: string, text: string) => ipcRenderer.invoke('clipboard:write-rich', html, text),
+    inlineImages: () => ipcRenderer.invoke('clipboard:inline-images'),
+  },
+  diagrams: {
+    copyImage: (svg: string, background: string) => ipcRenderer.invoke('diagram:copy', svg, background),
+    toPngDataUrl: (svg: string, background: string) => ipcRenderer.invoke('diagram:png', svg, background),
+    save: (svg: string, background: string, name: string) => ipcRenderer.invoke('diagram:save', svg, background, name),
+  },
+  pageMenu: {
+    setOnPage: (onPage: boolean) => {
+      ipcRenderer.sendSync('context:on-page', onPage === true)
+    },
+    onCopyPage: (cb) => {
+      const listener = (_e: IpcRendererEvent, format: 'rich' | 'markdown' | 'text') => cb(format)
+      ipcRenderer.on('page:copy', listener)
+      return () => ipcRenderer.removeListener('page:copy', listener)
+    },
+  },
   spellcheck: {
     set: (on: boolean) => ipcRenderer.send('spellcheck:set', on === true),
     onTurnedOff: (cb) => {

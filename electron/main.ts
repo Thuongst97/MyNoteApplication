@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
+import { app, BrowserWindow, clipboard, ClipboardItem as ElectronClipboardItem, dialog, ipcMain, Menu, nativeImage, net, Notification, protocol, screen, session, shell, Tray, type IpcMainEvent, type IpcMainInvokeEvent, type MenuItemConstructorOptions } from 'electron'
 import { SANDBOX_SCHEME, isAllowedFrameUrl, sandboxResponse } from './sandbox'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import path from 'node:path'
@@ -16,6 +16,8 @@ import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { contextMenuTemplate } from './contextMenu'
 import { renderPlantUml } from './plantuml'
+import { inlineAssetImages, singleImageSrc } from './clipboardRich'
+import { svgToPng } from './diagramImage'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -62,6 +64,24 @@ const on = (channel: string, fn: (e: IpcMainEvent) => void) =>
   ipcMain.on(channel, (e) => {
     if (trusted(e)) fn(e)
   })
+
+/** Puts HTML (+ plain text) on the clipboard with stored images embedded, and a single image as a picture. */
+async function writeRichClipboard(html: string, text: string) {
+  const inlined = await inlineAssetImages(html, (url) => assets.read(url))
+  const one = singleImageSrc(inlined)
+  let png: Buffer | undefined
+  if (one?.startsWith('data:image/')) {
+    const img = nativeImage.createFromDataURL(one)
+    if (!img.isEmpty()) png = img.toPNG()
+  }
+  await clipboard.write([
+    new ElectronClipboardItem({
+      ...(inlined && { 'text/html': inlined }),
+      'text/plain': text,
+      ...(png && { 'image/png': new Blob([new Uint8Array(png)], { type: 'image/png' }) }),
+    }),
+  ])
+}
 
 process.on('unhandledRejection', (reason) => console.error('[main] unhandled rejection:', reason))
 process.on('uncaughtException', (err) => console.error('[main] uncaught exception:', err))
@@ -123,6 +143,8 @@ let browseWin: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 let toldAboutBackground = false
+/** When the last right-click on a page happened (its menu offers "Copy page"). */
+let contextOnPage = 0
 /** Keep notifications referenced, otherwise their click handlers can be garbage-collected. */
 const liveNotifications = new Set<Notification>()
 
@@ -398,7 +420,11 @@ function createWindow() {
       replaceMisspelling: (w) => contents.replaceMisspelling(w),
       addToDictionary: (w) => contents.session.addWordToSpellCheckerDictionary(w),
       pasteAsPlainText: () => contents.pasteAndMatchStyle(),
-      copyImage: () => contents.copyImageAt(params.x, params.y),
+      // Stored images: the picture plus HTML with the image embedded (pastes into web apps).
+      copyImage: () =>
+        params.srcURL.startsWith('notion-asset://')
+          ? void writeRichClipboard(`<img src="${params.srcURL}">`, '').catch(() => contents.copyImageAt(params.x, params.y))
+          : contents.copyImageAt(params.x, params.y),
       copyText: (t) => clipboard.writeText(t),
       openExternal: (url) => {
         if (isSafeExternalUrl(url)) void shell.openExternal(url)
@@ -407,7 +433,10 @@ function createWindow() {
         contents.session.setSpellCheckerEnabled(false)
         contents.send('spellcheck:turned-off')
       },
+      // The page told us (just before) that the right-click was on a page.
+      ...(contextOnPage && Date.now() - contextOnPage < 2000 && { copyPage: (format: 'rich' | 'markdown' | 'text') => contents.send('page:copy', format) }),
     })
+    contextOnPage = 0
     if (template.length) Menu.buildFromTemplate(template).popup({ window: win ?? undefined })
   })
   win.once('ready-to-show', () => win?.show())
@@ -494,6 +523,11 @@ function createWindow() {
 function registerIpc() {
   // ---- Page CRUD -------------------------------------------------------
   // Spell check on/off (the app remembers the choice and tells us at startup).
+  // Sent synchronously from the page's contextmenu event, so it arrives before the menu opens.
+  ipcMain.on('context:on-page', (e, onPage: unknown) => {
+    contextOnPage = trusted(e) && onPage === true ? Date.now() : 0
+    e.returnValue = true
+  })
   ipcMain.on('spellcheck:set', (e, on: unknown) => {
     if (trusted(e)) e.sender.session.setSpellCheckerEnabled(on === true)
   })
@@ -538,6 +572,52 @@ function registerIpc() {
   )
 
   handle('save-asset', (_e, data: Uint8Array, mime: string) => assets.save(data, mime))
+  // ---- Clipboard with images, diagram images ------------------------------
+  handle('clipboard:write-rich', (_e, html: unknown, text: unknown) => writeRichClipboard(String(html ?? ''), String(text ?? '')))
+  // After a copy in the editor: embed the images of what was just copied.
+  handle('clipboard:inline-images', async () => {
+    const item = (await clipboard.read())[0]
+    const read = async (type: string) => (item?.types.includes(type) ? await ((await item.getType(type)) as Blob).text() : '')
+    const html = await read('text/html')
+    if (html.includes('notion-asset://')) await writeRichClipboard(html, await read('text/plain'))
+  })
+  const diagramPng = (svg: unknown, background: unknown) => {
+    const text = String(svg ?? '')
+    if (!/^\s*<svg[\s>]/i.test(text) || text.length > 20 * 1024 * 1024) throw new Error('Not a diagram')
+    return svgToPng(text, String(background ?? '#ffffff'))
+  }
+  handle('diagram:png', async (_e, svg: unknown, background: unknown) => (await diagramPng(svg, background)).toDataURL())
+  handle('diagram:copy', async (_e, svg: unknown, background: unknown) => {
+    const img = await diagramPng(svg, background)
+    await clipboard.write([
+      new ElectronClipboardItem({
+        'image/png': new Blob([new Uint8Array(img.toPNG())], { type: 'image/png' }),
+        'text/html': `<img src="${img.toDataURL()}">`,
+      }),
+    ])
+  })
+  handle('diagram:save', async (e, svg: unknown, background: unknown, name: unknown) => {
+    const parent = BrowserWindow.fromWebContents(e.sender) ?? win!
+    const r = await dialog.showSaveDialog(parent, {
+      title: 'Export diagram',
+      defaultPath: path.join(app.getPath('documents'), `${fileNameFor(String(name ?? 'Diagram'), 'png')}`),
+      filters: [
+        { name: 'PNG image', extensions: ['png'] },
+        { name: 'SVG image', extensions: ['svg'] },
+      ],
+    })
+    if (r.canceled || !r.filePath) return { ok: false as const }
+    if (/\.svg$/i.test(r.filePath)) {
+      const text = String(svg ?? '')
+      if (!/^\s*<svg[\s>]/i.test(text)) throw new Error('Not a diagram')
+      await fs.writeFile(r.filePath, text.includes('xmlns=') ? text : text.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'), 'utf8')
+    } else {
+      const file = /\.png$/i.test(r.filePath) ? r.filePath : `${r.filePath}.png`
+      await fs.writeFile(file, (await diagramPng(svg, background)).toPNG())
+    }
+    return { ok: true as const, path: r.filePath }
+  })
+
   handle('plantuml:render', (_e, server: string, source: string) => renderPlantUml(server, source, (url, init) => net.fetch(String(url), init)))
 
   // ---- Page files (export / import) ---------------------------------------
