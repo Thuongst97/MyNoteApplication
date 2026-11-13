@@ -113,12 +113,10 @@ export interface ElectronAPI {
     inlineImages: () => Promise<void>
   }
   diagrams: {
-    /** Copies a diagram (its SVG) as a PNG picture. */
-    copyImage: (svg: string, background: string) => Promise<void>
-    /** The diagram as a PNG data: URL. */
-    toPngDataUrl: (svg: string, background: string) => Promise<string>
-    /** Asks where to save the diagram as PNG or SVG. */
-    save: (svg: string, background: string, name: string) => Promise<{ ok: boolean; path?: string }>
+    /** Copies a diagram picture (PNG bytes). */
+    copyImage: (png: Uint8Array) => Promise<void>
+    /** Asks where to save the diagram, as PNG (these bytes) or SVG (this markup). */
+    save: (svg: string, png: Uint8Array, name: string) => Promise<{ ok: boolean; path?: string }>
   }
   pageMenu: {
     /** Tells the right-click menu whether it opens on a page (it then offers "Copy page"). */

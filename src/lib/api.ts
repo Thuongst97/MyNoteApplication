@@ -105,7 +105,7 @@ function createBrowserApi(): ElectronAPI {
       },
       inlineImages: async () => {},
     },
-    diagrams: { copyImage: async () => {}, toPngDataUrl: async () => '', save: async () => ({ ok: false }) },
+    diagrams: { copyImage: async () => {}, save: async () => ({ ok: false }) },
     pageMenu: { setOnPage: () => {}, onCopyPage: () => () => {} },
     spellcheck: { set: () => {}, onTurnedOff: () => () => {} },
     zoom: {

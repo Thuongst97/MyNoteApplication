@@ -52,9 +52,8 @@ const api: ElectronAPI = {
     inlineImages: () => ipcRenderer.invoke('clipboard:inline-images'),
   },
   diagrams: {
-    copyImage: (svg: string, background: string) => ipcRenderer.invoke('diagram:copy', svg, background),
-    toPngDataUrl: (svg: string, background: string) => ipcRenderer.invoke('diagram:png', svg, background),
-    save: (svg: string, background: string, name: string) => ipcRenderer.invoke('diagram:save', svg, background, name),
+    copyImage: (png: Uint8Array) => ipcRenderer.invoke('diagram:copy', png),
+    save: (svg: string, png: Uint8Array, name: string) => ipcRenderer.invoke('diagram:save', svg, png, name),
   },
   pageMenu: {
     setOnPage: (onPage: boolean) => {

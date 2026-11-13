@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Copy, Download, ImageDown } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAppStore } from '@/stores/useAppStore'
-import { diagramBackground, diagramSvg } from './pageCopy'
+import { diagramBackground, diagramSvg, svgToPng } from './pageCopy'
 
 /**
  * "Export" for a rendered diagram (Mermaid, PlantUML): copy it as a picture (pastes into
@@ -27,10 +27,10 @@ export function DiagramExportButton({ getRoot, name }: { getRoot: () => Element 
     const bg = diagramBackground(root ?? null)
     try {
       if (what === 'copy') {
-        await api.diagrams.copyImage(svg, bg)
+        await api.diagrams.copyImage(await svgToPng(svg, bg))
         toast('Diagram copied as an image')
       } else {
-        const r = await api.diagrams.save(svg, bg, name)
+        const r = await api.diagrams.save(svg, await svgToPng(svg, bg), name)
         if (r.ok) toast('Diagram saved')
       }
     } catch (err) {

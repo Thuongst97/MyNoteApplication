@@ -13,16 +13,58 @@ export function diagramSvg(root: Element | null | undefined): string | null {
   const svg = root?.querySelector('svg')
   if (!svg) return null
   const clone = svg.cloneNode(true) as SVGSVGElement
-  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-  const box = svg.getBoundingClientRect()
+  // (XMLSerializer below writes the SVG namespace itself.)
+  // Its natural size (in the page it may be scaled down to fit: max-width, width="100%").
+  clone.style.removeProperty('max-width')
+  clone.style.removeProperty('width')
+  clone.style.removeProperty('height')
+  if (!clone.getAttribute('style')?.trim()) clone.removeAttribute('style')
+  // Natural size: the viewBox, else numeric width/height, else the size it's shown at.
   const vb = svg.viewBox?.baseVal
-  const w = vb?.width || box.width
-  const h = vb?.height || box.height
+  const attr = (n: string) => (/^[\d.]+(px)?$/.test(svg.getAttribute(n) ?? '') ? parseFloat(svg.getAttribute(n)!) : 0)
+  const box = svg.getBoundingClientRect()
+  const w = vb?.width || attr('width') || box.width
+  const h = vb?.height || attr('height') || box.height
   if (w && h) {
     clone.setAttribute('width', String(Math.round(w)))
     clone.setAttribute('height', String(Math.round(h)))
   }
-  return clone.outerHTML
+  // XML, not HTML: labels hold HTML such as <br>, which must be <br/> in an SVG file or image.
+  return new XMLSerializer().serializeToString(clone)
+}
+
+/** Largest picture made from a diagram (pixels per side, and in all). */
+const MAX_SIDE = 16000
+const MAX_AREA = 120_000_000
+
+/**
+ * Draws a diagram's SVG (see diagramSvg) into a PNG at `scale` (sharp on high-DPI screens and
+ * in documents), on `background`. Done on a canvas in the page: no window or screen size limit.
+ */
+export async function svgToPng(svg: string, background: string, scale = 2): Promise<Uint8Array> {
+  const w = Number(/<svg\b[^>]*\swidth="([\d.]+)"/i.exec(svg)?.[1]) || 800
+  const h = Number(/<svg\b[^>]*\sheight="([\d.]+)"/i.exec(svg)?.[1]) || 600
+  const s = Math.max(0.1, Math.min(scale, MAX_SIDE / Math.max(w, h), Math.sqrt(MAX_AREA / (w * h))))
+  const img = new Image()
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  await img.decode()
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(w * s))
+  canvas.height = Math.max(1, Math.round(h * s))
+  const g = canvas.getContext('2d')
+  if (!g) throw new Error('Could not draw the diagram')
+  g.fillStyle = background
+  g.fillRect(0, 0, canvas.width, canvas.height)
+  g.drawImage(img, 0, 0, canvas.width, canvas.height)
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/png'))
+  if (!blob) throw new Error('Could not draw the diagram')
+  return new Uint8Array(await blob.arrayBuffer())
+}
+
+const toDataUrl = (png: Uint8Array) => {
+  let bin = ''
+  for (let i = 0; i < png.length; i += 0x8000) bin += String.fromCharCode(...png.subarray(i, i + 0x8000))
+  return `data:image/png;base64,${btoa(bin)}`
 }
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -47,7 +89,7 @@ export async function pageHtml(editor: Editor, title: string): Promise<string> {
     for (const [i, el] of els.entries()) {
       const svg = diagramSvg(live[type][i])
       let src = ''
-      if (svg) src = await api.diagrams.toPngDataUrl(svg, '#ffffff').catch(() => '')
+      if (svg) src = await svgToPng(svg, '#ffffff').then(toDataUrl, () => '')
       const img = doc.createElement('img')
       if (src) {
         img.setAttribute('src', src)

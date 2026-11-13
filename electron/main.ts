@@ -17,7 +17,6 @@ import { existsSync } from 'node:fs'
 import { contextMenuTemplate } from './contextMenu'
 import { renderPlantUml } from './plantuml'
 import { inlineAssetImages, singleImageSrc } from './clipboardRich'
-import { svgToPng } from './diagramImage'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -581,14 +580,15 @@ function registerIpc() {
     const html = await read('text/html')
     if (html.includes('notion-asset://')) await writeRichClipboard(html, await read('text/plain'))
   })
-  const diagramPng = (svg: unknown, background: unknown) => {
-    const text = String(svg ?? '')
-    if (!/^\s*<svg[\s>]/i.test(text) || text.length > 20 * 1024 * 1024) throw new Error('Not a diagram')
-    return svgToPng(text, String(background ?? '#ffffff'))
+  /** PNG bytes from the page (diagrams are drawn there); checked before use. */
+  const pngBytes = (png: unknown) => {
+    if (!(png instanceof Uint8Array) || png.byteLength < 8 || png.byteLength > 200 * 1024 * 1024) throw new Error('Not an image')
+    const img = nativeImage.createFromBuffer(Buffer.from(png))
+    if (img.isEmpty()) throw new Error('Not an image')
+    return img
   }
-  handle('diagram:png', async (_e, svg: unknown, background: unknown) => (await diagramPng(svg, background)).toDataURL())
-  handle('diagram:copy', async (_e, svg: unknown, background: unknown) => {
-    const img = await diagramPng(svg, background)
+  handle('diagram:copy', async (_e, png: unknown) => {
+    const img = pngBytes(png)
     await clipboard.write([
       new ElectronClipboardItem({
         'image/png': new Blob([new Uint8Array(img.toPNG())], { type: 'image/png' }),
@@ -596,7 +596,7 @@ function registerIpc() {
       }),
     ])
   })
-  handle('diagram:save', async (e, svg: unknown, background: unknown, name: unknown) => {
+  handle('diagram:save', async (e, svg: unknown, png: unknown, name: unknown) => {
     const parent = BrowserWindow.fromWebContents(e.sender) ?? win!
     const r = await dialog.showSaveDialog(parent, {
       title: 'Export diagram',
@@ -613,7 +613,7 @@ function registerIpc() {
       await fs.writeFile(r.filePath, text.includes('xmlns=') ? text : text.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'), 'utf8')
     } else {
       const file = /\.png$/i.test(r.filePath) ? r.filePath : `${r.filePath}.png`
-      await fs.writeFile(file, (await diagramPng(svg, background)).toPNG())
+      await fs.writeFile(file, pngBytes(png).toPNG())
     }
     return { ok: true as const, path: r.filePath }
   })

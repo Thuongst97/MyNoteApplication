@@ -29,21 +29,3 @@ export function singleImageSrc(html: string): string | null {
   const srcs = [...html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/gi)].map((m) => m[1])
   return srcs.length === 1 ? srcs[0] : null
 }
-
-/** Size of an SVG from its width/height or viewBox (px), clamped to sane bounds. */
-export function svgSize(svg: string): { width: number; height: number } {
-  const open = /<svg\b[^>]*>/i.exec(svg)?.[0] ?? ''
-  const num = (name: string) => {
-    const m = new RegExp(`\\b${name}="([\\d.]+)(px)?"`, 'i').exec(open)
-    return m ? Number(m[1]) : NaN
-  }
-  let width = num('width')
-  let height = num('height')
-  const vb = /\bviewBox="[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)"/i.exec(open)
-  if (vb && !(width > 0 && height > 0)) {
-    width = Number(vb[1])
-    height = Number(vb[2])
-  }
-  const clamp = (n: number) => Math.round(Math.min(8000, Math.max(16, Number.isFinite(n) && n > 0 ? n : 600)))
-  return { width: clamp(width), height: clamp(height) }
-}
