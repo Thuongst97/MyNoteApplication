@@ -47,7 +47,7 @@ export function Sidebar() {
       ref={asideRef}
       style={{ width: isOpen ? width : 0 }}
       className={cn(
-        'group/sidebar relative flex h-full shrink-0 flex-col overflow-hidden bg-sidebar-light text-ink-light/80 transition-[width] duration-200 ease-out dark:bg-sidebar-dark dark:text-ink-dark/80',
+        'group/sidebar relative flex h-full shrink-0 flex-col overflow-hidden bg-sidebar-light text-ink-light transition-[width] duration-200 ease-out dark:bg-sidebar-dark dark:text-ink-dark',
         isOpen && 'border-r border-black/5 dark:border-white/5',
       )}
     >
@@ -72,18 +72,18 @@ export function Sidebar() {
             onClick={() => setSearchOpen(true)}
             className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            <Search size={16} className="opacity-70" />
+            <Search size={16} className="opacity-85" />
             <span className="flex-1 text-left">Search</span>
-            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘⇧F' : 'Ctrl+Shift+F'}</kbd>
+            <kbd className="text-[11px] opacity-50">{isMacLike() ? '⌘⇧F' : 'Ctrl+Shift+F'}</kbd>
           </button>
           <button
             type="button"
             onClick={() => void createPage(null)}
             className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            <Plus size={16} className="opacity-70" />
+            <Plus size={16} className="opacity-85" />
             <span className="flex-1 text-left">New page</span>
-            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘N' : 'Ctrl+N'}</kbd>
+            <kbd className="text-[11px] opacity-50">{isMacLike() ? '⌘N' : 'Ctrl+N'}</kbd>
           </button>
           <button
             type="button"
@@ -93,7 +93,7 @@ export function Sidebar() {
               view === 'tasks' && 'bg-black/[0.06] font-medium text-ink-light dark:bg-white/[0.09] dark:text-white',
             )}
           >
-            <CheckSquare size={16} className="opacity-70" />
+            <CheckSquare size={16} className="opacity-85" />
             <span className="flex-1 text-left">Tasks</span>
             {dueCount > 0 && (
               <span
@@ -112,16 +112,16 @@ export function Sidebar() {
               view === 'graph' && 'bg-black/[0.06] font-medium text-ink-light dark:bg-white/[0.09] dark:text-white',
             )}
           >
-            <Network size={16} className="opacity-70" />
+            <Network size={16} className="opacity-85" />
             <span className="flex-1 text-left">Graph view</span>
-            <kbd className="text-[11px] opacity-40">{isMacLike() ? '⌘⇧G' : 'Ctrl+Shift+G'}</kbd>
+            <kbd className="text-[11px] opacity-50">{isMacLike() ? '⌘⇧G' : 'Ctrl+Shift+G'}</kbd>
           </button>
           <button
             type="button"
             onClick={() => void createPage(null, { kind: 'whiteboard', title: 'Untitled whiteboard' })}
             className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            <Shapes size={16} className="opacity-70" />
+            <Shapes size={16} className="opacity-85" />
             <span className="flex-1 text-left">New whiteboard</span>
           </button>
           <button
@@ -129,7 +129,7 @@ export function Sidebar() {
             onClick={() => void createPage(null, { kind: 'slides', title: 'Untitled presentation' })}
             className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            <Presentation size={16} className="opacity-70" />
+            <Presentation size={16} className="opacity-85" />
             <span className="flex-1 text-left">New presentation</span>
           </button>
           <button
@@ -138,14 +138,14 @@ export function Sidebar() {
             onClick={() => void importPageFile(null)}
             className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            <FileDown size={16} className="opacity-70" />
+            <FileDown size={16} className="opacity-85" />
             <span className="flex-1 text-left">Import</span>
           </button>
         </div>
 
         {/* Page tree */}
         <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-4">
-          <div className="px-2 pb-1 pt-2 text-xs font-medium opacity-50">Pages</div>
+          <div className="px-2 pb-1 pt-2 text-xs font-medium opacity-65">Pages</div>
           <div role="tree" aria-label="Pages">
             {roots.map((p) => (
               <PageTreeItem key={p.id} page={p} depth={0} />
@@ -161,7 +161,7 @@ export function Sidebar() {
             onClick={toggleTheme}
             className="flex h-[30px] min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
-            {theme === 'dark' ? <Sun size={16} className="opacity-70" /> : <Moon size={16} className="opacity-70" />}
+            {theme === 'dark' ? <Sun size={16} className="opacity-85" /> : <Moon size={16} className="opacity-85" />}
             <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
           </button>
           <ThemePicker />

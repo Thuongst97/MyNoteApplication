@@ -69,7 +69,7 @@ export function ThemePicker() {
         }}
         className="flex h-[30px] w-[30px] items-center justify-center rounded-md hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
       >
-        <Palette size={16} className="opacity-70" />
+        <Palette size={16} className="opacity-85" />
       </button>
       {open &&
         pos &&

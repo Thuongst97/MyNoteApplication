@@ -97,11 +97,11 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
         >
           <ChevronRight
             size={14}
-            className={cn('opacity-50 transition-transform duration-150', isExpanded && 'rotate-90', !hasChildren && 'opacity-25')}
+            className={cn('opacity-60 transition-transform duration-150', isExpanded && 'rotate-90', !hasChildren && 'opacity-30')}
           />
         </button>
         <span className="flex w-5 shrink-0 items-center justify-center text-[15px] leading-none">
-          {page.icon ?? <PageKindIcon kind={page.kind} size={15} className="opacity-60" />}
+          {page.icon ?? <PageKindIcon kind={page.kind} size={15} className="opacity-80" />}
         </span>
 
         {renaming ? (
@@ -238,7 +238,7 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           {hasChildren ? (
             children.map((child) => <PageTreeItem key={child.id} page={child} depth={depth + 1} />)
           ) : (
-            <div style={{ paddingLeft: 8 + (depth + 1) * 14 + 24 }} className="py-1 text-xs opacity-40">
+            <div style={{ paddingLeft: 8 + (depth + 1) * 14 + 24 }} className="py-1 text-xs opacity-55">
               No pages inside
             </div>
           )}
@@ -266,7 +266,7 @@ function IconButton({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex h-5 w-5 items-center justify-center rounded opacity-60 hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+      className="flex h-5 w-5 items-center justify-center rounded opacity-75 hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
     >
       {children}
     </button>
