@@ -20,8 +20,10 @@ const saved = async (id: string) => {
 const thumbs = () => within(screen.getByRole('listbox', { name: 'Slides' })).getAllByRole('option')
 
 describe('themes and starter decks', () => {
-  it('7 themes, including the AI theme, each with readable tokens', () => {
-    expect(SLIDE_THEMES.map((t) => t.id)).toEqual(['obsidian', 'champagne', 'platinum', 'electric', 'carbon', 'aurora', 'neural'])
+  it('12 themes (6 light), including the AI themes, each with readable tokens', () => {
+    expect(SLIDE_THEMES.map((t) => t.id)).toEqual(['obsidian', 'champagne', 'platinum', 'electric', 'carbon', 'aurora', 'neural', 'ivory', 'glacier', 'studio', 'sage', 'lumen'])
+    expect(SLIDE_THEMES.filter((t) => !t.dark).map((t) => t.id)).toEqual(['platinum', 'ivory', 'glacier', 'studio', 'sage', 'lumen'])
+    expect(new Set(SLIDE_THEMES.map((t) => t.deck.title)).size).toBe(SLIDE_THEMES.length)
     expect(slideTheme('neural')!.tag).toBe('AI')
     expect(slideTheme('nope')).toBeNull()
     for (const t of SLIDE_THEMES) {
@@ -79,7 +81,13 @@ describe('PresentationPage: gallery, theme, footer, hide, notes', () => {
     await act(async () => void (id = await useAppStore.getState().createPage(null, { kind: 'slides', title: 'Deck' })))
     render(<PresentationPage pageId={id} />)
     const dialog = await screen.findByRole('dialog', { name: 'Presentation theme' })
-    expect(within(dialog).getAllByRole('button', { name: /^(?!No ).* theme$/ })).toHaveLength(7)
+    expect(within(dialog).getAllByRole('button', { name: /^(?!No ).* theme$/ })).toHaveLength(12)
+    // Filter: light / dark themes.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Light' }))
+    expect(within(dialog).getAllByRole('button', { name: /^(?!No ).* theme$/ }).map((b) => b.getAttribute('aria-label'))).toEqual(['Platinum theme', 'Ivory Editorial theme', 'Glacier theme', 'Studio White theme', 'Sage & Stone theme', 'Lumen theme'])
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Dark' }))
+    expect(within(dialog).getAllByRole('button', { name: /^(?!No ).* theme$/ })).toHaveLength(6)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'All' }))
     expect(within(dialog).getByRole('checkbox', { name: /Start with sample slides/ })).toBeChecked()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Neural theme' }))
     expect(screen.queryByRole('dialog', { name: 'Presentation theme' })).toBeNull()

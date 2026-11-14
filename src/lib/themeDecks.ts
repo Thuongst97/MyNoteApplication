@@ -59,7 +59,10 @@ export function starterDeck(theme: SlideTheme): SlideData[] {
   const title = newSlide('title')
   title.content = doc(h(4, theme.deck.eyebrow), h(1, theme.deck.title), p(theme.deck.sub))
   // Upper part of the slide (the theme's artwork owns the lower right / horizon).
-  title.frame = { x: 96, y: 96, w: theme.id === 'aurora' || theme.id === 'neural' ? 660 : theme.id === 'carbon' ? 820 : 980, h: 380 }
+  // Narrower titles where the artwork sits on the right.
+  const narrow = ['aurora', 'neural', 'glacier', 'lumen'].includes(theme.id)
+  const medium = ['carbon', 'ivory', 'studio'].includes(theme.id)
+  title.frame = { x: 96, y: 96, w: narrow ? 660 : medium ? 820 : 980, h: 380 }
 
   const agenda = newSlide('content')
   agenda.content = doc(h(4, 'Agenda'), h(2, 'Today'))

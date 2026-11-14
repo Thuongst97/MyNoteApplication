@@ -3,7 +3,7 @@
  * fonts, colors, cards and the title slide's artwork. Artwork is static SVG/HTML made here
  * (never user content), drawn behind the slide's blocks.
  */
-export type ThemeId = 'obsidian' | 'champagne' | 'platinum' | 'electric' | 'carbon' | 'aurora' | 'neural'
+export type ThemeId = 'obsidian' | 'champagne' | 'platinum' | 'electric' | 'carbon' | 'aurora' | 'neural' | 'ivory' | 'glacier' | 'studio' | 'sage' | 'lumen'
 
 export interface SlideTheme {
   id: ThemeId
@@ -246,6 +246,150 @@ export const SLIDE_THEMES: SlideTheme[] = [
       </svg>`
     },
     deck: { eyebrow: 'AI in the vehicle', title: 'The Intelligent Cockpit', sub: 'On-device assistant, driver monitoring and predictive maintenance.', topic: 'ai' },
+  },
+  // ---------------------------------------------------------------- light themes
+  {
+    id: 'ivory',
+    name: 'Ivory Editorial',
+    tag: 'Light · editorial',
+    blurb: 'Warm ivory paper, charcoal serif titles and a bronze accent.',
+    dark: false,
+    bg: 'linear-gradient(180deg,#faf7f1 0%,#f2ece1 100%)',
+    text: '#1d1b18',
+    muted: '#6f675c',
+    hair: 'rgba(29,27,24,.12)',
+    accent: '#a2522c',
+    accentText: '#a2522c',
+    accent2: '#d4a373',
+    grad: 'linear-gradient(90deg,#a2522c,#d4a373)',
+    card: 'rgba(255,253,248,.85)',
+    cardBorder: 'rgba(29,27,24,.10)',
+    titleFont: LORA,
+    titleWeight: 500,
+    titleTracking: '-0.02em',
+    grain: 0.07,
+    art: () =>
+      `<svg style="position:absolute;inset:0" width="1280" height="720" viewBox="0 0 1280 720" aria-hidden="true">
+        ${Array.from({ length: 9 }, (_, i) => `<path d="M${760 + i * 6} 760 C ${880 + i * 10} ${560 - i * 14} ${1040 + i * 8} ${470 - i * 16} ${1340} ${300 - i * 22}" fill="none" stroke="#a2522c" stroke-opacity="${(0.08 + i * 0.035).toFixed(3)}" stroke-width="1.2"/>`).join('')}
+        <circle cx="1080" cy="190" r="74" fill="none" stroke="#a2522c" stroke-opacity=".35" stroke-width="1.2"/>
+        <circle cx="1080" cy="190" r="6" fill="#a2522c"/>
+      </svg>`,
+    deck: { eyebrow: 'Design review', title: 'The Calm Cockpit', sub: 'Materials, light and type for the 2027 interior.', topic: 'cockpit' },
+  },
+  {
+    id: 'glacier',
+    name: 'Glacier',
+    tag: 'Light · connected',
+    blurb: 'Icy white-blue, deep navy type, teal accent and frosted glass cards.',
+    dark: false,
+    bg: 'linear-gradient(160deg,#f7fbfd 0%,#e6f0f6 100%)',
+    text: '#0c1b2e',
+    muted: '#56677c',
+    hair: 'rgba(12,27,46,.10)',
+    accent: '#0e8fae',
+    accentText: '#0b7f9c',
+    accent2: '#7cc6dc',
+    grad: 'linear-gradient(90deg,#0e8fae,#5b7cfa)',
+    card: 'rgba(255,255,255,.66)',
+    cardBorder: 'rgba(255,255,255,.95)',
+    titleFont: INTER,
+    titleWeight: 600,
+    titleTracking: '-0.035em',
+    round: true,
+    grain: 0.04,
+    art: () =>
+      `<div style="position:absolute;right:-100px;top:-140px;width:760px;height:620px;filter:blur(70px);opacity:.8;background:radial-gradient(40% 45% at 35% 40%,#9fe3f2 0%,transparent 70%),radial-gradient(40% 45% at 70% 60%,#b9c8ff 0%,transparent 70%)"></div>
+      <div style="position:absolute;right:110px;top:250px;width:320px;height:190px;border-radius:26px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.95);box-shadow:0 24px 60px rgba(12,27,46,.12)">
+        <div style="position:absolute;left:26px;top:24px;font:500 14px ${INTER};color:#56677c;letter-spacing:.04em">5G TCU · fleet</div>
+        <div style="position:absolute;left:26px;top:54px;font:600 52px ${INTER};color:#0c1b2e;letter-spacing:-0.03em">99.95%</div>
+        <div style="position:absolute;left:26px;top:122px;font:400 15px ${INTER};color:#56677c">connectivity uptime</div>
+        <div style="position:absolute;left:26px;right:26px;bottom:24px;height:4px;border-radius:2px;background:rgba(12,27,46,.08)"><div style="width:96%;height:4px;border-radius:2px;background:linear-gradient(90deg,#0e8fae,#5b7cfa)"></div></div></div>`,
+    deck: { eyebrow: 'Validation report', title: 'Telematics 5G — Ready to Launch', sub: 'eCall, OTA and V2X validated across 14 countries.', topic: 'telematics' },
+  },
+  {
+    id: 'studio',
+    name: 'Studio White',
+    tag: 'Light · Swiss',
+    blurb: 'Pure white, bold black type, a precise grid and signal orange.',
+    dark: false,
+    bg: '#ffffff',
+    text: '#0a0a0a',
+    muted: '#6b6b6b',
+    hair: 'rgba(10,10,10,.14)',
+    accent: '#ff4f12',
+    accentText: '#e8430a',
+    accent2: '#0a0a0a',
+    grad: 'linear-gradient(90deg,#ff4f12,#ff8a3d)',
+    card: '#f6f6f4',
+    cardBorder: 'rgba(10,10,10,.06)',
+    titleFont: INTER,
+    titleWeight: 700,
+    titleTracking: '-0.045em',
+    mono: true,
+    grain: 0,
+    pattern: 'linear-gradient(rgba(10,10,10,.045) 1px,transparent 1px) 0 0/80px 80px,linear-gradient(90deg,rgba(10,10,10,.045) 1px,transparent 1px) 0 0/80px 80px',
+    art: () =>
+      `<div style="position:absolute;right:-160px;bottom:-200px;width:620px;height:620px;border-radius:50%;background:#ff4f12"></div>
+      <div style="position:absolute;right:300px;top:120px;width:160px;height:160px;border:2px solid #0a0a0a;border-radius:50%"></div>
+      <div style="position:absolute;right:96px;top:96px;font:500 13px ${MONO};letter-spacing:.12em;color:#0a0a0a">01 — PLATFORM</div>`,
+    deck: { eyebrow: 'Platform 2027', title: 'One Stack. Every Screen.', sub: 'Cluster, head unit and telematics on one software platform.', topic: 'platform' },
+  },
+  {
+    id: 'sage',
+    name: 'Sage & Stone',
+    tag: 'Light · EV & sustainability',
+    blurb: 'Soft stone and sage, forest-green type and gentle landscape lines.',
+    dark: false,
+    bg: 'linear-gradient(180deg,#f6f6f1 0%,#e9ece3 100%)',
+    text: '#17241d',
+    muted: '#5e6b62',
+    hair: 'rgba(23,36,29,.12)',
+    accent: '#2e7d57',
+    accentText: '#256b4a',
+    accent2: '#9cc5a1',
+    grad: 'linear-gradient(90deg,#2e7d57,#8bbf6a)',
+    card: 'rgba(255,255,255,.7)',
+    cardBorder: 'rgba(23,36,29,.08)',
+    titleFont: INTER,
+    titleWeight: 600,
+    titleTracking: '-0.035em',
+    round: true,
+    grain: 0.05,
+    art: () =>
+      `<svg style="position:absolute;inset:0" width="1280" height="720" viewBox="0 0 1280 720" aria-hidden="true">
+        <path d="M560 720 C 760 600 900 640 1040 560 S 1240 470 1300 480 L 1300 720 Z" fill="#9cc5a1" fill-opacity=".35"/>
+        <path d="M680 720 C 840 640 980 660 1100 600 S 1260 540 1300 545 L 1300 720 Z" fill="#2e7d57" fill-opacity=".22"/>
+        <circle cx="1090" cy="210" r="56" fill="#e7c76b" fill-opacity=".55"/>
+      </svg>`,
+    deck: { eyebrow: 'EV program', title: 'More Range, Less Energy', sub: 'Efficiency gains delivered over the air in 2026.', topic: 'cluster' },
+  },
+  {
+    id: 'lumen',
+    name: 'Lumen',
+    tag: 'Light · AI',
+    blurb: 'Bright lavender white with a soft violet-to-peach glow — AI in daylight.',
+    dark: false,
+    bg: 'linear-gradient(180deg,#fcfbff 0%,#f1eefb 100%)',
+    text: '#151230',
+    muted: '#666180',
+    hair: 'rgba(21,18,48,.10)',
+    accent: '#6d4aff',
+    accentText: '#5b3df0',
+    accent2: '#ff8f6b',
+    grad: 'linear-gradient(90deg,#6d4aff,#e05aa8 55%,#ff9a62)',
+    card: 'rgba(255,255,255,.75)',
+    cardBorder: 'rgba(109,74,255,.12)',
+    titleFont: INTER,
+    titleWeight: 600,
+    titleTracking: '-0.04em',
+    round: true,
+    grain: 0.04,
+    art: () =>
+      `<div style="position:absolute;right:40px;top:90px;width:540px;height:540px;border-radius:50%;filter:blur(50px);opacity:.55;background:conic-gradient(from 200deg at 50% 50%,#6d4aff,#e05aa8,#ff9a62,#6d4aff);-webkit-mask:radial-gradient(circle,#000 28%,transparent 68%);mask:radial-gradient(circle,#000 28%,transparent 68%)"></div>
+      <svg style="position:absolute;inset:0" width="1280" height="720" viewBox="0 0 1280 720" aria-hidden="true">
+        ${[[860, 200], [980, 150], [1100, 230], [920, 330], [1050, 360], [1170, 330], [990, 480], [1120, 500]].map(([x, y], i, a) => (i ? `<line x1="${a[i - 1][0]}" y1="${a[i - 1][1]}" x2="${x}" y2="${y}" stroke="#6d4aff" stroke-opacity=".25"/>` : '') + `<circle cx="${x}" cy="${y}" r="${i % 3 ? 3.5 : 5}" fill="#6d4aff" fill-opacity=".75"/>`).join('')}
+      </svg>`,
+    deck: { eyebrow: 'AI in the vehicle', title: 'Assistance You Can Trust', sub: 'On-device intelligence for drivers — private by design.', topic: 'ai' },
   },
 ]
 

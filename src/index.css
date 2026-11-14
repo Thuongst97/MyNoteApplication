@@ -1149,7 +1149,11 @@ body.block-dragging .prosemirror-dropcursor-inline {
   border-radius: var(--st-card-radius);
   padding: 26px 28px 22px;
 }
-.theme-platinum .slide-content .notion-editor [data-type='column'] { box-shadow: 0 10px 30px rgba(11, 18, 32, 0.06); }
+.theme-platinum .slide-content .notion-editor [data-type='column'],
+.theme-ivory .slide-content .notion-editor [data-type='column'],
+.theme-sage .slide-content .notion-editor [data-type='column'] { box-shadow: 0 10px 30px rgba(11, 18, 32, 0.06); }
+.theme-glacier .slide-content .notion-editor [data-type='column'],
+.theme-lumen .slide-content .notion-editor [data-type='column'] { box-shadow: 0 18px 40px rgba(30, 40, 90, 0.08); backdrop-filter: blur(14px); }
 .slide-themed .slide-content .notion-editor [data-type='column'] h1 {
   font-family: 'Inter', sans-serif;
   font-weight: 600;

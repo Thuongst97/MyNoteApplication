@@ -36,6 +36,8 @@ export function ThemeGallery({
   onClose: () => void
 }) {
   const [samples, setSamples] = useState(fresh)
+  const [look, setLook] = useState<'all' | 'light' | 'dark'>('all')
+  const shown = SLIDE_THEMES.filter((t) => look === 'all' || (look === 'dark') === t.dark)
   useEffect(() => {
     document.body.classList.add('drawing-open')
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -54,12 +56,31 @@ export function ThemeGallery({
             <div className="text-xl font-semibold tracking-tight">{fresh ? 'Start your presentation' : 'Presentation theme'}</div>
             <div className="mt-1 text-sm opacity-60">Premium themes for tech & automotive topics. Fonts, colors, cards, charts and the title slide all follow the theme.</div>
           </div>
+          <div role="group" aria-label="Show themes" className="flex rounded-lg bg-black/5 p-0.5 text-sm dark:bg-white/10">
+            {(
+              [
+                ['all', 'All'],
+                ['light', 'Light'],
+                ['dark', 'Dark'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={look === id}
+                onClick={() => setLook(id)}
+                className={cn('rounded-md px-3 py-1', look === id ? 'bg-white font-medium shadow-sm dark:bg-[#3a3a3a]' : 'opacity-60 hover:opacity-100')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button type="button" aria-label="Close" onClick={onClose} className="rounded-md p-1.5 opacity-60 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10">
             <X size={18} />
           </button>
         </div>
         <div className="grid min-h-0 grid-cols-2 gap-5 overflow-y-auto px-7 pb-2 md:grid-cols-3 lg:grid-cols-4">
-          {SLIDE_THEMES.map((t) => (
+          {shown.map((t) => (
             <button
               key={t.id}
               type="button"

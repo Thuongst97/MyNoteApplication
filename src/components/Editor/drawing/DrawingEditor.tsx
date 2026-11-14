@@ -11,6 +11,7 @@ import { externalizeFiles, inlineFiles, replaceInSvg } from '@/lib/sceneFiles'
 import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { useTwoWayArrowTool } from '@/components/Whiteboard/twoWayArrow'
 import { useMovableShapePanel } from '@/components/Whiteboard/movablePanel'
+import { OFFICE_SHAPE_DEFAULTS, useOfficeShapes } from '@/components/Whiteboard/officeShapes'
 
 interface Props {
   initial: DrawingData
@@ -30,6 +31,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   useMovableShapePanel(canvasRef)
+  const office = useOfficeShapes(library.api, canvasRef)
   // Stored images are asset files; load them back inline for Excalidraw (once).
   const [initialData] = useState(() =>
     inlineFiles(initial.scene.files).then((files): ExcalidrawInitialDataState => ({
@@ -42,6 +44,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
         currentItemFontFamily: FONT_FAMILY.Nunito,
         currentItemRoundness: 'sharp',
         currentItemStrokeWidth: 2,
+        ...OFFICE_SHAPE_DEFAULTS,
       },
       scrollToContent: true,
     })),
@@ -120,7 +123,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
     >
       <div className="drag flex h-11 shrink-0 items-center gap-2 border-b border-black/10 px-4 dark:border-white/10" style={{ paddingLeft: isMacLike() ? 84 : undefined }}>
         <span className="text-sm font-medium">Drawing</span>
-        <span className="text-xs opacity-50">Shapes, arrows, text, pen — pick a tool from the toolbar</span>
+        <span className="text-xs opacity-50">Pick a shape from the toolbar · select a shape and type to write in it · Background sets its fill</span>
         <span className="ml-auto text-xs opacity-40">{mod}+Enter to save</span>
         <button type="button" onClick={cancel} className="no-drag flex items-center gap-1 rounded-md px-2.5 py-1 text-sm hover:bg-black/5 dark:hover:bg-white/10">
           <X size={14} /> Cancel
@@ -146,6 +149,7 @@ export default function DrawingEditor({ initial, theme, onClose }: Props) {
           initialData={initialData}
           onChange={(_elements, state, _files) => {
             twoWay.onAppStateChange(state)
+            office.onAppStateChange(state)
             if (apiRef.current) dirty.current = true
           }}
           UIOptions={{

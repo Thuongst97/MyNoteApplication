@@ -11,6 +11,7 @@ import { useLibraryIntegration } from '@/components/Library/LibraryPanel'
 import { canvasBackground } from '@/components/Editor/drawing/drawingModel'
 import { useTwoWayArrowTool } from './twoWayArrow'
 import { useMovableShapePanel } from './movablePanel'
+import { OFFICE_SHAPE_DEFAULTS, useOfficeShapes } from './officeShapes'
 
 interface Props {
   theme: Theme
@@ -26,6 +27,7 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
   const twoWay = useTwoWayArrowTool(library.api)
   const hostRef = useRef<HTMLDivElement>(null)
   useMovableShapePanel(hostRef)
+  const office = useOfficeShapes(library.api, hostRef)
 
   return (
     <div ref={hostRef} className={`relative h-full w-full${twoWay.active ? ' two-way-arrow-host' : ''}`}>
@@ -43,11 +45,13 @@ export default function WhiteboardCanvas({ theme, initial, onChange }: Props) {
           currentItemFontFamily: FONT_FAMILY.Nunito,
           currentItemRoundness: 'sharp',
           currentItemStrokeWidth: 2,
+          ...OFFICE_SHAPE_DEFAULTS,
         },
         scrollToContent: true,
       }}
       onChange={(elements, appState, files) => {
         twoWay.onAppStateChange(appState)
+        office.onAppStateChange(appState)
         const hash = hashElementsVersion(elements)
         const fileCount = Object.keys(files).length
         if (lastHash.current === null) {
