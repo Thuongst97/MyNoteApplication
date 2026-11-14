@@ -1,10 +1,10 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
-import { PageTreeItem, pageDrag } from './PageTreeItem'
+import { PAGE_DRAG_END, PageTreeItem, pageDrag } from './PageTreeItem'
 import { planMove } from '@/lib/pageMove'
 import { ThemePicker } from './ThemePicker'
 import { importPageFile } from '@/components/Editor/pageFiles'
@@ -23,6 +23,17 @@ export function Sidebar() {
   })
   const roots = useChildPages(null)
   const [rootDrop, setRootDrop] = useState(false)
+  // A drop on a page row (or anywhere) ends the drag without reaching this area: always clear.
+  useEffect(() => {
+    if (!rootDrop) return
+    const clear = () => setRootDrop(false)
+    window.addEventListener('dragend', clear, true)
+    window.addEventListener(PAGE_DRAG_END, clear)
+    return () => {
+      window.removeEventListener('dragend', clear, true)
+        window.removeEventListener(PAGE_DRAG_END, clear)
+    }
+  }, [rootDrop])
   const isMac = platform === 'darwin'
   const asideRef = useRef<HTMLElement>(null)
 
@@ -166,6 +177,7 @@ export function Sidebar() {
             const plan = planMove(useAppStore.getState().pages, id, null, 'after')
             if (plan) void useAppStore.getState().movePage(id, plan.parentId, plan.order)
             pageDrag.id = null
+            window.dispatchEvent(new Event(PAGE_DRAG_END))
           }}
         >
           <div className="px-2 pb-1 pt-2 text-xs font-medium opacity-65">Pages</div>

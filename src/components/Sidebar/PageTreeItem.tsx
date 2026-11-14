@@ -14,6 +14,12 @@ import { dropPositionAt, planMove, type DropPosition } from '@/lib/pageMove'
 export const PAGE_DRAG_TYPE = 'application/x-premiumnote-page'
 /** The page being dragged in the sidebar (drag data can't be read during dragover). */
 export const pageDrag: { id: string | null } = { id: null }
+/** Sent on window when a page drag ends (dropped anywhere or cancelled): every drop guide clears. */
+export const PAGE_DRAG_END = 'pn-page-drag-end'
+const endPageDrag = () => {
+  pageDrag.id = null
+  window.dispatchEvent(new Event(PAGE_DRAG_END))
+}
 
 interface PageTreeItemProps {
   page: PageMeta
@@ -43,6 +49,16 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
     if (expandTimer.current) window.clearTimeout(expandTimer.current)
     expandTimer.current = null
   }
+  useEffect(() => {
+    if (!drop) return
+    const clear = () => clearDrop()
+    window.addEventListener(PAGE_DRAG_END, clear)
+    window.addEventListener('dragend', clear, true)
+    return () => {
+      window.removeEventListener(PAGE_DRAG_END, clear)
+        window.removeEventListener('dragend', clear, true)
+    }
+  }, [drop])
   const children = useChildPages(page.id)
   const hasChildren = children.length > 0
 
@@ -86,8 +102,8 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           e.dataTransfer.setData(PAGE_DRAG_TYPE, page.id)
         }}
         onDragEnd={() => {
-          pageDrag.id = null
           clearDrop()
+          endPageDrag()
         }}
         onDragOver={(e) => {
           const id = pageDrag.id
@@ -122,7 +138,7 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           e.stopPropagation()
           const plan = planMove(useAppStore.getState().pages, id, page.id, pos)
           if (plan) void useAppStore.getState().movePage(id, plan.parentId, plan.order)
-          pageDrag.id = null
+          endPageDrag()
         }}
         onKeyDown={(e) => {
           if (renaming) return
