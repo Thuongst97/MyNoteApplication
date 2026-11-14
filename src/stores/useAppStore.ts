@@ -77,6 +77,8 @@ interface AppState extends Prefs {
   linksVersion: number
   updatePageMeta: (id: string, patch: Partial<Pick<PageMeta, 'title' | 'icon' | 'cover' | 'width' | 'font'>>) => void
   deletePage: (id: string) => Promise<void>
+  /** Moves a page under another parent (null: top level) at a sort position. */
+  movePage: (id: string, parentId: string | null, order: number) => Promise<void>
   toggleExpanded: (id: string, value?: boolean) => void
   toggleSidebar: () => void
   setSidebarWidth: (w: number) => void
@@ -185,6 +187,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     return id
   },
 
+  movePage: async (id, parentId, order) => {
+    const before = get().pages
+    set((s) => ({
+      pages: s.pages.map((p) => (p.id === id ? { ...p, parentId, order } : p)),
+      expanded: parentId ? { ...s.expanded, [parentId]: true } : s.expanded,
+    }))
+    try {
+      const meta = await api.savePage({ id, parentId, order })
+      if (!meta) set({ pages: before })
+    } catch (err) {
+      set({ pages: before })
+      get().showToast(`Could not move the page: ${String((err as Error)?.message ?? err)}`)
+    }
+  },
   updatePageMeta: (id, patch) => {
     set((s) => ({ pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p)) }))
     autoSaver.schedule({ id, ...patch })

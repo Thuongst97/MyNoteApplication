@@ -1,10 +1,11 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
-import { PageTreeItem } from './PageTreeItem'
+import { PageTreeItem, pageDrag } from './PageTreeItem'
+import { planMove } from '@/lib/pageMove'
 import { ThemePicker } from './ThemePicker'
 import { importPageFile } from '@/components/Editor/pageFiles'
 
@@ -21,6 +22,7 @@ export function Sidebar() {
     return s.tasks.filter((t) => !t.completed && t.dueAt !== null && t.dueAt <= end.getTime()).length
   })
   const roots = useChildPages(null)
+  const [rootDrop, setRootDrop] = useState(false)
   const isMac = platform === 'darwin'
   const asideRef = useRef<HTMLElement>(null)
 
@@ -144,7 +146,28 @@ export function Sidebar() {
         </div>
 
         {/* Page tree */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-4">
+        <div
+          className={cn('min-h-0 flex-1 overflow-y-auto px-1.5 pb-4', rootDrop && 'bg-[#2383e2]/[0.06]')}
+          // Dropping a page on the empty space below the tree makes it a top-level page.
+          onDragOver={(e) => {
+            const id = pageDrag.id
+            if ((e.target as Element).closest?.('[role=treeitem]')) return setRootDrop(false)
+            if (!id || !planMove(useAppStore.getState().pages, id, null, 'after')) return
+            e.preventDefault()
+            e.dataTransfer.dropEffect = 'move'
+            if (!rootDrop) setRootDrop(true)
+          }}
+          onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setRootDrop(false)}
+          onDrop={(e) => {
+            setRootDrop(false)
+            const id = pageDrag.id
+            if (!id) return
+            e.preventDefault()
+            const plan = planMove(useAppStore.getState().pages, id, null, 'after')
+            if (plan) void useAppStore.getState().movePage(id, plan.parentId, plan.order)
+            pageDrag.id = null
+          }}
+        >
           <div className="px-2 pb-1 pt-2 text-xs font-medium opacity-65">Pages</div>
           <div role="tree" aria-label="Pages">
             {roots.map((p) => (

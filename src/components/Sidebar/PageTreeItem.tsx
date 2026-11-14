@@ -8,6 +8,12 @@ import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { MenuItem, Popover } from '@/components/ui/Popover'
 import { openPageFromClick, useTabsStore } from '@/stores/useTabsStore'
 import { cn } from '@/lib/utils'
+import { dropPositionAt, planMove, type DropPosition } from '@/lib/pageMove'
+
+/** Data type of a page dragged in the sidebar. */
+export const PAGE_DRAG_TYPE = 'application/x-premiumnote-page'
+/** The page being dragged in the sidebar (drag data can't be read during dragover). */
+export const pageDrag: { id: string | null } = { id: null }
 
 interface PageTreeItemProps {
   page: PageMeta
@@ -30,6 +36,13 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
   const [draft, setDraft] = useState(page.title)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [drop, setDrop] = useState<DropPosition | null>(null)
+  const expandTimer = useRef<number | null>(null)
+  const clearDrop = () => {
+    setDrop(null)
+    if (expandTimer.current) window.clearTimeout(expandTimer.current)
+    expandTimer.current = null
+  }
   const children = useChildPages(page.id)
   const hasChildren = children.length > 0
 
@@ -65,6 +78,52 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
         onClick={(e) => !renaming && openPageFromClick(page.id, e)}
         onAuxClick={(e) => !renaming && e.button === 1 && openPageFromClick(page.id, e)}
         onMouseDown={(e) => e.button === 1 && e.preventDefault()}
+        // Drag a page onto another: top/bottom edge = before/after it, middle = inside it.
+        draggable={!renaming}
+        onDragStart={(e) => {
+          pageDrag.id = page.id
+          e.dataTransfer.effectAllowed = 'move'
+          e.dataTransfer.setData(PAGE_DRAG_TYPE, page.id)
+        }}
+        onDragEnd={() => {
+          pageDrag.id = null
+          clearDrop()
+        }}
+        onDragOver={(e) => {
+          const id = pageDrag.id
+          if (!id) return
+          const r = e.currentTarget.getBoundingClientRect()
+          const pos = dropPositionAt(e.clientY - r.top, r.height)
+          if (!planMove(useAppStore.getState().pages, id, page.id, pos)) {
+            if (drop) clearDrop()
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          e.dataTransfer.dropEffect = 'move'
+          if (pos !== drop) setDrop(pos)
+          // Hovering in the middle of a collapsed page opens it, to drop deeper.
+          if (pos === 'inside' && hasChildren && !isExpanded && !expandTimer.current) {
+            expandTimer.current = window.setTimeout(() => toggleExpanded(page.id, true), 600)
+          } else if (pos !== 'inside' && expandTimer.current) {
+            window.clearTimeout(expandTimer.current)
+            expandTimer.current = null
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) clearDrop()
+        }}
+        onDrop={(e) => {
+          const id = pageDrag.id
+          const pos = drop
+          clearDrop()
+          if (!id || !pos) return
+          e.preventDefault()
+          e.stopPropagation()
+          const plan = planMove(useAppStore.getState().pages, id, page.id, pos)
+          if (plan) void useAppStore.getState().movePage(id, plan.parentId, plan.order)
+          pageDrag.id = null
+        }}
         onKeyDown={(e) => {
           if (renaming) return
           if (e.key === 'Enter') setActivePage(page.id)
@@ -84,8 +143,18 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           'group relative flex h-[30px] cursor-pointer select-none items-center gap-1 rounded-md pr-1 text-sm outline-none',
           'hover:bg-black/[0.04] focus-visible:ring-1 focus-visible:ring-blue-400 dark:hover:bg-white/[0.06]',
           isActive && 'bg-black/[0.06] font-medium text-ink-light dark:bg-white/[0.09] dark:text-white',
+          drop === 'inside' && 'bg-[#2383e2]/15 ring-1 ring-[#2383e2]/60 dark:bg-[#2383e2]/25',
         )}
       >
+        {/* Drop guide: a line above or below the row. */}
+        {(drop === 'before' || drop === 'after') && (
+          <span
+            aria-hidden
+            data-drop-line={drop}
+            className={cn('pointer-events-none absolute right-1 h-[2px] rounded bg-[#2383e2]', drop === 'before' ? '-top-px' : '-bottom-px')}
+            style={{ left: 8 + depth * 14 + 22 }}
+          />
+        )}
         <button
           type="button"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
