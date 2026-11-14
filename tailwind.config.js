@@ -6,9 +6,10 @@ export default {
     extend: {
       colors: {
         // Notion-like palette
-        canvas: { light: '#FFFFFF', dark: '#191919' },
-        sidebar: { light: '#F7F7F5', dark: '#202020' },
-        ink: { light: '#37352F', dark: '#D4D4D4' },
+        // Set by the app theme (see src/lib/appThemes.ts); defaults in index.css.
+        canvas: { light: 'rgb(var(--pn-canvas-light) / <alpha-value>)', dark: 'rgb(var(--pn-canvas-dark) / <alpha-value>)' },
+        sidebar: { light: 'rgb(var(--pn-sidebar-light) / <alpha-value>)', dark: 'rgb(var(--pn-sidebar-dark) / <alpha-value>)' },
+        ink: { light: 'rgb(var(--pn-ink-light) / <alpha-value>)', dark: 'rgb(var(--pn-ink-dark) / <alpha-value>)' },
       },
       fontFamily: {
         sans: [

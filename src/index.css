@@ -5,6 +5,14 @@
 :root {
   --titlebar-h: 44px;
 
+  /* App theme colors (page, sidebar, text), changed by the theme picker (appThemes.ts). */
+  --pn-canvas-light: 255 255 255;
+  --pn-sidebar-light: 247 247 245;
+  --pn-ink-light: 55 53 47;
+  --pn-canvas-dark: 25 25 25;
+  --pn-sidebar-dark: 32 32 32;
+  --pn-ink-dark: 212 212 212;
+
   /* Notion-like text & background colors (light mode) */
   --c-gray: #787774;
   --c-brown: #9f6b53;

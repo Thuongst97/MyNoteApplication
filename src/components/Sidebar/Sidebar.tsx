@@ -5,6 +5,7 @@ import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { platform } from '@/lib/api'
 import { cn, isMacLike } from '@/lib/utils'
 import { PageTreeItem } from './PageTreeItem'
+import { ThemePicker } from './ThemePicker'
 import { importPageFile } from '@/components/Editor/pageFiles'
 
 export function Sidebar() {
@@ -154,15 +155,16 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-black/5 p-1.5 dark:border-white/5">
+        <div className="flex items-center gap-1 border-t border-black/5 p-1.5 dark:border-white/5">
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+            className="flex h-[30px] min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           >
             {theme === 'dark' ? <Sun size={16} className="opacity-70" /> : <Moon size={16} className="opacity-70" />}
             <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
           </button>
+          <ThemePicker />
         </div>
       </div>
 

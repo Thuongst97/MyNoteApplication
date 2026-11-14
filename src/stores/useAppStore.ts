@@ -7,6 +7,8 @@ import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { newId } from '@/lib/utils'
 
+import { APP_THEMES } from '@/lib/appThemes'
+
 export type Theme = 'light' | 'dark'
 
 const PREFS_KEY = 'notion-clone:prefs'
@@ -16,6 +18,9 @@ export type View = 'page' | 'tasks' | 'graph' | 'home'
 interface Prefs {
   view: View
   theme: Theme
+  /** App themes chosen for light and for dark mode (see appThemes.ts). */
+  lightTheme: string
+  darkTheme: string
   /** Red underlines for misspelled words (on unless turned off). */
   spellcheck: boolean
   isSidebarOpen: boolean
@@ -27,6 +32,8 @@ interface Prefs {
 function loadPrefs(): Prefs {
   const fallback: Prefs = {
     theme: window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark',
+    lightTheme: 'light',
+    darkTheme: 'dark',
     view: 'page',
     spellcheck: true,
     isSidebarOpen: true,
@@ -75,6 +82,8 @@ interface AppState extends Prefs {
   setSidebarWidth: (w: number) => void
   setTheme: (t: Theme) => void
   toggleTheme: () => void
+  /** Picks an app theme (switches to its light or dark mode). */
+  setAppTheme: (id: string) => void
   setSpellcheck: (on: boolean) => void
   setSearchOpen: (open: boolean) => void
   clearFocusTitle: () => void
@@ -208,6 +217,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
   setSidebarWidth: (w) => set({ sidebarWidth: Math.round(Math.min(480, Math.max(200, w))) }),
   setTheme: (theme) => set({ theme }),
+  setAppTheme: (id) => {
+    const t = APP_THEMES.find((x) => x.id === id)
+    if (!t) return
+    set(t.mode === 'light' ? { theme: 'light', lightTheme: t.id } : { theme: 'dark', darkTheme: t.id })
+  },
   toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
   setSpellcheck: (on) => set({ spellcheck: on }),
   setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
@@ -228,6 +242,8 @@ useAppStore.subscribe((s) => {
   const p: Prefs = {
     view: s.view,
     theme: s.theme,
+    lightTheme: s.lightTheme,
+    darkTheme: s.darkTheme,
     spellcheck: s.spellcheck,
     isSidebarOpen: s.isSidebarOpen,
     sidebarWidth: s.sidebarWidth,

@@ -17,6 +17,7 @@ import { FindBar } from '@/components/Find/FindBar'
 import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
 import { useAppZoom } from '@/hooks/useAppZoom'
 import { api } from '@/lib/api'
+import { appTheme, appThemeVars } from '@/lib/appThemes'
 import { autoSaver } from '@/lib/autoSave'
 
 export default function App() {
@@ -45,12 +46,18 @@ export default function App() {
   useEffect(() => api.spellcheck.set(spellcheck), [spellcheck])
   useEffect(() => api.spellcheck.onTurnedOff(() => useAppStore.getState().setSpellcheck(false)), [])
 
-  // Apply theme class to <html>.
+  // Apply theme class to <html>, and the colors of the chosen light and dark app themes.
+  const lightTheme = useAppStore((s) => s.lightTheme)
+  const darkTheme = useAppStore((s) => s.darkTheme)
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
     root.style.colorScheme = theme
-  }, [theme])
+    for (const t of [appTheme(lightTheme, 'light'), appTheme(darkTheme, 'dark')]) {
+      for (const [k, v] of Object.entries(appThemeVars(t))) root.style.setProperty(k, v)
+    }
+    root.dataset.appTheme = theme === 'dark' ? appTheme(darkTheme, 'dark').id : appTheme(lightTheme, 'light').id
+  }, [theme, lightTheme, darkTheme])
 
   // Flush pending debounced saves before the window closes.
   useEffect(() => {
