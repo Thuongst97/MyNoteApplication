@@ -5,6 +5,7 @@ import { useAppStore } from '@/stores/useAppStore'
 import type { PageMeta } from '@/types'
 import { Popover } from '@/components/ui/Popover'
 import { COVERS, EMOJIS, coverToCss } from './pickerData'
+import { COVER_TOPICS, coverImageValue } from '@/lib/coverImages'
 import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
@@ -22,6 +23,8 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
   const spellcheck = useAppStore((s) => s.spellcheck)
   const [iconOpen, setIconOpen] = useState(false)
   const [coverOpen, setCoverOpen] = useState(false)
+  // The cover picker opens on the topic of the current cover (illustrations first).
+  const [coverTab, setCoverTab] = useState(() => COVER_TOPICS.find((t) => t.covers.some((c) => coverImageValue(c.id) === page.cover))?.id ?? (page.cover && !page.cover.startsWith('cover:') && COVERS.includes(page.cover) ? 'colors' : 'nature'))
   const [coverUrl, setCoverUrl] = useState('')
   const [uploading, setUploading] = useState(false)
   const [dropping, setDropping] = useState(false)
@@ -56,7 +59,9 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
   }, [autoFocusTitle, titleRef])
 
   const randomEmoji = () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)]
-  const randomCover = () => COVERS[Math.floor(Math.random() * COVERS.length)]
+  // "Add cover" picks a random illustration.
+  const ALL_IMAGES = COVER_TOPICS.flatMap((t) => t.covers.map((c) => coverImageValue(c.id)))
+  const randomCover = () => ALL_IMAGES[Math.floor(Math.random() * ALL_IMAGES.length)]
 
   return (
     <div className="group/header">
@@ -95,25 +100,58 @@ export function PageHeader({ page, autoFocusTitle, onChange, onEnterBody, titleR
                   {uploading ? 'Uploading…' : 'Upload from computer'}
                 </button>
                 <p className="-mt-2 mb-3 text-center text-[11px] opacity-45">or drop an image file onto the cover</p>
-                <div className="mb-2 text-xs font-medium opacity-60">Gallery</div>
-                <div className="grid grid-cols-4 gap-2">
-                  {COVERS.map((c) => (
+                {/* Topics: illustrated covers, or the color gallery. */}
+                <div role="tablist" aria-label="Cover topics" className="mb-2 flex flex-wrap gap-1">
+                  {[{ id: 'colors', label: 'Colors' }, ...COVER_TOPICS].map((t) => (
                     <button
-                      key={c}
+                      key={t.id}
                       type="button"
-                      aria-label="Choose cover"
-                      onClick={() => {
-                        onChange({ cover: c })
-                        setCoverOpen(false)
-                      }}
-                      className={cn(
-                        'h-12 rounded-md ring-offset-1 hover:ring-2 hover:ring-blue-400',
-                        page.cover === c && 'ring-2 ring-blue-500',
-                      )}
-                      style={{ background: c }}
-                    />
+                      role="tab"
+                      aria-selected={coverTab === t.id}
+                      onClick={() => setCoverTab(t.id)}
+                      className={cn('rounded-full px-2.5 py-0.5 text-xs', coverTab === t.id ? 'bg-black/80 text-white dark:bg-white/85 dark:text-black' : 'bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15')}
+                    >
+                      {t.label}
+                    </button>
                   ))}
                 </div>
+                {coverTab === 'colors' ? (
+                  <div className="grid grid-cols-4 gap-2">
+                    {COVERS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-label="Choose cover"
+                        onClick={() => {
+                          onChange({ cover: c })
+                          setCoverOpen(false)
+                        }}
+                        className={cn('h-12 rounded-md ring-offset-1 hover:ring-2 hover:ring-blue-400', page.cover === c && 'ring-2 ring-blue-500')}
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(COVER_TOPICS.find((t) => t.id === coverTab)?.covers ?? []).map((c) => {
+                      const value = coverImageValue(c.id)
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          title={c.label}
+                          aria-label={`${c.label} cover`}
+                          onClick={() => {
+                            onChange({ cover: value })
+                            setCoverOpen(false)
+                          }}
+                          className={cn('h-14 rounded-md ring-offset-1 hover:ring-2 hover:ring-blue-400', page.cover === value && 'ring-2 ring-blue-500')}
+                          style={{ background: coverToCss(value) }}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
                 <div className="mb-2 mt-3 text-xs font-medium opacity-60">Image link</div>
                 <form
                   className="flex gap-2"

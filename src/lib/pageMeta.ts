@@ -1,6 +1,7 @@
 import type { PageKind, PageMeta } from '@/types'
 import { normalizeWidth } from './pageWidth'
 import { normalizeFont } from './pageFont'
+import { coverImageUrl } from './coverImages'
 
 /** Validation shared by the main process (saving/loading) and the renderer (display). */
 
@@ -22,6 +23,9 @@ export function coverToCss(cover: string | null | undefined): string | undefined
   ) {
     return `center / cover no-repeat url("${cover}")`
   }
+  // Built-in illustrated covers ("cover:<id>").
+  const builtIn = coverImageUrl(cover)
+  if (builtIn) return `center / cover no-repeat url("${builtIn}")`
   if (SAFE_GRADIENT.test(cover) && !/url\s*\(/i.test(cover)) return cover
   if (SAFE_COLOR.test(cover)) return cover
   return undefined
