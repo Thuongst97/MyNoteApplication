@@ -120,11 +120,12 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
           />
         ) : (
           // The full width is for the title; the hover buttons only take room while shown.
-          <span className={cn('min-w-0 flex-1 truncate group-hover:pr-[46px] group-focus-within:pr-[46px]', menuOpen && 'pr-[46px]', !page.title && 'opacity-50')}>{page.title || 'Untitled'}</span>
+          // Long names fade out at the end (no "…"); while the row's buttons show, the fade ends before them.
+          <span className={cn('page-title-fade min-w-0 flex-1 overflow-hidden whitespace-nowrap', menuOpen && 'page-title-fade-open', !page.title && 'opacity-50')}>{page.title || 'Untitled'}</span>
         )}
 
         {!renaming && (
-          <div className={cn('absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100', menuOpen && 'pointer-events-auto opacity-100')}>
+          <div className={cn('absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 rounded-md opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100', menuOpen && 'pointer-events-auto opacity-100')}>
             <IconButton
               buttonRef={menuButton}
               label="More actions"
@@ -266,7 +267,7 @@ function IconButton({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex h-5 w-5 items-center justify-center rounded opacity-75 hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+      className="flex h-6 w-6 items-center justify-center rounded-md opacity-80 hover:bg-black/[0.08] hover:opacity-100 hover:opacity-100 dark:hover:bg-white/10"
     >
       {children}
     </button>

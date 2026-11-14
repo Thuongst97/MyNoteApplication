@@ -1217,3 +1217,15 @@ body.block-dragging .prosemirror-dropcursor-inline {
 @media (max-width: 1500px) {
   .master-hint { display: none; }
 }
+
+/* Sidebar page names: fade out at the end instead of an ellipsis (the row's buttons sit on top while hovered). */
+.page-title-fade {
+  --fade-end: 0px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade-end) - 28px), transparent calc(100% - var(--fade-end)));
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade-end) - 28px), transparent calc(100% - var(--fade-end)));
+}
+.group:hover > .page-title-fade,
+.group:focus-within > .page-title-fade,
+.page-title-fade.page-title-fade-open {
+  --fade-end: 54px;
+}
