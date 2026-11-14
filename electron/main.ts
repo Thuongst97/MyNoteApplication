@@ -15,6 +15,7 @@ import { exportPages, fileNameFor, importPages, MAX_IMPORT_BYTES, PAGE_FILE_EXT,
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { contextMenuTemplate } from './contextMenu'
+import { translationWarning } from './archCheck'
 import { renderPlantUml } from './plantuml'
 import { inlineAssetImages, singleImageSrc } from './clipboardRich'
 
@@ -438,7 +439,12 @@ function createWindow() {
     contextOnPage = 0
     if (template.length) Menu.buildFromTemplate(template).popup({ window: win ?? undefined })
   })
-  win.once('ready-to-show', () => win?.show())
+  win.once('ready-to-show', () => {
+    win?.show()
+    // Running the Intel build on Apple Silicon (Rosetta) makes everything slow: say so.
+    const warn = translationWarning(process.platform, app.runningUnderARM64Translation)
+    if (warn && win) void dialog.showMessageBox(win, { type: 'warning', buttons: ['OK'], ...warn })
+  })
 
   // Keep the title-bar button in sync, including OS snapping that fires no maximize events.
   let lastMaximized: boolean | null = null

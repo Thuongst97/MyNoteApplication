@@ -57,6 +57,7 @@
       }
     ],
     "icon": "resources/icon.icns",
+    "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
     "category": "public.app-category.productivity",
     "identity": "-",
     "hardenedRuntime": false,
