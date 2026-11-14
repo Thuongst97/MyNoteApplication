@@ -119,11 +119,12 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
             className="min-w-0 flex-1 rounded border border-blue-400 bg-white px-1 py-0.5 text-sm outline-none dark:bg-[#2a2a2a]"
           />
         ) : (
-          <span className={cn('min-w-0 flex-1 truncate', !page.title && 'opacity-50')}>{page.title || 'Untitled'}</span>
+          // The full width is for the title; the hover buttons only take room while shown.
+          <span className={cn('min-w-0 flex-1 truncate group-hover:pr-[46px] group-focus-within:pr-[46px]', menuOpen && 'pr-[46px]', !page.title && 'opacity-50')}>{page.title || 'Untitled'}</span>
         )}
 
         {!renaming && (
-          <div className={cn('flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100', menuOpen && 'opacity-100')}>
+          <div className={cn('absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100', menuOpen && 'pointer-events-auto opacity-100')}>
             <IconButton
               buttonRef={menuButton}
               label="More actions"
