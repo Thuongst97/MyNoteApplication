@@ -88,6 +88,7 @@ export const PageTreeItem = memo(function PageTreeItem({ page, depth }: PageTree
     <div>
       <div
         role="treeitem"
+        data-drop={drop ?? undefined}
         aria-selected={isActive}
         aria-expanded={hasChildren ? isExpanded : undefined}
         tabIndex={0}

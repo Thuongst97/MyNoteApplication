@@ -46,6 +46,17 @@ if (typeof window !== 'undefined') {
     } as unknown as typeof ClipboardEvent
   }
 
+  // Drag events with a pointer position and a dataTransfer (jsdom has no DragEvent).
+  if (typeof globalThis.DragEvent === 'undefined') {
+    globalThis.DragEvent = class extends MouseEvent {
+      dataTransfer: DataTransfer | null
+      constructor(type: string, init?: DragEventInit) {
+        super(type, init)
+        this.dataTransfer = init?.dataTransfer ?? null
+      }
+    } as unknown as typeof DragEvent
+  }
+
   // Clipboard (used by "Copy link" actions)
   if (!navigator.clipboard) {
     let text = ''
