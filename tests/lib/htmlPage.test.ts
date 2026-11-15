@@ -22,6 +22,6 @@ describe('web page (HTML page type)', () => {
     expect(untrustScripts({ ...newHtmlPageContent() }).trusted).toBe(false)
   })
   it('is searchable by its text', () => {
-    expect(docToText({ type: 'htmlPage', source: '<h1>Hello CAN bus</h1><script>x()</script>' } as never)).toContain('Hello CAN bus')
+    expect(docToText({ type: 'htmlPage', source: '<h1>Hello web app</h1><script>x()</script>' } as never)).toContain('Hello web app')
   })
 })

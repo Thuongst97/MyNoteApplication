@@ -83,7 +83,7 @@ describe('Find: highlights inside rendered Markdown blocks', () => {
 
   it('paints every match in the rendered text, marks the current one, and clears when find closes', () => {
     const reg = installHighlights()
-    const source = '## Head unit\n\nThe head unit boots.'
+    const source = '## Head office\n\nThe head office boots.'
     const editor = makeEditor(doc(p('head of page'), { type: 'markdown', attrs: { source } }))
     // The block view in tests is plain: render its Markdown where the app's view would.
     const pos = (() => {

@@ -44,7 +44,7 @@ describe('themes and starter decks', () => {
       expect(JSON.stringify(n.slides[3].boxes)).toContain('"chart"')
       expect(JSON.stringify(n.slides[0].content)).toContain(t.deck.title)
     }
-    expect(JSON.stringify(starterDeck(slideTheme('neural')!))).toContain('On-device assistant')
+    expect(JSON.stringify(starterDeck(slideTheme('neural')!))).toContain('AI assistant')
   })
 
   it('footer, hidden slides and notes survive saving; bad values are dropped', () => {

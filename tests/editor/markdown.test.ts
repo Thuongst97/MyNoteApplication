@@ -43,8 +43,8 @@ describe('Markdown → editor blocks', () => {
     expect(block.attrs!.language).toBe('mermaid')
   })
 
-  it('converts the project README without losing content', () => {
-    const readme = readFileSync('README.md', 'utf8')
+  it('converts the developer guide (a big real Markdown file) without losing content', () => {
+    const readme = readFileSync('docs/DEVELOPMENT.md', 'utf8')
     editor = makeEditor(doc(p()))
     editor.commands.insertContent(markdownToHtml(readme))
     const json = blocks(editor)
@@ -74,5 +74,14 @@ describe('Markdown block', () => {
     const again = makeEditor(editor.getHTML())
     expect(blocks(again)[0].attrs!.source).toBe(json.content![0].attrs!.source)
     again.destroy()
+  })
+})
+
+describe('README (the app introduction)', () => {
+  it('converts without losing content: tables, headings, links', () => {
+    editor = makeEditor(doc(p()))
+    editor.commands.insertContent(markdownToHtml(readFileSync('README.md', 'utf8')))
+    const text = editor.getText()
+    for (const s of ['PremiumNote', 'Why PremiumNote?', 'Get started in a minute', 'Handy shortcuts', 'FAQ']) expect(text).toContain(s)
   })
 })

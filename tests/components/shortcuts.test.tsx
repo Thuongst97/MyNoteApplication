@@ -51,10 +51,10 @@ describe('global shortcuts', () => {
     fireEvent.keyDown(window, { key: 'f', ctrlKey: true })
     expect(useAppStore.getState().isSearchOpen).toBe(true) // no find target (e.g. Tasks)
     useAppStore.setState({ isSearchOpen: false })
-    const provider = { search: () => 0, reveal: () => {}, clear: () => {}, selectedText: () => 'CAN bus' }
+    const provider = { search: () => 0, reveal: () => {}, clear: () => {}, selectedText: () => 'web app' }
     useFindStore.setState({ provider, open: false, query: '' })
     fireEvent.keyDown(window, { key: 'f', ctrlKey: true })
-    expect(useFindStore.getState()).toMatchObject({ open: true, query: 'CAN bus' })
+    expect(useFindStore.getState()).toMatchObject({ open: true, query: 'web app' })
     expect(useAppStore.getState().isSearchOpen).toBe(false)
     useFindStore.setState({ provider: null, open: false, query: '' })
   })

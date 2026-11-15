@@ -20,7 +20,7 @@ function ThemeThumb({ theme }: { theme: SlideTheme }) {
 }
 
 /**
- * Choose a presentation theme: 7 premium tech & automotive themes (or none). A new deck can
+ * Choose a presentation theme: 12 premium themes, light and dark (or none). A new deck can
  * start from the theme's sample slides; an existing one just takes on the new look.
  */
 export function ThemeGallery({
@@ -54,7 +54,7 @@ export function ThemeGallery({
         <div className="flex items-start gap-4 px-7 pb-4 pt-6">
           <div className="flex-1">
             <div className="text-xl font-semibold tracking-tight">{fresh ? 'Start your presentation' : 'Presentation theme'}</div>
-            <div className="mt-1 text-sm opacity-60">Premium themes for tech & automotive topics. Fonts, colors, cards, charts and the title slide all follow the theme.</div>
+            <div className="mt-1 text-sm opacity-60">Premium themes for any topic. Fonts, colors, cards, charts and the title slide all follow the theme.</div>
           </div>
           <div role="group" aria-label="Show themes" className="flex rounded-lg bg-black/5 p-0.5 text-sm dark:bg-white/10">
             {(

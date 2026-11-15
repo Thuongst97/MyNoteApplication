@@ -12,7 +12,7 @@ const o = (query: string, caseSensitive = false, wholeWord = false): FindOptions
 
 describe('find matching', () => {
   it('case and whole-word options', () => {
-    const t = 'The CAN bus carries the can signal; Scan it. can_send'
+    const t = 'The CAN tin holding the can signal; Scan it. can_send'
     expect(findInText(t, o('can'))).toHaveLength(4)
     expect(findInText(t, o('can', true))).toEqual([[24, 27], [37, 40], [45, 48]]) // the, scan, can_send
     expect(findInText(t, o('can', false, true))).toEqual([[4, 7], [24, 27]])

@@ -6,13 +6,13 @@ import { markdownToHtml } from '@/lib/markdown'
 import { doc, makeEditor, p } from './helpers'
 
 const opts = (query: string, caseSensitive = false, wholeWord = false) => ({ query, caseSensitive, wholeWord })
-const SRC = '## Head unit\n\nThe **head** unit boots in 3 s.\n\n- Head-up display\n- Cluster\n\n| Part | Note |\n| --- | --- |\n| HU | head |\n\n```mermaid\ngraph TD; head-->x\n```\n'
+const SRC = '## Head office\n\nThe **head** office opens at 9.\n\n- Head-up display\n- Lobby\n\n| Part | Note |\n| --- | --- |\n| HQ | head |\n\n```mermaid\ngraph TD; head-->x\n```\n'
 
 describe('find in Markdown blocks', () => {
   it('reads the rendered text (no Markdown syntax), one segment per block', () => {
     const segs = markdownSegments(SRC)
-    expect(segs).toContain('Head unit')
-    expect(segs).toContain('The head unit boots in 3 s.')
+    expect(segs).toContain('Head office')
+    expect(segs).toContain('The head office opens at 9.')
     expect(segs.join('|')).not.toContain('**')
     expect(segs.join('|')).not.toContain('graph TD') // diagrams are skipped
   })
@@ -20,7 +20,7 @@ describe('find in Markdown blocks', () => {
     expect(countInMarkdown(SRC, opts('head'))).toBe(4)
     expect(countInMarkdown(SRC, opts('Head', true))).toBe(2)
     expect(countInMarkdown(SRC, opts('head', false, true))).toBe(4)
-    expect(countInMarkdown(SRC, opts('unit boots'))).toBe(1) // across bold/plain text
+    expect(countInMarkdown(SRC, opts('office opens'))).toBe(1) // across bold/plain text
     expect(countInMarkdown(SRC, opts('**head**'))).toBe(0)
   })
   it('is part of the document matches in the editor and in stored documents', () => {
@@ -36,6 +36,6 @@ describe('find in Markdown blocks', () => {
     root.innerHTML = markdownToHtml(SRC)
     const ranges = rangesIn(root, opts('head'))
     expect(ranges.map((r) => r.toString())).toEqual(['Head', 'head', 'Head', 'head'])
-    expect(rangesIn(root, opts('unit boots'))[0].toString()).toBe('unit boots')
+    expect(rangesIn(root, opts('office opens'))[0].toString()).toBe('office opens')
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Presentation themes (premium tech & automotive). A theme styles the whole deck: background,
+ * Presentation themes (premium, for any topic). A theme styles the whole deck: background,
  * fonts, colors, cards and the title slide's artwork. Artwork is static SVG/HTML made here
  * (never user content), drawn behind the slide's blocks.
  */
@@ -79,12 +79,12 @@ export const SLIDE_THEMES: SlideTheme[] = [
     grain: 0.1,
     glow: 'radial-gradient(700px 360px at 85% 25%,rgba(110,139,255,.16),transparent 70%)',
     art: () => trails('pn-ob', [[0, '#4f7cff', 0], [0.35, '#4f7cff'], [1, '#b06bff']], [['M560 760 C 760 640 900 560 1020 470 S 1220 300 1340 200', 3], ['M700 780 C 880 660 1000 590 1100 520 S 1260 400 1340 340', 1.4]], 16),
-    deck: { eyebrow: 'Strategy 2027', title: 'The Software‑Defined Vehicle', sub: 'One platform for cluster, head unit and telematics.', topic: 'platform' },
+    deck: { eyebrow: 'Strategy 2027', title: 'One Platform, Every Device', sub: 'Our product strategy for the next four quarters.', topic: 'product' },
   },
   {
     id: 'champagne',
     name: 'Graphite & Champagne',
-    tag: 'Luxury automotive',
+    tag: 'Luxury editorial',
     blurb: 'Graphite, champagne-gold hairlines and an elegant serif.',
     dark: true,
     bg: '#141416',
@@ -102,7 +102,7 @@ export const SLIDE_THEMES: SlideTheme[] = [
     grain: 0.12,
     glow: 'radial-gradient(900px 300px at 50% 105%,rgba(214,186,140,.14),transparent 70%)',
     art: () => trails('pn-ch', [[0, '#b8925a', 0], [0.5, '#d6ba8c'], [1, '#f6e6c4', 0.2]], [['M-40 500 C 300 460 640 460 900 500 S 1200 580 1340 540', 1.6], ['M-40 535 C 340 495 680 500 940 535 S 1220 615 1340 585', 0.8]], 10, 0.9),
-    deck: { eyebrow: 'Cockpit experience', title: 'The Luxury Cockpit, Reimagined', sub: 'Cluster, head unit and ambient light as one experience.', topic: 'cockpit' },
+    deck: { eyebrow: 'Design review', title: 'Effortless by Design', sub: 'Color, motion and type for the new experience.', topic: 'design' },
   },
   {
     id: 'platinum',
@@ -128,13 +128,13 @@ export const SLIDE_THEMES: SlideTheme[] = [
     art: () =>
       `<div style="position:absolute;right:-180px;top:-220px;width:760px;height:760px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffffff 0%,#dfe6f5 45%,#c5d1ec 70%,rgba(197,209,236,0) 72%)"></div>` +
       trails('pn-pl', [[0, '#2453ff', 0], [0.4, '#2453ff'], [1, '#7fb0ff', 0.4]], [['M620 760 C 820 640 960 560 1080 470 S 1260 330 1340 270', 2]], 12, 0.85),
-    deck: { eyebrow: 'Release review', title: 'AVN Head Unit 4.2', sub: 'Navigation, media and connectivity — faster than ever.', topic: 'headunit' },
+    deck: { eyebrow: 'Release review', title: 'Version 4.2', sub: 'Faster, smoother, better connected.', topic: 'release' },
   },
   {
     id: 'electric',
     name: 'Electric Night',
-    tag: 'EV & digital cluster',
-    blurb: 'Midnight blue, cyan headlight trails and a horizon glow.',
+    tag: 'Tech & data',
+    blurb: 'Midnight blue, cyan light trails and a horizon glow.',
     dark: true,
     bg: 'linear-gradient(180deg,#050a14 0%,#071226 60%,#0a1a33 100%)',
     text: '#eef6ff',
@@ -153,12 +153,12 @@ export const SLIDE_THEMES: SlideTheme[] = [
     art: () =>
       `<div style="position:absolute;left:0;right:0;top:470px;height:2px;background:linear-gradient(90deg,transparent,rgba(56,225,255,.55),transparent)"></div><div style="position:absolute;left:-10%;right:-10%;top:420px;height:200px;background:radial-gradient(50% 50% at 50% 30%,rgba(56,225,255,.22),transparent 70%)"></div>` +
       trails('pn-el', [[0, '#38e1ff', 0], [0.5, '#38e1ff'], [1, '#1a7bff', 0]], [['M470 720 C 560 590 610 520 640 472', 2.2], ['M810 720 C 720 590 670 520 640 472', 2.2], ['M580 720 C 610 600 628 520 640 472', 1], ['M700 720 C 670 600 652 520 640 472', 1]], 9),
-    deck: { eyebrow: 'Digital cluster · EV', title: 'Range, Rendered', sub: 'The 2027 digital cluster and 800 V powertrain.', topic: 'cluster' },
+    deck: { eyebrow: 'Growth · 2027', title: 'Built to Scale', sub: 'Revenue, performance and efficiency at a glance.', topic: 'growth' },
   },
   {
     id: 'carbon',
     name: 'Carbon',
-    tag: 'Engineering & motorsport',
+    tag: 'Engineering',
     blurb: 'Carbon weave, signal-red details and technical mono labels.',
     dark: true,
     bg: '#0c0d0e',
@@ -181,12 +181,12 @@ export const SLIDE_THEMES: SlideTheme[] = [
       `<div style="position:absolute;right:96px;top:96px;bottom:96px;width:1px;background:rgba(255,255,255,.12)"></div>` +
       [0, 1, 2, 3, 4].map((i) => `<div style="position:absolute;right:${96 + i * 54}px;bottom:96px;width:2px;height:${[230, 170, 120, 80, 50][i]}px;background:${i === 0 ? '#ff2d2d' : 'rgba(255,255,255,.25)'}"></div>`).join('') +
       `<div style="position:absolute;right:96px;bottom:338px;font:700 13px ${MONO};letter-spacing:.2em;color:#ff5a52">SIGNAL −71 dBm</div>`,
-    deck: { eyebrow: 'Validation report', title: 'Telematics Control Unit', sub: '5G TCU · eCall · OTA — 1.2 million test km.', topic: 'telematics' },
+    deck: { eyebrow: 'Launch readiness', title: 'Ready for Launch', sub: 'Beta results, quality and the go / no-go decision.', topic: 'launch' },
   },
   {
     id: 'aurora',
     name: 'Aurora Glass',
-    tag: 'HMI · Android Automotive',
+    tag: 'Product & UI',
     blurb: 'Deep night, a teal-violet aurora and frosted glass panels.',
     dark: true,
     bg: '#070b12',
@@ -207,11 +207,11 @@ export const SLIDE_THEMES: SlideTheme[] = [
     art: () =>
       `<div style="position:absolute;right:-120px;top:-160px;width:820px;height:640px;filter:blur(60px);opacity:.75;background:radial-gradient(40% 45% at 30% 40%,#14b88f 0%,transparent 70%),radial-gradient(40% 45% at 70% 55%,#5a4dff 0%,transparent 70%),radial-gradient(30% 35% at 55% 25%,#1f7bff 0%,transparent 70%)"></div>
       <div style="position:absolute;right:96px;top:250px;width:330px;height:200px;border-radius:28px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);box-shadow:0 30px 60px rgba(0,0,0,.35)">
-        <div style="position:absolute;left:28px;top:26px;font:500 14px ${INTER};color:#a9b6c9;letter-spacing:.04em">AAOS 14 · Head unit</div>
+        <div style="position:absolute;left:28px;top:26px;font:500 14px ${INTER};color:#a9b6c9;letter-spacing:.04em">Cloud migration</div>
         <div style="position:absolute;left:28px;top:58px;font:600 54px ${INTER};color:#fff;letter-spacing:-0.03em">27 / 32</div>
-        <div style="position:absolute;left:28px;top:128px;font:400 15px ${INTER};color:#a9b6c9">apps running natively</div>
+        <div style="position:absolute;left:28px;top:128px;font:400 15px ${INTER};color:#a9b6c9">services migrated</div>
         <div style="position:absolute;left:28px;right:28px;bottom:26px;height:4px;border-radius:2px;background:rgba(255,255,255,.12)"><div style="width:84%;height:4px;border-radius:2px;background:linear-gradient(90deg,#3ee0b4,#7a7cff)"></div></div></div>`,
-    deck: { eyebrow: 'Program update', title: 'Android Automotive OS', sub: 'Moving the head unit to AAOS 14 — status and next steps.', topic: 'android' },
+    deck: { eyebrow: 'Program update', title: 'Moving to the Cloud', sub: 'Migration status and next steps.', topic: 'migration' },
   },
   {
     id: 'neural',
@@ -245,7 +245,7 @@ export const SLIDE_THEMES: SlideTheme[] = [
         ${nodes.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 4 === 0 ? 4.5 : 3}" fill="${i % 5 === 0 ? '#ffd2a8' : '#efe6ff'}" opacity="${i % 3 === 0 ? 1 : 0.7}"/>`).join('')}
       </svg>`
     },
-    deck: { eyebrow: 'AI in the vehicle', title: 'The Intelligent Cockpit', sub: 'On-device assistant, driver monitoring and predictive maintenance.', topic: 'ai' },
+    deck: { eyebrow: 'AI at work', title: 'The Intelligent Workplace', sub: 'Assistants, smart search and automation for every team.', topic: 'ai' },
   },
   // ---------------------------------------------------------------- light themes
   {
@@ -274,7 +274,7 @@ export const SLIDE_THEMES: SlideTheme[] = [
         <circle cx="1080" cy="190" r="74" fill="none" stroke="#a2522c" stroke-opacity=".35" stroke-width="1.2"/>
         <circle cx="1080" cy="190" r="6" fill="#a2522c"/>
       </svg>`,
-    deck: { eyebrow: 'Design review', title: 'The Calm Cockpit', sub: 'Materials, light and type for the 2027 interior.', topic: 'cockpit' },
+    deck: { eyebrow: 'Design review', title: 'The Calm Interface', sub: 'Materials, light and type for the next release.', topic: 'design' },
   },
   {
     id: 'glacier',
@@ -300,11 +300,11 @@ export const SLIDE_THEMES: SlideTheme[] = [
     art: () =>
       `<div style="position:absolute;right:-100px;top:-140px;width:760px;height:620px;filter:blur(70px);opacity:.8;background:radial-gradient(40% 45% at 35% 40%,#9fe3f2 0%,transparent 70%),radial-gradient(40% 45% at 70% 60%,#b9c8ff 0%,transparent 70%)"></div>
       <div style="position:absolute;right:110px;top:250px;width:320px;height:190px;border-radius:26px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.95);box-shadow:0 24px 60px rgba(12,27,46,.12)">
-        <div style="position:absolute;left:26px;top:24px;font:500 14px ${INTER};color:#56677c;letter-spacing:.04em">5G TCU · fleet</div>
+        <div style="position:absolute;left:26px;top:24px;font:500 14px ${INTER};color:#56677c;letter-spacing:.04em">Cloud · uptime</div>
         <div style="position:absolute;left:26px;top:54px;font:600 52px ${INTER};color:#0c1b2e;letter-spacing:-0.03em">99.95%</div>
-        <div style="position:absolute;left:26px;top:122px;font:400 15px ${INTER};color:#56677c">connectivity uptime</div>
+        <div style="position:absolute;left:26px;top:122px;font:400 15px ${INTER};color:#56677c">service uptime</div>
         <div style="position:absolute;left:26px;right:26px;bottom:24px;height:4px;border-radius:2px;background:rgba(12,27,46,.08)"><div style="width:96%;height:4px;border-radius:2px;background:linear-gradient(90deg,#0e8fae,#5b7cfa)"></div></div></div>`,
-    deck: { eyebrow: 'Validation report', title: 'Telematics 5G — Ready to Launch', sub: 'eCall, OTA and V2X validated across 14 countries.', topic: 'telematics' },
+    deck: { eyebrow: 'Launch report', title: 'Ready to Launch', sub: 'Beta validated with 12,000 testers in 14 countries.', topic: 'launch' },
   },
   {
     id: 'studio',
@@ -332,12 +332,12 @@ export const SLIDE_THEMES: SlideTheme[] = [
       `<div style="position:absolute;right:-160px;bottom:-200px;width:620px;height:620px;border-radius:50%;background:#ff4f12"></div>
       <div style="position:absolute;right:300px;top:120px;width:160px;height:160px;border:2px solid #0a0a0a;border-radius:50%"></div>
       <div style="position:absolute;right:96px;top:96px;font:500 13px ${MONO};letter-spacing:.12em;color:#0a0a0a">01 — PLATFORM</div>`,
-    deck: { eyebrow: 'Platform 2027', title: 'One Stack. Every Screen.', sub: 'Cluster, head unit and telematics on one software platform.', topic: 'platform' },
+    deck: { eyebrow: 'Platform 2027', title: 'One Stack. Every Screen.', sub: 'Web, mobile and desktop on one platform.', topic: 'product' },
   },
   {
     id: 'sage',
     name: 'Sage & Stone',
-    tag: 'Light · EV & sustainability',
+    tag: 'Light · sustainability',
     blurb: 'Soft stone and sage, forest-green type and gentle landscape lines.',
     dark: false,
     bg: 'linear-gradient(180deg,#f6f6f1 0%,#e9ece3 100%)',
@@ -361,7 +361,7 @@ export const SLIDE_THEMES: SlideTheme[] = [
         <path d="M680 720 C 840 640 980 660 1100 600 S 1260 540 1300 545 L 1300 720 Z" fill="#2e7d57" fill-opacity=".22"/>
         <circle cx="1090" cy="210" r="56" fill="#e7c76b" fill-opacity=".55"/>
       </svg>`,
-    deck: { eyebrow: 'EV program', title: 'More Range, Less Energy', sub: 'Efficiency gains delivered over the air in 2026.', topic: 'cluster' },
+    deck: { eyebrow: 'Sustainability', title: 'More Impact, Less Energy', sub: 'How we cut our footprint by 18% this year.', topic: 'growth' },
   },
   {
     id: 'lumen',
@@ -389,7 +389,7 @@ export const SLIDE_THEMES: SlideTheme[] = [
       <svg style="position:absolute;inset:0" width="1280" height="720" viewBox="0 0 1280 720" aria-hidden="true">
         ${[[860, 200], [980, 150], [1100, 230], [920, 330], [1050, 360], [1170, 330], [990, 480], [1120, 500]].map(([x, y], i, a) => (i ? `<line x1="${a[i - 1][0]}" y1="${a[i - 1][1]}" x2="${x}" y2="${y}" stroke="#6d4aff" stroke-opacity=".25"/>` : '') + `<circle cx="${x}" cy="${y}" r="${i % 3 ? 3.5 : 5}" fill="#6d4aff" fill-opacity=".75"/>`).join('')}
       </svg>`,
-    deck: { eyebrow: 'AI in the vehicle', title: 'Assistance You Can Trust', sub: 'On-device intelligence for drivers — private by design.', topic: 'ai' },
+    deck: { eyebrow: 'AI at work', title: 'Assistance You Can Trust', sub: 'Helpful AI — private by design.', topic: 'ai' },
   },
 ]
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { codeClickRange } from '@/components/Editor/code/codeClicks'
 
-const code = 'const max_speed = getSpeed($vehicle);\nif (max_speed > 120) {\n    warn("fast");\n}'
+const code = 'const max_speed = getSpeed($account);\nif (max_speed > 120) {\n    warn("fast");\n}'
 const pick = (offset: number, count: number) => {
   const r = codeClickRange(code, offset, count)
   return r ? code.slice(r.from, r.to) : null
@@ -11,14 +11,14 @@ const at = (s: string, k = 0) => code.indexOf(s) + k
 describe('code block click selection (like VS Code)', () => {
   it('double click: whole word with _ and $, no trailing space', () => {
     expect(pick(at('max_speed', 4), 2)).toBe('max_speed')
-    expect(pick(at('$vehicle', 3), 2)).toBe('$vehicle')
+    expect(pick(at('$account', 3), 2)).toBe('$account')
     expect(pick(at('getSpeed'), 2)).toBe('getSpeed')
     expect(pick(at('120', 2), 2)).toBe('120')
   })
 
   it('double click on spaces or symbols selects that run', () => {
     expect(pick(at('    warn', 1), 2)).toBe('    ')
-    expect(pick(at('($v'), 2)).toBe('(')
+    expect(pick(at('($a'), 2)).toBe('(')
     expect(pick(at(');'), 2)).toBe(');')
     expect(pick(at(' > ', 1), 2)).toBe('>')
   })
@@ -30,7 +30,7 @@ describe('code block click selection (like VS Code)', () => {
 
   it('triple click: the line with its line break (the last line has none)', () => {
     expect(pick(at('warn'), 3)).toBe('    warn("fast");\n')
-    expect(pick(0, 3)).toBe('const max_speed = getSpeed($vehicle);\n')
+    expect(pick(0, 3)).toBe('const max_speed = getSpeed($account);\n')
     expect(pick(code.length - 1, 3)).toBe('}')
   })
 

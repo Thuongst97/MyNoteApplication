@@ -28,7 +28,7 @@ describe('clipboard with images', () => {
     expect(out).toContain('<rect width="5"/>')
     expect(out).toContain('<text>t</text>')
     expect(out.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
-    const ok = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><g><text>Head unit</text></g></svg>'
+    const ok = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><g><text>Head office</text></g></svg>'
     expect(safeSvgFile(ok)).toBe(ok)
   })
 })
