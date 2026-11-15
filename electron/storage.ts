@@ -274,6 +274,15 @@ export class PageStorage {
     return this.enqueue(id, () => this.readFromDisk(id))
   }
 
+  /** Whether page `id` is `ancestorId` or lies under it (by the stored parents). */
+  private isWithin(id: string, ancestorId: string): boolean {
+    for (let cur: string | null = id, guard = 0; cur && guard < 100_000; guard++) {
+      if (cur === ancestorId) return true
+      cur = this.index.get(cur)?.parentId ?? null
+    }
+    return false
+  }
+
   async save(update: PageUpdate): Promise<PageMeta | null> {
     assertValidId(update?.id)
     await this.ensureLoaded()
@@ -282,6 +291,8 @@ export class PageStorage {
     return this.enqueue(update.id, async () => {
       if (this.tombstones.has(update.id)) return null
       if (update.parentId && this.tombstones.has(update.parentId)) return null
+      // A page can't move into itself or one of its own sub-pages (it would vanish from the tree).
+      if (update.parentId && this.isWithin(update.parentId, update.id)) throw new Error('A page cannot be moved inside itself')
       const now = Date.now()
       // Content updates (every auto-save) build on the in-memory metadata, so the
       // page file isn't read and parsed again on each save. Metadata-only updates

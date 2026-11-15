@@ -29,3 +29,19 @@ export function singleImageSrc(html: string): string | null {
   const srcs = [...html.matchAll(/<img\b[^>]*\bsrc="([^"]+)"/gi)].map((m) => m[1])
   return srcs.length === 1 ? srcs[0] : null
 }
+
+/**
+ * An SVG made safe to save as a file: scripts, foreign scripts in event attributes and
+ * javascript: links are removed (a diagram from an untrusted PlantUML server could carry them,
+ * and the file may later be opened in a browser). The drawing itself is unchanged.
+ */
+export function safeSvgFile(svg: string): string {
+  let out = svg
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<script\b[^>]*\/>/gi, '')
+    .replace(/<(iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/((?:xlink:)?href\s*=\s*)("|')\s*(?:javascript|vbscript|data:text\/html)[^"']*\2/gi, '$1$2#$2')
+  if (!/^\s*<svg[^>]*\sxmlns=/i.test(out)) out = out.replace(/<svg\b/i, '<svg xmlns="http://www.w3.org/2000/svg"')
+  return out
+}

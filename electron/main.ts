@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs'
 import { contextMenuTemplate } from './contextMenu'
 import { translationWarning } from './archCheck'
 import { renderPlantUml } from './plantuml'
-import { inlineAssetImages, singleImageSrc } from './clipboardRich'
+import { inlineAssetImages, safeSvgFile, singleImageSrc } from './clipboardRich'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -616,7 +616,7 @@ function registerIpc() {
     if (/\.svg$/i.test(r.filePath)) {
       const text = String(svg ?? '')
       if (!/^\s*<svg[\s>]/i.test(text)) throw new Error('Not a diagram')
-      await fs.writeFile(r.filePath, text.includes('xmlns=') ? text : text.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"'), 'utf8')
+      await fs.writeFile(r.filePath, safeSvgFile(text), 'utf8')
     } else {
       const file = /\.png$/i.test(r.filePath) ? r.filePath : `${r.filePath}.png`
       await fs.writeFile(file, pngBytes(png).toPNG())

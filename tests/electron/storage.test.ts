@@ -13,6 +13,19 @@ const para = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', t
 const doc = (...content: object[]) => ({ type: 'doc', content }) as never
 
 describe('PageStorage', () => {
+  it('refuses to move a page inside itself or its own sub-pages', async () => {
+    const s = new PageStorage(root)
+    await s.save({ id: 'a', title: 'A', parentId: null })
+    await s.save({ id: 'b', title: 'B', parentId: 'a' })
+    await s.save({ id: 'c', title: 'C', parentId: 'b' })
+    await expect(s.save({ id: 'a', parentId: 'c' })).rejects.toThrow(/inside itself/)
+    await expect(s.save({ id: 'a', parentId: 'a' })).rejects.toThrow(/inside itself/)
+    expect((await s.read('a'))!.parentId).toBeNull()
+    // Normal moves still work.
+    expect((await s.save({ id: 'c', parentId: null, order: 5 }))!.parentId).toBeNull()
+    expect((await s.save({ id: 'b', parentId: null }))!.parentId).toBeNull()
+  })
+
   it('creates, merges and reads pages from disk', async () => {
     const s = new PageStorage(root)
     const meta = await s.save({ id: 'a', title: 'Alpha', content: doc(para('hello')) })

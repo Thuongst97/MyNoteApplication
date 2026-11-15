@@ -73,7 +73,13 @@
       "nanoid": "5.1.16"
     },
     "katex": "0.18.11",
-    "lodash-es": "4.18.1"
+    "lodash-es": "4.18.1",
+    "@electron/universal": {
+      "minimatch": "11.0.3"
+    },
+    "app-builder-lib": {
+      "minimatch": "11.0.3"
+    }
   },
   "dependencies": {
     "@fontsource/caveat": "^5.3.0",

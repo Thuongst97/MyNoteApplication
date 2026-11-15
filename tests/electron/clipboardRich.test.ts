@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { assetUrlsIn, inlineAssetImages, singleImageSrc } from '../../electron/clipboardRich'
+import { assetUrlsIn, inlineAssetImages, safeSvgFile, singleImageSrc } from '../../electron/clipboardRich'
 
 const A = 'notion-asset://local/11111111-2222-3333-4444-555555555555.png'
 const B = 'notion-asset://local/aaaaaaaa-2222-3333-4444-555555555555.jpg'
@@ -18,5 +18,17 @@ describe('clipboard with images', () => {
     expect(singleImageSrc('<p>a</p><img alt="x" src="data:image/png;base64,AA">')).toBe('data:image/png;base64,AA')
     expect(singleImageSrc('<img src="a"><img src="b">')).toBeNull()
     expect(singleImageSrc('<p>text</p>')).toBeNull()
+  })
+  it('saves diagrams as SVG files without scripts or event handlers', () => {
+    const bad =
+      '<svg viewBox="0 0 10 10"><script>alert(1)</script><script src="x.js"/><rect onclick="alert(2)" onload=\'x()\' width="5"/>' +
+      '<a href="javascript:alert(3)"><text>t</text></a><a xlink:href="data:text/html,x"/><foreignObject><iframe src="x"></iframe></foreignObject></svg>'
+    const out = safeSvgFile(bad)
+    expect(out).not.toMatch(/<script|onclick|onload|javascript:|data:text\/html|<iframe/i)
+    expect(out).toContain('<rect width="5"/>')
+    expect(out).toContain('<text>t</text>')
+    expect(out.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
+    const ok = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><g><text>Head unit</text></g></svg>'
+    expect(safeSvgFile(ok)).toBe(ok)
   })
 })
