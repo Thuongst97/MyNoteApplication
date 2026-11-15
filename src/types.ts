@@ -1,7 +1,7 @@
 import type { JSONContent } from '@tiptap/react'
 
 /** Lightweight page metadata used to build the sidebar tree. */
-export type PageKind = 'doc' | 'whiteboard' | 'slides'
+export type PageKind = 'doc' | 'whiteboard' | 'slides' | 'html'
 
 export interface PageMeta {
   id: string

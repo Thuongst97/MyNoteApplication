@@ -18,6 +18,7 @@ export function docToText(node: JSONContent | null | undefined): string {
   if (node.type === 'markdown') return String(node.attrs?.source ?? '')
   if (node.type === 'equation' || node.type === 'plantuml') return String(node.attrs?.source ?? '')
   if (node.type === 'htmlBlock') return htmlToText(String(node.attrs?.source ?? ''))
+  if (node.type === 'htmlPage') return htmlToText(String((node as { source?: string }).source ?? ''))
   if (node.type === 'drawing') return drawingText(node.attrs?.data)
   if (node.type === 'mindmap') return mindMapText(node.attrs?.map)
   if (node.type === 'chart') {

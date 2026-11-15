@@ -52,7 +52,7 @@ export function cleanCover(v: unknown): string | null {
 
 /** A known page kind ('doc' for anything else). */
 export function normalizeKind(v: unknown): PageKind {
-  return v === 'whiteboard' || v === 'slides' ? v : 'doc'
+  return v === 'whiteboard' || v === 'slides' || v === 'html' ? v : 'doc'
 }
 
 /** Makes page metadata from disk safe to display (corrupted or hand-edited files). */

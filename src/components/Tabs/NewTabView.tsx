@@ -1,4 +1,4 @@
-import { CheckSquare, FilePlus, Network, Presentation, Shapes } from 'lucide-react'
+import { CodeXml, CheckSquare, FilePlus, Network, Presentation, Shapes } from 'lucide-react'
 import { PageKindIcon } from '@/components/ui/PageKindIcon'
 import { useAppStore } from '@/stores/useAppStore'
 import { openPageFromClick } from '@/stores/useTabsStore'
@@ -32,6 +32,9 @@ export function NewTabView() {
         </button>
         <button type="button" className={action} onClick={() => void createPage(null, { kind: 'slides', title: 'Untitled presentation' })}>
           <Presentation size={15} className="opacity-70" /> New presentation
+        </button>
+        <button type="button" className={action} onClick={() => void createPage(null, { kind: 'html', title: 'Untitled web page' })}>
+          <CodeXml size={15} className="opacity-70" /> New web page
         </button>
         <button type="button" className={action} onClick={() => openTasks()}>
           <CheckSquare size={15} className="opacity-70" /> Tasks

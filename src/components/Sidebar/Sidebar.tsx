@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CheckSquare, ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, CodeXml, ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
 import { isElectron, platform } from '@/lib/api'
@@ -192,6 +192,15 @@ export function Sidebar() {
           >
             <Presentation size={16} className="opacity-85" />
             <span className="flex-1 text-left">New presentation</span>
+          </button>
+          <button
+            type="button"
+            title="A page that is one web page (HTML, CSS, JavaScript), shown full size"
+            onClick={() => void createPage(null, { kind: 'html', title: 'Untitled web page' })}
+            className="flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-sm hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+          >
+            <CodeXml size={16} className="opacity-85" />
+            <span className="flex-1 text-left">New web page</span>
           </button>
           <button
             type="button"

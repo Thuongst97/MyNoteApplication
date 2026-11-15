@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { FilePlus, Loader2 } from 'lucide-react'
 import { Sidebar } from '@/components/Sidebar/Sidebar'
+import { HtmlPage } from '@/components/HtmlPage/HtmlPage'
 import { TopBar } from '@/components/TitleBar/TopBar'
 import { PageView } from '@/components/Editor/PageView'
 import { SearchModal } from '@/components/Search/SearchModal'
@@ -93,6 +94,8 @@ export default function App() {
             <NewTabView />
           ) : activePageId && activeExists && activePage?.kind === 'whiteboard' ? (
             <WhiteboardPage key={activePageId} pageId={activePageId} />
+          ) : activePageId && activeExists && activePage?.kind === 'html' ? (
+            <HtmlPage key={activePageId} pageId={activePageId} />
           ) : activePageId && activeExists && activePage?.kind === 'slides' ? (
             <PresentationPage key={activePageId} pageId={activePageId} />
           ) : activePageId && activeExists ? (

@@ -10,6 +10,7 @@ export function untrustScripts<T>(value: T): T {
     const o = v as Record<string, unknown>
     const out: Record<string, unknown> = {}
     for (const [k, x] of Object.entries(o)) out[k] = walk(x)
+    if (o.type === 'htmlPage') out.trusted = false
     if (o.type === 'htmlBlock' && out.attrs && typeof out.attrs === 'object') out.attrs = { ...(out.attrs as object), trusted: false }
     return out
   }

@@ -8,6 +8,7 @@ import { autoSaver } from '@/lib/autoSave'
 import { newId } from '@/lib/utils'
 
 import { APP_THEMES } from '@/lib/appThemes'
+import { newHtmlPageContent } from '@/components/HtmlPage/htmlPageModel'
 
 export type Theme = 'light' | 'dark'
 
@@ -185,7 +186,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (init?.navigate !== false) get().setActivePage(id)
     const content =
       init?.content ??
-      (kind === 'whiteboard' ? { type: 'whiteboard', scene: { elements: [], files: {} } } : kind === 'slides' ? newPresentation(init?.title === 'Untitled presentation' ? '' : (init?.title ?? '')) : null)
+      (kind === 'whiteboard' ? { type: 'whiteboard', scene: { elements: [], files: {} } } : kind === 'html' ? newHtmlPageContent() : kind === 'slides' ? newPresentation(init?.title === 'Untitled presentation' ? '' : (init?.title ?? '')) : null)
     await api.savePage({ ...meta, content })
     set((s) => ({ linksVersion: s.linksVersion + 1 }))
     return id

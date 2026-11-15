@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Minus, Monitor, Plus, Smartphone, Tablet, X, Maximize } from 'lucide-react'
+import { Expand, Minimize, Minus, Monitor, Plus, Smartphone, Tablet, X, Maximize } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SANDBOX_ESCAPE } from './HtmlSandbox'
 
@@ -28,6 +28,20 @@ export function HtmlViewer({ title = 'HTML', onClose, children }: { title?: stri
   const [width, setWidth] = useState<string>('fit')
   const [zoom, setZoom] = useState(1)
   const w = VIEW_WIDTHS.find((v) => v.id === width)?.width ?? null
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [full, setFull] = useState(false)
+  useEffect(() => {
+    const onChange = () => setFull(!!document.fullscreenElement && document.fullscreenElement === rootRef.current)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    }
+  }, [])
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    else void rootRef.current?.requestFullscreen?.().catch(() => {})
+  }
 
   useEffect(() => {
     // The editor and the app's shortcuts stay out of the way while the viewer is open.
@@ -36,6 +50,8 @@ export function HtmlViewer({ title = 'HTML', onClose, children }: { title?: stri
       if (e.key === 'Escape') {
         e.preventDefault()
         e.stopPropagation()
+        // In full screen, Esc first leaves full screen.
+        if (document.fullscreenElement) return void document.exitFullscreen().catch(() => {})
         onClose()
       } else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
@@ -49,18 +65,19 @@ export function HtmlViewer({ title = 'HTML', onClose, children }: { title?: stri
       }
     }
     window.addEventListener('keydown', onKey, true)
-    window.addEventListener(SANDBOX_ESCAPE, onClose)
+    const onFrameEscape = () => (document.fullscreenElement ? void document.exitFullscreen().catch(() => {}) : onClose())
+    window.addEventListener(SANDBOX_ESCAPE, onFrameEscape)
     return () => {
       document.body.classList.remove('drawing-open')
       window.removeEventListener('keydown', onKey, true)
-      window.removeEventListener(SANDBOX_ESCAPE, onClose)
+      window.removeEventListener(SANDBOX_ESCAPE, onFrameEscape)
     }
   }, [onClose])
 
   const btn = 'flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-2 text-sm hover:bg-black/5 dark:hover:bg-white/10'
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-label={title} data-testid="html-viewer" className="fixed inset-0 z-[400] flex flex-col bg-canvas-light text-ink-light dark:bg-canvas-dark dark:text-ink-dark">
+    <div ref={rootRef} role="dialog" aria-modal="true" aria-label={title} data-testid="html-viewer" className="fixed inset-0 z-[400] flex flex-col bg-canvas-light text-ink-light dark:bg-canvas-dark dark:text-ink-dark">
       <div className="flex h-12 shrink-0 items-center gap-1 border-b border-black/10 px-3 dark:border-white/10">
         <span className="mr-auto truncate text-sm font-medium">{title}</span>
         <div className="flex items-center rounded-lg bg-black/[0.04] p-0.5 dark:bg-white/[0.06]" role="radiogroup" aria-label="Page width">
@@ -90,6 +107,9 @@ export function HtmlViewer({ title = 'HTML', onClose, children }: { title?: stri
           <Plus size={16} />
         </button>
         <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
+        <button type="button" className={btn} aria-label={full ? 'Exit full screen' : 'Full screen'} title={full ? 'Exit full screen (Esc)' : 'Full screen (fills the whole screen)'} onClick={toggleFull}>
+          {full ? <Minimize size={15} /> : <Expand size={15} />}
+        </button>
         <button type="button" className={btn} aria-label="Close" title="Close (Esc)" onClick={onClose}>
           <X size={17} />
         </button>
