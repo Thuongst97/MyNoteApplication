@@ -25,6 +25,8 @@ interface Prefs {
   spellcheck: boolean
   isSidebarOpen: boolean
   sidebarWidth: number
+  /** Which side of the window the sidebar is on. */
+  sidebarSide: 'left' | 'right'
   expanded: Record<string, boolean>
   activePageId: string | null
 }
@@ -38,12 +40,13 @@ function loadPrefs(): Prefs {
     spellcheck: true,
     isSidebarOpen: true,
     sidebarWidth: 260,
+    sidebarSide: 'left',
     expanded: {},
     activePageId: null,
   }
   try {
     const p = { ...fallback, ...JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') }
-    return { ...p, spellcheck: p.spellcheck !== false }
+    return { ...p, spellcheck: p.spellcheck !== false, sidebarSide: p.sidebarSide === 'right' ? 'right' : 'left' }
   } catch {
     return fallback
   }
@@ -82,6 +85,7 @@ interface AppState extends Prefs {
   toggleExpanded: (id: string, value?: boolean) => void
   toggleSidebar: () => void
   setSidebarWidth: (w: number) => void
+  setSidebarSide: (side: 'left' | 'right') => void
   setTheme: (t: Theme) => void
   toggleTheme: () => void
   /** Picks an app theme (switches to its light or dark mode). */
@@ -233,6 +237,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
   setSidebarWidth: (w) => set({ sidebarWidth: Math.round(Math.min(480, Math.max(200, w))) }),
   setTheme: (theme) => set({ theme }),
+  setSidebarSide: (side) => set({ sidebarSide: side === 'right' ? 'right' : 'left' }),
   setAppTheme: (id) => {
     const t = APP_THEMES.find((x) => x.id === id)
     if (!t) return
@@ -263,6 +268,7 @@ useAppStore.subscribe((s) => {
     spellcheck: s.spellcheck,
     isSidebarOpen: s.isSidebarOpen,
     sidebarWidth: s.sidebarWidth,
+    sidebarSide: s.sidebarSide,
     expanded: s.expanded,
     activePageId: s.activePageId,
   }

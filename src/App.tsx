@@ -18,6 +18,7 @@ import { useGlobalShortcuts } from '@/hooks/useGlobalShortcuts'
 import { useAppZoom } from '@/hooks/useAppZoom'
 import { api } from '@/lib/api'
 import { appTheme, appThemeVars } from '@/lib/appThemes'
+import { cn } from '@/lib/utils'
 import { autoSaver } from '@/lib/autoSave'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
   useEffect(() => api.spellcheck.onTurnedOff(() => useAppStore.getState().setSpellcheck(false)), [])
 
   // Apply theme class to <html>, and the colors of the chosen light and dark app themes.
+  const sidebarSide = useAppStore((s) => s.sidebarSide)
   const lightTheme = useAppStore((s) => s.lightTheme)
   const darkTheme = useAppStore((s) => s.darkTheme)
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function App() {
   }, [])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas-light text-ink-light dark:bg-canvas-dark dark:text-ink-dark">
+    <div className={cn('flex h-screen w-screen overflow-hidden bg-canvas-light text-ink-light dark:bg-canvas-dark dark:text-ink-dark', sidebarSide === 'right' && 'flex-row-reverse')}>
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar />

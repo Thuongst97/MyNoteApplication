@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CheckSquare, ChevronsLeft, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
+import { CheckSquare, ChevronsLeft, ChevronsRight, PanelLeft, PanelRight, FileDown, Moon, Network, Plus, Search, Presentation, Shapes, Sun, SquarePen } from 'lucide-react'
 import { useTaskStore } from '@/stores/useTaskStore'
 import { useAppStore, useChildPages } from '@/stores/useAppStore'
-import { platform } from '@/lib/api'
+import { isElectron, platform } from '@/lib/api'
+import { createPortal } from 'react-dom'
+import { WindowControls } from '@/components/TitleBar/WindowControls'
 import { cn, isMacLike } from '@/lib/utils'
 import { PAGE_DRAG_END, PageTreeItem, pageDrag } from './PageTreeItem'
 import { planMove } from '@/lib/pageMove'
@@ -36,6 +38,32 @@ export function Sidebar() {
   }, [rootDrop])
   const isMac = platform === 'darwin'
   const asideRef = useRef<HTMLElement>(null)
+  const side = useAppStore((s) => s.sidebarSide)
+  const right = side === 'right'
+  const showWindowControls = isElectron && !isMac && right
+  // Drag the "My Notes" title to the other half of the window to move the sidebar there.
+  const [dockPreview, setDockPreview] = useState<'left' | 'right' | null>(null)
+  const startDock = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    const x0 = e.clientX
+    let moved = false
+    const target = (x: number): 'left' | 'right' => (x > window.innerWidth / 2 ? 'right' : 'left')
+    const onMove = (ev: PointerEvent) => {
+      if (!moved && Math.abs(ev.clientX - x0) < 8) return
+      moved = true
+      document.body.style.cursor = 'grabbing'
+      setDockPreview(target(ev.clientX))
+    }
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      document.body.style.cursor = ''
+      setDockPreview(null)
+      if (moved) useAppStore.getState().setSidebarSide(target(ev.clientX))
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
 
   const startResize = useCallback(
     (e: React.MouseEvent) => {
@@ -43,7 +71,8 @@ export function Sidebar() {
       const startX = e.clientX
       const startW = useAppStore.getState().sidebarWidth
       document.body.style.cursor = 'col-resize'
-      const onMove = (ev: MouseEvent) => setSidebarWidth(startW + ev.clientX - startX)
+      const dir = useAppStore.getState().sidebarSide === 'right' ? -1 : 1
+      const onMove = (ev: MouseEvent) => setSidebarWidth(startW + dir * (ev.clientX - startX))
       const onUp = () => {
         document.body.style.cursor = ''
         window.removeEventListener('mousemove', onMove)
@@ -61,17 +90,36 @@ export function Sidebar() {
       style={{ width: isOpen ? width : 0 }}
       className={cn(
         'group/sidebar relative flex h-full shrink-0 flex-col overflow-hidden bg-sidebar-light text-ink-light transition-[width] duration-200 ease-out dark:bg-sidebar-dark dark:text-ink-dark',
-        isOpen && 'border-r border-black/5 dark:border-white/5',
+        isOpen && (right ? 'border-l border-black/5 dark:border-white/5' : 'border-r border-black/5 dark:border-white/5'),
       )}
     >
       <div style={{ width }} className="flex h-full flex-col">
-        {/* Header / drag region (leaves room for macOS traffic lights) */}
-        <div className={cn('drag flex h-11 shrink-0 items-center gap-1 px-2', isMac && 'pl-[78px]')}>
-          <div className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink-light dark:text-ink-dark">
-            {!isMac && <img src="./app-icon.png" alt="" aria-hidden className="mr-1.5 inline-block h-[18px] w-[18px] -translate-y-px align-middle" draggable={false} />}My Notes
+        {/* With the sidebar on the right, the window buttons stay in the window's top-right corner. */}
+        {showWindowControls && (
+          <div className="drag flex shrink-0 items-center justify-end" style={{ height: 'var(--titlebar-h)' }}>
+            <WindowControls />
           </div>
+        )}
+        {/* Header / drag region (leaves room for macOS traffic lights) */}
+        <div className={cn('drag flex h-11 shrink-0 items-center gap-1 px-2', isMac && !right && 'pl-[78px]', showWindowControls && 'h-9')}>
+          <div className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink-light dark:text-ink-dark">
+            <span
+              onPointerDown={startDock}
+              title="Drag to move the sidebar to the other side"
+              className="no-drag cursor-grab select-none"
+            >
+              {!isMac && <img src="./app-icon.png" alt="" aria-hidden className="mr-1.5 inline-block h-[18px] w-[18px] -translate-y-px align-middle" draggable={false} />}My Notes
+            </span>
+          </div>
+          <SidebarIconButton
+            label={right ? 'Move sidebar to the left' : 'Move sidebar to the right'}
+            onClick={() => useAppStore.getState().setSidebarSide(right ? 'left' : 'right')}
+            className="opacity-0 group-hover/sidebar:opacity-100"
+          >
+            {right ? <PanelLeft size={16} /> : <PanelRight size={16} />}
+          </SidebarIconButton>
           <SidebarIconButton label="Close sidebar (Ctrl+\)" onClick={toggleSidebar} className="opacity-0 group-hover/sidebar:opacity-100">
-            <ChevronsLeft size={17} />
+            {right ? <ChevronsRight size={17} /> : <ChevronsLeft size={17} />}
           </SidebarIconButton>
           <SidebarIconButton label="New page" onClick={() => void createPage(null)}>
             <SquarePen size={16} />
@@ -208,9 +256,19 @@ export function Sidebar() {
         <div
           onMouseDown={startResize}
           onDoubleClick={() => setSidebarWidth(260)}
-          className="no-drag absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-blue-400/40"
+          className={cn('no-drag absolute top-0 z-10 h-full w-1 cursor-col-resize transition-colors hover:bg-blue-400/40', right ? 'left-0' : 'right-0')}
         />
       )}
+      {dockPreview &&
+        createPortal(
+          <div
+            aria-hidden
+            data-dock-preview={dockPreview}
+            className={cn('pointer-events-none fixed inset-y-2 z-[400] rounded-xl border-2 border-[#2383e2] bg-[#2383e2]/10', dockPreview === 'right' ? 'right-2' : 'left-2')}
+            style={{ width }}
+          />,
+          document.body,
+        )}
     </aside>
   )
 }

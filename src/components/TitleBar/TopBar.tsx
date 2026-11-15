@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, Check, ChevronsRight, Loader2 } from 'lucide-react'
+import { AlertCircle, Check, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/stores/useAppStore'
 import { autoSaver, type SaveStatus } from '@/lib/autoSave'
 import { isElectron, platform } from '@/lib/api'
@@ -14,12 +14,14 @@ import { TabBar } from '@/components/Tabs/TabBar'
  */
 export function TopBar() {
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
+  const sidebarRight = useAppStore((s) => s.sidebarSide === 'right')
   const pages = useAppStore((s) => s.pages)
   const activePageId = useAppStore((s) => s.activePageId)
   const view = useAppStore((s) => s.view)
   const { toggleSidebar } = useAppStore.getState()
   const isMac = platform === 'darwin'
-  const showWindowControls = isElectron && !isMac
+  // With an open sidebar on the right, the window buttons sit in its header instead.
+  const showWindowControls = isElectron && !isMac && !(sidebarRight && isSidebarOpen)
 
   const byId = new Map(pages.map((p) => [p.id, p]))
 
@@ -29,12 +31,12 @@ export function TopBar() {
         className={cn(
           'drag flex items-center gap-1 bg-black/[0.035] pl-2 dark:bg-white/[0.035]',
           // Keep room for the macOS traffic lights when the sidebar is collapsed.
-          isMac && !isSidebarOpen && 'pl-[80px]',
+          isMac && (!isSidebarOpen || sidebarRight) && 'pl-[80px]',
           !showWindowControls && 'pr-3',
         )}
         style={{ height: 'var(--titlebar-h)' }}
       >
-        {!isSidebarOpen && (
+        {!isSidebarOpen && !sidebarRight && (
           <button
             type="button"
             title="Open sidebar (Ctrl+\)"
@@ -53,6 +55,17 @@ export function TopBar() {
           <div className="no-drag">
             <PageOptions pageId={activePageId} />
           </div>
+        )}
+        {!isSidebarOpen && sidebarRight && (
+          <button
+            type="button"
+            title="Open sidebar (Ctrl+\)"
+            aria-label="Open sidebar"
+            onClick={toggleSidebar}
+            className="no-drag flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-60 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+          >
+            <ChevronsLeft size={17} />
+          </button>
         )}
         {showWindowControls && <WindowControls />}
       </div>
