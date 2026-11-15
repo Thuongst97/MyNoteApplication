@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { BlockEditPanel } from '../BlockEditPanel'
 import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
-import { Blocks, Check, Code2, Copy, Maximize2, Square, Trash2, X, type LucideIcon } from 'lucide-react'
+import { Blocks, Check, Code2, Copy, Maximize2, Square, Trash2, WandSparkles, X, type LucideIcon } from 'lucide-react'
 import { blockFrameClass } from '../blockBorder'
 import { DiagramViewer } from '@/components/ui/DiagramViewer'
 import { cn, isMacLike } from '@/lib/utils'
 import { placeCursorAfter } from '../mermaid/MermaidNode'
 import { DiagramExportButton } from '../DiagramExport'
+import { HighlightedTextarea } from '../code/HighlightedTextarea'
 
 /** What makes a source block a Markdown block, an HTML block… */
 export interface SourceKind {
   /** "Markdown", "HTML" */
   name: string
+  /** highlight.js language for colors in the code editor (none: plain text). */
+  codeLanguage?: string
+  /** Tidies the source (Format button in the editor). */
+  format?: (source: string) => Promise<string>
   icon: LucideIcon
   /** Shown above the editor. */
   hint: string
@@ -175,10 +180,10 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
             </a>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            <textarea
+            <HighlightedTextarea
               ref={textareaRef}
+              language={kind.codeLanguage ?? 'plaintext'}
               value={draft}
-              spellCheck={false}
               placeholder={kind.template}
               aria-label={`${kind.name} source`}
               onChange={(e) => setDraft(e.target.value)}
@@ -198,7 +203,8 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
                   requestAnimationFrame(() => el.setSelectionRange(s + 2, s + 2))
                 }
               }}
-              className="block max-h-[70vh] min-h-[220px] w-full resize-y rounded-md border border-black/10 bg-white p-3 font-mono text-[13px] leading-relaxed outline-none focus:border-blue-400 dark:border-white/10 dark:bg-[#191919]"
+              wrapperClassName="rounded-md border border-black/10 bg-white focus-within:border-blue-400 dark:border-white/10 dark:bg-[#191919]"
+              className="max-h-[70vh] min-h-[220px] resize-y"
             />
             <div className="max-h-[70vh] min-h-[220px] overflow-auto rounded-md border border-black/5 bg-white px-4 py-2 dark:border-white/5 dark:bg-[#191919]">
               {preview.trim() ? (
@@ -208,6 +214,21 @@ export function SourceBlockView({ node, updateAttributes, deleteNode, selected, 
           </div>
           {kind.EditorFooter && <kind.EditorFooter attrs={draftAttrs} setAttrs={(p) => setDraftAttrs((d) => ({ ...d, ...p }))} />}
           <div className="mt-2 flex items-center gap-2">
+            {kind.format && draft.trim() && (
+              <button
+                type="button"
+                title="Tidy the indentation and line breaks"
+                onClick={() => {
+                  const f = kind.format!
+                  void f(draft)
+                    .then(setDraft)
+                    .catch((err) => window.alert(`Couldn't format: ${String((err as Error)?.message ?? err).split('\n')[0]}`))
+                }}
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs opacity-70 hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
+              >
+                <WandSparkles size={13} /> Format
+              </button>
+            )}
             {!draft.trim() && (
               <button
                 type="button"

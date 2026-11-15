@@ -5,6 +5,7 @@ import { SourceBlockView, type SourceKind, type SourceRenderProps } from '../mar
 import { HtmlRender } from './HtmlRender'
 import { HtmlSandbox } from './HtmlSandbox'
 import { HtmlViewer } from './HtmlViewer'
+import { formatHtml } from '../code/HighlightedTextarea'
 import { useStaticBlocks } from '../staticBlocks'
 import { sanitizeHtml } from '@/lib/html'
 
@@ -39,6 +40,8 @@ export const HTML_TEMPLATE = `<style>
 
 export const HTML_KIND: SourceKind = {
   name: 'HTML',
+  codeLanguage: 'xml',
+  format: formatHtml,
   icon: CodeXml,
   hint: 'HTML & CSS (styles stay inside this block). Turn on JavaScript below for buttons and interactive content.',
   help: { url: 'https://developer.mozilla.org/en-US/docs/Web/HTML', label: 'HTML reference' },

@@ -18,6 +18,7 @@ Some **bold**, *italic* and \`code\` text with a [link](https://example.com).
 
 export const MARKDOWN_KIND: SourceKind = {
   name: 'Markdown',
+  codeLanguage: 'markdown',
   icon: FileText,
   hint: 'Markdown — paste or type, the preview updates as you go',
   help: { url: 'https://www.markdownguide.org/cheat-sheet/', label: 'Syntax help' },

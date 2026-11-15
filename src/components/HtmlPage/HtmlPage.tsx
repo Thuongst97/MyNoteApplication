@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Code2, Expand, Globe, Loader2, Minimize, RotateCw, X, Zap } from 'lucide-react'
+import { Code2, Expand, Globe, Loader2, Minimize, RotateCw, WandSparkles, X, Zap } from 'lucide-react'
 import { api } from '@/lib/api'
 import { autoSaver } from '@/lib/autoSave'
 import { useAppStore } from '@/stores/useAppStore'
 import { HtmlBlockRender } from '@/components/Editor/html/HtmlView'
 import { SANDBOX_ESCAPE } from '@/components/Editor/html/HtmlSandbox'
+import { HighlightedTextarea, formatHtml } from '@/components/Editor/code/HighlightedTextarea'
 import { cn } from '@/lib/utils'
 import { normalizeHtmlPage, newHtmlPageContent, type HtmlPageContent } from './htmlPageModel'
 
@@ -22,6 +23,16 @@ export function HtmlPage({ pageId }: { pageId: string }) {
   const [reload, setReload] = useState(0)
   const [full, setFull] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const [formatting, setFormatting] = useState(false)
+  const draftRef = useRef('')
+  draftRef.current = draft
+  const runFormat = () => {
+    setFormatting(true)
+    formatHtml(draftRef.current)
+      .then((out) => setDraft(out))
+      .catch((err) => useAppStore.getState().showToast(`Couldn't format: ${String((err as Error)?.message ?? err).split('\n')[0]}`))
+      .finally(() => setFormatting(false))
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -121,6 +132,11 @@ export function HtmlPage({ pageId }: { pageId: string }) {
             <div className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
           </>
         )}
+        {editing && (
+          <button type="button" className={btn} title="Tidy the code (Ctrl+Shift+F)" onClick={runFormat} disabled={formatting}>
+            {formatting ? <Loader2 size={14} className="animate-spin" /> : <WandSparkles size={14} />} Format
+          </button>
+        )}
         <button type="button" className={btn} title="Reload the page" aria-label="Reload" onClick={() => setReload((n) => n + 1)}>
           <RotateCw size={14} />
         </button>
@@ -144,10 +160,10 @@ export function HtmlPage({ pageId }: { pageId: string }) {
       </div>
       <div className="flex min-h-0 flex-1">
         {editing && (
-          <textarea
+          <HighlightedTextarea
             aria-label="HTML code"
+            language="xml"
             value={draft}
-            spellCheck={false}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Tab') {
@@ -156,9 +172,14 @@ export function HtmlPage({ pageId }: { pageId: string }) {
                 const el = e.currentTarget
                 el.setRangeText('  ', el.selectionStart, el.selectionEnd, 'end')
                 setDraft(el.value)
+              } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+                e.preventDefault()
+                e.stopPropagation()
+                runFormat()
               }
             }}
-            className="w-[45%] min-w-[280px] resize-none border-r border-black/[0.08] bg-[#fafafa] p-4 font-mono text-[13px] leading-relaxed text-[#1f2328] outline-none dark:border-white/[0.08] dark:bg-[#1e1e1e] dark:text-[#d4d4d4]"
+            wrapperClassName="w-[45%] min-w-[280px] border-r border-black/[0.08] bg-[#fafafa] dark:border-white/[0.08] dark:bg-[#1e1e1e]"
+            className="overflow-auto"
           />
         )}
         <div key={reload} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto" data-testid="html-page-view">
