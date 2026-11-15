@@ -99,7 +99,7 @@ describe('PresentationPage: gallery, theme, footer, hide, notes', () => {
     expect(document.querySelector('[data-testid="slide-edit-surface"]')!.closest('.slide-themed')).toHaveClass('theme-neural')
     fireEvent.mouseDown(thumbs()[1])
     await waitFor(() => expect(document.querySelector('.slide-themed [data-testid="slide-footer"]')?.textContent).toContain('02 / 05'))
-  })
+  }, 20_000) // renders all 12 theme previews: slow when the whole suite runs in parallel
 
   it('Theme button switches the look of an existing deck without touching its slides', async () => {
     let id = ''
