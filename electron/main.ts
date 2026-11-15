@@ -387,7 +387,7 @@ function createWindow() {
     // Frameless look: macOS keeps native traffic lights inset into our header,
     // Windows/Linux draw custom controls in the renderer (see TitleBar).
     titleBarStyle: 'hidden',
-    ...(isMac ? { trafficLightPosition: { x: 14, y: 14 } } : { frame: false }),
+    ...(isMac ? { trafficLightPosition: { x: 14, y: 11 } } : { frame: false }),
     backgroundColor: '#191919',
     // Window/taskbar icon on Windows & Linux (macOS uses the app bundle's icon).
     ...(!isMac && { icon: windowIcon() }),

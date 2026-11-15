@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --titlebar-h: 44px;
+  --titlebar-h: 36px;
 
   /* App theme colors (page, sidebar, text), changed by the theme picker (appThemes.ts). */
   --pn-canvas-light: 255 255 255;

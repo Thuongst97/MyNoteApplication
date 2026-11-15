@@ -101,7 +101,7 @@ export function Sidebar() {
           </div>
         )}
         {/* Header / drag region (leaves room for macOS traffic lights) */}
-        <div className={cn('drag flex h-11 shrink-0 items-center gap-1 px-2', isMac && !right && 'pl-[78px]', showWindowControls && 'h-9')}>
+        <div className={cn('drag flex h-[var(--titlebar-h)] shrink-0 items-center gap-1 px-2', isMac && !right && 'pl-[78px]', showWindowControls && 'h-9')}>
           <div className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-ink-light dark:text-ink-dark">
             <span
               onPointerDown={startDock}

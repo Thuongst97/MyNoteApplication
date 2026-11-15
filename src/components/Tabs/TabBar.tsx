@@ -157,7 +157,7 @@ function TabItem({
         }
       }}
       className={cn(
-        'no-drag group/tab relative flex h-[30px] w-[220px] min-w-[72px] flex-[0_1_220px] cursor-default select-none items-center gap-1.5 rounded-t-lg px-2.5 text-[13px]',
+        'no-drag group/tab relative flex h-[28px] w-[220px] min-w-[72px] flex-[0_1_220px] cursor-default select-none items-center gap-1.5 rounded-t-lg px-2.5 text-[13px]',
         active
           ? 'bg-canvas-light shadow-[0_-1px_0_rgba(0,0,0,0.06),1px_0_0_rgba(0,0,0,0.06),-1px_0_0_rgba(0,0,0,0.06)] dark:bg-canvas-dark dark:shadow-[0_-1px_0_rgba(255,255,255,0.08),1px_0_0_rgba(255,255,255,0.08),-1px_0_0_rgba(255,255,255,0.08)]'
           : 'opacity-75 hover:bg-black/[0.04] hover:opacity-100 dark:hover:bg-white/[0.06]',
