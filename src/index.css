@@ -674,6 +674,16 @@ body {
 .notion-editor .markdown-body pre {
   padding: 14px 18px;
 }
+/* Inline code in Markdown: dark blue text, no shading (easier to read than red on grey). */
+.notion-editor .markdown-body :not(pre) > code {
+  background: none;
+  padding: 0;
+  color: #1e3a8a;
+  font-weight: 500;
+}
+.dark .notion-editor .markdown-body :not(pre) > code {
+  color: #93c5fd;
+}
 .notion-editor .markdown-body em[title] {
   opacity: 0.6;
   font-size: 0.9em;
